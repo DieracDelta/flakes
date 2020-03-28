@@ -1,0 +1,39 @@
+window {
+    background-color: --rootbar-color0;
+    color: --rootbar-color4;
+    font-family: "Iosevka Medium";
+    border-bottom: 5px solid --rootbar-color4;
+}
+
+label {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+#cpu {
+    margin-left: 5px;
+}
+
+.ws {
+    background-color: --rootbar-color2;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-bottom:5px;
+    border-radius: 2px;
+    border: 2px solid black;
+    color: black;
+}
+
+#ws {
+    margin-right: 25px;
+}
+
+#ws-focused {
+    background-color: --rootbar-color1;
+}
+#ws-visible {
+    background-color: --rootbar-color3;
+}
+#ws-inactive {
+    background-color: --rootbar-color5;
+}

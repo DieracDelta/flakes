@@ -1,0 +1,12 @@
+mode=run
+height=960
+width=400
+xoffset=-10
+#content_halign=end
+location=3
+#colors=colors
+filter_rate=100
+dmenu-parse_action=true
+allow_images=true
+line_wrap=word_char
+insensitive=true

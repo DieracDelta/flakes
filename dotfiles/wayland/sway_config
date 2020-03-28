@@ -1,0 +1,180 @@
+include "$HOME/.cache/wal/colors-sway"
+
+#output DP-1 mode 1920x1080 pos 1920 0 bg $wallpaper stretch
+output HDMI-A-2 mode 1920x1080 pos 1920 0 bg $wallpaper stretch
+client.focused $color0 $background $foreground $color7 $background
+
+set $mod Mod1
+set $mod_alt Mod4
+
+bindsym $mod+t exec pkill -9 rootbar && swaymsg reload
+
+set $left h
+set $down j
+set $up k
+set $right l
+set $term alacritty
+
+### Output configuration
+#
+# Default wallpaper
+#output * bg ~/.config/sway/backgrounds/Sway_Wallpaper_Blue_1920x1080.png fill
+#
+# Example configuration:
+#
+#   output HDMI-A-1 resolution 1920x1080 position 1920,0
+#
+# You can get the names of your outputs by running: swaymsg -t get_outputs
+
+### Idle configuration
+#
+# Example configuration:
+#
+# exec swayidle -w \
+#          timeout 300 'swaylock -f -c 000000' \
+#          timeout 600 'swaymsg "output * dpms off"' \
+#               resume 'swaymsg "output * dpms on"' \
+#          before-sleep 'swaylock -f -c 000000'
+#
+# This will lock your screen after 300 seconds of inactivity, then turn off
+# your displays after another 300 seconds, and turn your screens back on when
+# resumed. It will also lock your screen before your computer goes to sleep.
+
+for_window [app_id="^.*"] border pixel 5
+for_window [class="^.*"] border pixel 5
+smart_borders on
+
+set $mod Mod1
+
+bindsym $mod+Return exec $term
+# TODO fix
+bindsym $mod+Shift+x kill
+bindsym $mod+d exec XDG_CONFIG_HOME="/etc/wofi" wofi --style $HOME/.config/sway/wofi_style.css --conf $HOME/.config/sway/wofi_config
+bindsym $mod+n exec bash /etc/config/wofi/wofi_parse.sh
+
+floating_modifier $mod normal
+bindsym $mod+Shift+c reload
+
+bindsym $mod+semicolon exec swaylock -i $wallpaper
+
+bindsym $mod+Control+Left exec amixer sset Master 5%-
+bindsym $mod+Control+Down exec amixer sset Master mute
+bindsym $mod+Control+Up exec amixer sset Master unmute
+bindsym $mod+Control+Right exec amixer sset Master 5%+
+
+bindsym $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -b 'Yes, exit sway' 'swaymsg exit'
+
+bindsym $mod+$left focus left
+bindsym $mod+$down focus down
+bindsym $mod+$up focus up
+bindsym $mod+$right focus right
+
+# Move the focused window with the same, but add Shift
+bindsym $mod+Shift+$left move left
+bindsym $mod+Shift+$down move down
+bindsym $mod+Shift+$up move up
+bindsym $mod+Shift+$right move right
+bindsym $mod+1 workspace 1
+bindsym $mod+2 workspace 2
+bindsym $mod+3 workspace 3
+bindsym $mod+4 workspace 4
+bindsym $mod+5 workspace 5
+bindsym $mod+6 workspace 6
+bindsym $mod+7 workspace 7
+bindsym $mod+8 workspace 8
+bindsym $mod+9 workspace 9
+bindsym $mod+0 workspace 10
+# Move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace 1
+bindsym $mod+Shift+2 move container to workspace 2
+bindsym $mod+Shift+3 move container to workspace 3
+bindsym $mod+Shift+4 move container to workspace 4
+bindsym $mod+Shift+5 move container to workspace 5
+bindsym $mod+Shift+6 move container to workspace 6
+bindsym $mod+Shift+7 move container to workspace 7
+bindsym $mod+Shift+8 move container to workspace 8
+bindsym $mod+Shift+9 move container to workspace 9
+bindsym $mod+Shift+0 move container to workspace 10
+
+bindsym $mod+b splith
+bindsym $mod+v splitv
+
+# Switch the current container between different layout styles
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+bindsym $mod+Shift+p exec deepfry
+
+# Make the current focus fullscreen
+bindsym $mod+f fullscreen
+
+# Toggle the current focus between tiling and floating mode
+bindsym $mod+Shift+space floating toggle
+
+# Swap focus between the tiling area and the floating area
+bindsym $mod+space focus mode_toggle
+
+# Move focus to the parent container
+bindsym $mod+a focus parent
+#
+# Scratchpad:
+#
+# Sway has a "scratchpad", which is a bag of holding for windows.
+# You can send windows there and get them back later.
+
+# Move the currently focused window to the scratchpad
+bindsym $mod+Shift+minus move scratchpad
+
+# Show the next scratchpad window or hide the focused scratchpad window.
+# If there are multiple scratchpad windows, this command cycles through them.
+bindsym $mod+minus scratchpad show
+#
+# Resizing containers:
+#
+mode "resize" {
+# left will shrink the containers width
+# right will grow the containers width
+# up will shrink the containers height
+# down will grow the containers height
+	bindsym $left resize shrink width 10px
+		bindsym $down resize grow height 10px
+		bindsym $up resize shrink height 10px
+		bindsym $right resize grow width 10px
+
+# Ditto, with arrow keys
+		bindsym Left resize shrink width 10px
+		bindsym Down resize grow height 10px
+		bindsym Up resize shrink height 10px
+		bindsym Right resize grow width 10px
+
+# Return to default mode
+		bindsym Return mode "default"
+		bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+
+exec rootbar --conf $HOME/.config/sway/rootbar_config --style $HOME/.config/sway/rootbar.css
+
+bindsym $mod+comma workspace prev
+bindsym $mod+period workspace next
+bindsym $mod+Tab workspace back_and_forth
+bindsym $mod+Shift+Left exec playerctl previous
+bindsym $mod+Shift+Right exec playerctl next
+bindsym $mod+Shift+Up exec playerctl play
+bindsym $mod+Shift+Down exec playerctl pause
+bindsym $mod+Shift+d exec makoctl dismiss -a
+
+
+bindsym $mod+p exec grim -g "$(slurp)" -t "png" - | wl-copy
+
+
+exec Discord
+exec pithos
+exec pavucontrol
+exec firefox
+
+assign [app_id="^firefox$"] workspace 9
+assign [app_id=null] workspace 1
+assign [app_id="^pavucontrol$"] workspace 2
+assign [app_id=".*pithos.*"] workspace 2

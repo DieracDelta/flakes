@@ -1,0 +1,39 @@
+bars=prim
+
+stylesheet=style.css
+watch_css=true
+
+prim-output=HDMI-A-2
+prim-interval=100
+prim-height=35
+prim-left=ws
+prim-center=win
+prim-right=cpu,memory,date
+
+
+ws-dso=workspace
+ws-show_all=false
+ws-name_only=false
+
+date-dso=clock
+date-length=50
+date-format=%a %b %e %I:%M %p
+
+notif-exec=/etc/rootbar/handler_script.lua
+
+win-dso=window
+win-length=50
+
+cpu-dso=cpu
+cpu-interval=100
+cpu-format=cpu %u%%
+cpu-allow_markup=true
+cpu-length=50
+
+memory-dso=memory
+memory-interval=100
+memory-percent=true
+memory-format=mem %.0f%s |
+memory-allow_markup=true
+memory-length=50
+

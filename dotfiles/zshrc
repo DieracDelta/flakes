@@ -1,0 +1,123 @@
+export _JAVA_AWT_WM_NONREPARENTING=1
+cat $HOME/.cache/wal/sequences
+function post_code {
+        INPUT_UNESCAPED=$(cat)
+        INPUT=''${INPUT_UNESCAPED//\\/\\\\}
+        echo -n "https://endpoints.justinrestivo.me/"$(echo -n '{"key":"'$ENDPOINTKEY'","src":"' $(echo $INPUT | base64) '"}' | curl -X POST https://endpoints.justinrestivo.me/code -H 'Content-Type: application/json' --data @- | jq -r '.link') | wl-copy
+}
+function scp_mits_color {
+        ssh -f -N -l $KERBEROS athena.dialup.mit.edu
+        ssh $KERBEROS@athena.dialup.mit.edu "mkdir printer_files"
+        cmd=""
+        for var in "$@"
+        do
+                #cmd+="lpr -P mitprint -U graceyin -o sides=two-sided-long-edge ~/printer_files/"
+                # add -# 20 to print 20 copies
+                #cmd+="lpr -P mitprint-color -o sides=two-sided-long-edge ~/printer_files/"
+                cmd+="lpr -P mitprint-color -o sides=two-sided-long-edge ~/printer_files/"
+                #cmd+="lpr -P mitprint ~/printer_files/"
+                #cmd+="lpr -P mitprint ~/printer_files/"
+                cmd+=$(basename $var)
+                cmd+="; "
+        done
+        echo $cmd
+        scp $@ $KERBEROS@athena.dialup.mit.edu:/mit/$KERBEROS/printer_files/
+        ssh $KERBEROS@athena.dialup.mit.edu $cmd " rm -dr printer_files"
+}
+
+# double sided
+function scp_mit {
+        ssh -f -N -l $KERBEROS athena.dialup.mit.edu
+        ssh $KERBEROS@athena.dialup.mit.edu "mkdir printer_files"
+        cmd=""
+        for var in "$@"
+        do
+                #cmd+="lpr -P mitprint -U graceyin -o sides=two-sided-long-edge ~/printer_files/"
+                # add -# 20 to print 20 copies
+                cmd+="lpr -P mitprint-color -o sides=two-sided-long-edge ~/printer_files/"
+                cmd+="lpr -P mitprint -o sides=two-sided-long-edge ~/printer_files/"
+                #cmd+="lpr -P mitprint -o ~/printer_files/"
+                #cmd+="lpr -P mitprint ~/printer_files/"
+                #cmd+="lpr -P mitprint ~/printer_files/"
+                cmd+=$(basename $var)
+                cmd+="; "
+        done
+        echo $cmd
+        scp $@ $KERBEROS@athena.dialup.mit.edu:/mit/$KERBEROS/printer_files/
+        ssh $KERBEROS@athena.dialup.mit.edu $cmd " rm -dr printer_files"
+}
+
+MAIM_LOCATION="/tmp/maim_screenshoot.png"
+
+function post_image {
+        grim -g "$(slurp)" -t "png" $MAIM_LOCATION
+        echo -n "https://endpoints.justinrestivo.me/"$(echo -n '{"key": "'$ENDPOINTKEY'", "doCasify" : false, "src":"data:image/jpg;base64,'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST https://endpoints.justinrestivo.me/image -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | wl-copy
+}
+
+export FZF_COMPLETION_TRIGGER='~~'
+
+# Use fd (https://github.com/sharkdp/fd) instead of the default find
+# command for listing path candidates.
+# - The first argument to the function ($1) is the base path to start traversal
+# - See the source code (completion.{bash,zsh}) for the details.
+_fzf_compgen_path() {
+        fd --hidden --follow --exclude ".git" . "$1"
+}
+
+# Use fd to generate the list for directory completion
+_fzf_compgen_dir() {
+        fd --type d --hidden --follow --exclude ".git" . "$1"
+}
+
+if [ -n "''${commands[fzf-share]}" ]; then
+        source "$(fzf-share)/key-bindings.zsh"
+fi
+
+function cd() {
+        if [[ "$#" != 0 ]]; then
+                builtin cd "$@";
+                return
+        fi
+        while true; do
+                local lsd=$(echo ".." && ls -p | grep '/$' | sed 's;/$;;')
+                local dir="$(printf '%s\n' "''${lsd[@]}" |
+                        fzf --reverse --preview '
+                                        __cd_nxt="$(echo {})";
+                                        __cd_path="$(echo $(pwd)/''${__cd_nxt} | sed "s;//;/;")";
+                                        echo $__cd_path;
+                                        echo;
+                                        ls -p --color=always "''${__cd_path}";
+                                        ')"
+                                        [[ ''${#dir} != 0 ]] || return 0
+                                        builtin cd "$dir" &> /dev/null
+                                done
+                        }
+
+# Select a docker container to start and attach to
+#function da() {
+#local cid
+#cid=$(docker ps -a | sed 1d | fzf -1 -q "$1" | awk '{print $1}')
+
+#[ -n "$cid" ] && docker start "$cid" && docker attach "$cid"
+#}
+# Select a running docker container to stop
+function ds() {
+        local cid
+        cid=$(docker ps | sed 1d | fzf -q "$1" | awk '{print $1}')
+
+        [ -n "$cid" ] && docker stop "$cid"
+}
+# Select a docker container to remove
+function drm() {
+        local cid
+        cid=$(docker ps -a | sed 1d | fzf -q "$1" | awk '{print $1}')
+
+        [ -n "$cid" ] && docker rm "$cid"
+}
+# Select a container to attach onto with bash
+function da() {
+        local cid
+        cid=$(docker ps -a | sed 1d | fzf -q "$1" | awk '{print $1}')
+
+        [ -n "$cid" ] && docker container exec -it "$cid" /bin/bash
+}
