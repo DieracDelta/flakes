@@ -23,36 +23,28 @@
     let textPack = with pkgs; [ neovim ];
   wlPack = with pkgs; [ chromium wofi flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim ly];
   cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd];
-  devPack = with pkgs; [ nodejs rustc cargo git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua emacs idea.idea-community john gdb];
+  devPack = with pkgs; [ nodejs rustc cargo git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua emacs idea.idea-community john gdb direnv ];
   utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
   gamingPack = with pkgs; [ steam mesa gnuchess];
   bapPack = with pkgs; [ libbap skopeo python27 m4 z3];
   appPack = with pkgs; [ discord zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty ];
   pythonPack = with pkgs;
-
   let my-python-packages = python-packages: with python-packages; [
     pywal jedi flake8 pep8 tesserocr pillow autopep8 xdot
   ]; python-with-my-packages = python37.withPackages my-python-packages; in [python-with-my-packages];
 
-  customPack = [
-    (
-     pkgs.writeTextFile {
-     name = "startsway";
-     destination = "/bin/startsway";
-     executable = true;
-     text = ''
-        #! ${pkgs.bash}/bin/bash
-
-        # first import environment variables from the login manager
-             systemctl --user import-environment
-        # then start the service
-             exec systemctl --user start sway.service
-     '';
-     }
-    )
+  swayPack = [
+    (pkgs.makeDesktopItem {
+     name = "Sway_TESTING";
+     desktopName = "Sway";
+     comment = "An i3-compatible Wayland Compositor";
+     exec = "sway";
+     type = "Application";
+     })
   ];
-  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack bapPack pythonPack customPack];
+
+  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack bapPack pythonPack swayPack];
 
   environment.etc = {
     "sway/config".source = ./dotfiles/wayland/sway_config;
@@ -116,6 +108,8 @@
   hardware.pulseaudio.enable = true;
   nixpkgs.config.pulseaudio = true;
   nixpkgs.config.allowUnfree = true;
+
+  services.lorri.enable = true;
 
   system.stateVersion = "19.09"; # Did you read the comment? No I did not.
 

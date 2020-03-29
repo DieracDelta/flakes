@@ -1,19 +1,43 @@
-{ stdenv, fetchhg, pkg-config, wayland, gtk3, json_c, libpulseaudio }:
+{ stdenv, fetchhg
+	, meson, ninja, pkgconfig
+		, wayland, wayland-protocols
+		, gtk3, json_c, libpulseaudio
+}:
 
+let
+metadata = import ./metadata.nix;
+in
 stdenv.mkDerivation rec {
-  pname = "rootbar";
-  version = "f8b43cc69e49";
+	name = "${pname}-${version}";
+	pname = "rootbar";
+	version = metadata.rev;
 
-  src = fetchhg {
-    url = "https://hg.sr.ht/~scoopta/rootbar";
-    rev = version;
-    sha256 = "0l7z214z8gl5m414cw37af6ls5ba752sm1p9ylv69l37qznvzsbw";
-  };
+	src = fetchhg {
+		url = "https://hg.sr.ht/~scoopta/rootbar";
+		rev = version;
+		sha256 = metadata.sha256;
+	};
 
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ wayland gtk3 json_c libpulseaudio ];
+	nativeBuildInputs = [
+		meson ninja pkgconfig
+	];
 
-  preConfigure = "cd Release";
+	buildInputs = [
+		wayland wayland-protocols
+			gtk3 json_c libpulseaudio
+	];
 
-  installPhase = "install -D rootbar $out/bin/rootbar";
+        mesonFlags = [
+          "--buildtype=debug"
+          "-Dd_sanitize=address"
+        ];
+
+	enableParallelBuilding = true;
+
+	meta = with stdenv.lib; {
+		description = "Root Bar is a bar for wlroots based wayland compositors such as sway and was designed to address the lack of good bars for wayland";
+		homepage    = "https://hg.sr.ht/~scoopta/rootbar";
+		platforms   = platforms.linux;
+		maintainers = with maintainers; [ colemickens ];
+	};
 }

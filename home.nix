@@ -20,4 +20,5 @@
 
   programs.opam.enable = true;
   programs.opam.enableZshIntegration = true;
+
 }

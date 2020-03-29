@@ -29,6 +29,8 @@
     "start_nix_shell" = "nix-shell --pure -E 'with import<nixpkgs> {}; callPackage ./. {}";
     "alacritty_x" = "env WINIT_UNIX_BACKEND=x11 alacritty & disown && exit";
     "nu" = "sudo NIXOS_CONFIG=$HOME/.config/nixpkgs/configuration.nix nixos-rebuild switch";
+    # run lorri
+    "rl" = "lorri init";
   };
   # keys.sh contains a bunch of my keys
   programs.zsh.initExtra = builtins.readFile ./keys.sh + builtins.readFile ./zshrc;
@@ -53,6 +55,24 @@
       sha256 = "1ib98j7v6hy3x43dcli59q5rpg9bamrg335zc4fw91hk6jcxvy45";
     };
   }
-    ];
+  {
+    name = "fzf-z";
+    src = pkgs.fetchFromGitHub {
+      owner = "andrewferrier";
+      repo = "fzf-z";
+      rev = "2db04c704360b5b303fb5708686cbfd198c6bf4f";
+      sha256 = "1ib98j7v6hy3x43dcli59q5rpg9bamrg335zc4fw91hk6jcxvy45";
+    };
+  }
+  /*{*/
+    /*name = "zsh-nix-shell";*/
+    /*src = pkgs.fetchFromGitHub {*/
+      /*owner = "chisui";*/
+      /*repo = "zsh-nix-shell";*/
+      /*rev = "a65382a353eaee5a98f068c330947c032a1263bb";*/
+      /*sha256 = "0l41ac5b7p8yyjvpfp438kw7zl9dblrpd7icjg1v3ig3xy87zv0n";*/
+    /*};*/
+  /*}*/
+  ];
 
 }

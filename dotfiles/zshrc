@@ -121,3 +121,5 @@ function da() {
 
         [ -n "$cid" ] && docker container exec -it "$cid" /bin/bash
 }
+# nix direnv hook
+eval "$(direnv hook zsh)"
