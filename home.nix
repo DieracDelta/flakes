@@ -7,7 +7,7 @@
   programs.git.enable = true;
 
   programs.fzf.enableZshIntegration = true;
-  imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./creds.nix ];
+  imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./creds.nix ./dotfiles/emacs.nix];
 
   programs.tmux.enable = true;
   programs.tmux.historyLimit = 1000000;
@@ -15,10 +15,8 @@
 
 
   nixpkgs.overlays = [ (import ./overs) ] ;
-  home.packages = [ pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.opam2nix pkgs.deepfry pkgs.imagemagick ];
+  home.packages = [ pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.deepfry pkgs.imagemagick pkgs.wofi pkgs.zathura_rice];
   manual.html.enable = true;
 
-  programs.opam.enable = true;
-  programs.opam.enableZshIntegration = true;
 
 }

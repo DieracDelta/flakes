@@ -4,8 +4,8 @@ self: super: rec {
         slurp = super.callPackage ./pkgs/slurp { };
         wl-clipboard = super.callPackage ./pkgs/wl-clipboard { };
         clipman = super.callPackage ./pkgs/clipman { };
-        opam2nix = super.callPackage ./pkgs/opam2nix {};
-        bap = super.callPackage ./pkgs/bap {};
         deepfry = super.callPackage ./pkgs/deepfry {};
         imagemagick = super.callPackage ./pkgs/imagemagick {};
+        wofi             = super.callPackage ./pkgs/wofi {};
+        zathura_rice = super.callPackage ./pkgs/zathura_rice {};
       }

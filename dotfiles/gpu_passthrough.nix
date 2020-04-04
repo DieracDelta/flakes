@@ -21,5 +21,5 @@
     "/dev/rtc","/dev/hpet", "/dev/sev"
     ]
     '';
-  boot.kernelPatches = [ { name = "novi reset patch"; patch = /home/jrestivo/Downloads/nixos/reset_bug_patch.patch; } ];
+  boot.kernelPatches = [ { name = "novi reset patch"; patch = ./reset_bug_patch.patch; } ];
 }

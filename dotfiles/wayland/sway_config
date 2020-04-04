@@ -49,8 +49,8 @@ set $mod Mod1
 bindsym $mod+Return exec $term
 # TODO fix
 bindsym $mod+Shift+x kill
-bindsym $mod+d exec XDG_CONFIG_HOME="/etc/wofi" wofi --style $HOME/.config/sway/wofi_style.css --conf $HOME/.config/sway/wofi_config
-bindsym $mod+n exec bash /etc/config/wofi/wofi_parse.sh
+bindsym $mod+d exec wofi --style /etc/wofi/style.css --conf /etc/wofi/config
+bindsym $mod+n exec bash /etc/wofi/wofi_parse.sh
 
 floating_modifier $mod normal
 bindsym $mod+Shift+c reload
@@ -172,9 +172,11 @@ bindsym $mod+p exec grim -g "$(slurp)" -t "png" - | wl-copy
 exec Discord
 exec pithos
 exec pavucontrol
-exec firefox
+exec qutebrowser
+exec chromium
 
-assign [app_id="^firefox$"] workspace 9
+assign [app_id="^qutebrowser$"] workspace 9
+assign [app_id="chromium^$"] workspace 2
 assign [app_id=null] workspace 1
 assign [app_id="^pavucontrol$"] workspace 2
 assign [app_id=".*pithos.*"] workspace 2

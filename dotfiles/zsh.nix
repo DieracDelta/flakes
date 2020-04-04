@@ -30,7 +30,10 @@
     "alacritty_x" = "env WINIT_UNIX_BACKEND=x11 alacritty & disown && exit";
     "nu" = "sudo NIXOS_CONFIG=$HOME/.config/nixpkgs/configuration.nix nixos-rebuild switch";
     # run lorri
-    "rl" = "lorri init";
+    "rl" = "lorri init && direnv allow";
+    "cdh" = "cd $HOME";
+    "emacs_headless" = "emacs -nw";
+    "zathura" = "zathura_pwyal.sh";
   };
   # keys.sh contains a bunch of my keys
   programs.zsh.initExtra = builtins.readFile ./keys.sh + builtins.readFile ./zshrc;

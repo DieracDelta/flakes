@@ -11,6 +11,8 @@
     /etc/nixos/hardware-configuration.nix
       ./dotfiles/docker.nix
       ./dotfiles/wayland/sway_service.nix
+      ./block_hosts/hosts.nix
+      /*./dotfiles/emacs.nix*/
       /*./dotfiles/gpu_passthrough.nix*/
     ];
 
@@ -18,17 +20,19 @@
   virtualisation.docker.enable = true;
 
   boot.loader.systemd-boot.enable = true;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   environment.systemPackages =
     let textPack = with pkgs; [ neovim ];
-  wlPack = with pkgs; [ chromium wofi flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim ly];
-  cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd];
-  devPack = with pkgs; [ nodejs rustc cargo git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua emacs idea.idea-community john gdb direnv ];
+  wlPack = with pkgs; [ chromium flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim ly unzip];
+  cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd sd tealdeer htop wget];
+  devPack = with pkgs; [ nodejs git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua idea.idea-community gdb direnv ];
   utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
   gamingPack = with pkgs; [ steam mesa gnuchess];
-  bapPack = with pkgs; [ libbap skopeo python27 m4 z3];
+  /*bapPack = with pkgs; [ libbap skopeo python27 m4];*/
   appPack = with pkgs; [ discord zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty ];
+  hackPack = with pkgs; [ghidra-bin john];
   pythonPack = with pkgs;
   let my-python-packages = python-packages: with python-packages; [
     pywal jedi flake8 pep8 tesserocr pillow autopep8 xdot
@@ -37,14 +41,14 @@
   swayPack = [
     (pkgs.makeDesktopItem {
      name = "Sway_TESTING";
-     desktopName = "Sway";
+     desktopName = "Sway_TESTING";
      comment = "An i3-compatible Wayland Compositor";
      exec = "sway";
      type = "Application";
      })
   ];
 
-  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack bapPack pythonPack swayPack];
+  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack swayPack pythonPack hackPack];
 
   environment.etc = {
     "sway/config".source = ./dotfiles/wayland/sway_config;
@@ -54,8 +58,8 @@
     "wofi/config".source = ./dotfiles/wayland/wofi/wofi_config;
     "wofi/wofi_parse.sh".source = ./dotfiles/wayland/wofi/wofi_parse.sh;
     "rootbar/handler_script.lua".source = ./dotfiles/wayland/rootbar/handler_script.lua;
+    "rootbar/handler_script.lua".mode = "0666";
   };
-
 
 
   environment.variables = {
