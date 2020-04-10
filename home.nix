@@ -14,8 +14,14 @@
   programs.tmux.extraConfig = builtins.readFile ./dotfiles/tmux.conf;
 
 
-  nixpkgs.overlays = [ (import ./overs) ] ;
-  home.packages = [ pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.deepfry pkgs.imagemagick pkgs.wofi pkgs.zathura_rice];
+  nixpkgs.overlays = [ (import ./overs)
+      (import (builtins.fetchTarball {
+               url = https://github.com/nix-community/emacs-overlay/archive/master.tar.gz;
+               }))
+  ] ;
+  home.packages = [
+    pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.deepfry pkgs.imagemagick pkgs.wofi pkgs.zathura_rice
+  ];
   manual.html.enable = true;
 
 

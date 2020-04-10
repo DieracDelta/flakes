@@ -7,7 +7,8 @@ client.focused $color0 $background $foreground $color7 $background
 set $mod Mod1
 set $mod_alt Mod4
 
-bindsym $mod+t exec pkill -9 rootbar && swaymsg reload
+#bindsym $mod+t exec pkill -9 rootbar && swaymsg reload
+bindsym $mod+t exec emacsclient -c
 
 set $left h
 set $down j

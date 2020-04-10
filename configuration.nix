@@ -24,31 +24,22 @@
 
   environment.systemPackages =
     let textPack = with pkgs; [ neovim ];
-  wlPack = with pkgs; [ chromium flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim ly unzip];
+  wlPack = with pkgs; [ chromium flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim unzip];
   cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd sd tealdeer htop wget];
   devPack = with pkgs; [ nodejs git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua idea.idea-community gdb direnv ];
   utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
-  gamingPack = with pkgs; [ steam mesa gnuchess];
+  gamingPack = with pkgs; [ steam mesa gnuchess angband winetricks protontricks cabextract];
   /*bapPack = with pkgs; [ libbap skopeo python27 m4];*/
   appPack = with pkgs; [ discord zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty ];
   hackPack = with pkgs; [ghidra-bin john];
-  pythonPack = with pkgs;
+  python37Pack = with pkgs;
   let my-python-packages = python-packages: with python-packages; [
     pywal jedi flake8 pep8 tesserocr pillow autopep8 xdot
   ]; python-with-my-packages = python37.withPackages my-python-packages; in [python-with-my-packages];
 
-  swayPack = [
-    (pkgs.makeDesktopItem {
-     name = "Sway_TESTING";
-     desktopName = "Sway_TESTING";
-     comment = "An i3-compatible Wayland Compositor";
-     exec = "sway";
-     type = "Application";
-     })
-  ];
 
-  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack swayPack pythonPack hackPack];
+  in builtins.concatLists [ textPack wlPack cliPack devPack toolPack utilsPack appPack gamingPack python37Pack hackPack];
 
   environment.etc = {
     "sway/config".source = ./dotfiles/wayland/sway_config;
@@ -61,14 +52,27 @@
     "rootbar/handler_script.lua".mode = "0666";
   };
 
-
   environment.variables = {
     BROWSER="qutebrowser";
     EDITOR="nvim";
   };
 
   services.gnome3.gnome-keyring.enable = true;
+  services.xserver = {
+    enable = true;
 
+    desktopManager = {
+      default = "none+i3";
+      xterm.enable = true;
+    };
+
+    windowManager.i3 = {
+      enable = true;
+      extraPackages = with pkgs; [
+        dmenu #application launcher most people use
+      ];
+    };
+  };
 
   nix.allowedUsers = [ "jrestivo" ];
 
@@ -95,6 +99,7 @@
     d2coding
       iosevka
       aileron
+      nerdfonts
   ];
 
   networking.hostName = "nixos"; # Define your hostname.

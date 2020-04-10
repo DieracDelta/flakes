@@ -67,15 +67,6 @@
       sha256 = "1ib98j7v6hy3x43dcli59q5rpg9bamrg335zc4fw91hk6jcxvy45";
     };
   }
-  /*{*/
-    /*name = "zsh-nix-shell";*/
-    /*src = pkgs.fetchFromGitHub {*/
-      /*owner = "chisui";*/
-      /*repo = "zsh-nix-shell";*/
-      /*rev = "a65382a353eaee5a98f068c330947c032a1263bb";*/
-      /*sha256 = "0l41ac5b7p8yyjvpfp438kw7zl9dblrpd7icjg1v3ig3xy87zv0n";*/
-    /*};*/
-  /*}*/
   ];
 
 }
