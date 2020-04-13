@@ -13,6 +13,7 @@
     /* new extensions */
     epkgs.projectile
     epkgs.lsp-mode
+    epkgs.rust-mode
     epkgs.git-gutter
     epkgs.lsp-ui
     epkgs.flycheck
@@ -23,6 +24,8 @@
     epkgs.dap-mode
     epkgs.direnv
     epkgs.use-package
+    epkgs.counsel-projectile
+    epkgs.nix-mode
   ];
   home.file = {
     ".emacs.d" = {
