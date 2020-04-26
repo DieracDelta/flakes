@@ -20,7 +20,7 @@
                }))
   ] ;
   home.packages = [
-    pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.deepfry pkgs.imagemagick pkgs.wofi pkgs.zathura_rice
+    pkgs.rootbar pkgs.clipman pkgs.wl-clipboard pkgs.deepfry pkgs.imagemagick pkgs.wofi pkgs.zathura_rice pkgs.zlib.out pkgs.opam pkgs.m4 pkgs.nodePackages.node2nix
   ];
   manual.html.enable = true;
 

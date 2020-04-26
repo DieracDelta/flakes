@@ -167,7 +167,7 @@ bindsym $mod+Shift+Down exec playerctl pause
 bindsym $mod+Shift+d exec makoctl dismiss -a
 
 
-bindsym $mod+p exec grim -g "$(slurp)" -t "png" - | wl-copy
+bindsym $mod+p exec zsh -c "source /home/jrestivo/.zshrc ; post_image"
 
 
 exec Discord

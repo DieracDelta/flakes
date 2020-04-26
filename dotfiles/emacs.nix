@@ -10,7 +10,6 @@
     epkgs.spacemacs-theme
     epkgs.ivy
     epkgs.counsel
-    /* new extensions */
     epkgs.projectile
     epkgs.lsp-mode
     epkgs.rust-mode
@@ -26,6 +25,8 @@
     epkgs.use-package
     epkgs.counsel-projectile
     epkgs.nix-mode
+    epkgs.tuareg
+    epkgs.merlin
   ];
   home.file = {
     ".emacs.d" = {

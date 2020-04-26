@@ -1,3 +1,10 @@
+;; TODO figure out how to do this by default, because this is pretty brittle
+(add-to-list 'exec-path "/home/jrestivo/.opam/4.09.1/bin/")
+(setenv "OCAML_TOPLEVEL_PATH" (concat "/home/jrestivo/.opam/4.09.1/lib/toplevel"))
+(setenv "CAML_LD_LIBRARY_PATH" (concat "/home/jrestivo/.opam/4.09.1/lib/stublibs" ":" "/home/jrestivo/.opam/4.09.1/lib/ocaml/stublibs" ":" "/home/jrestivo/.opam/4.09.1/lib/ocaml"))
+
+(global-visual-line-mode nil)
+
 (require 'package)
 (setq package-archives nil)
 (setq package-enable-at-startup nil)
@@ -12,8 +19,15 @@
   :config
   (direnv-mode))
 
+(recentf-mode 1)
+(setq recentf-max-menu-items 25)
+(setq recentf-max-saved-items 25)
+
+
 (use-package nix-mode
   :mode "\\.nix\\'")
+
+(use-package merlin)
 
 (use-package company-lsp
   :defer t)
@@ -22,15 +36,16 @@
 
 ;; increase performance for lsp servers
 (setq gc-cons-threshold 100000000)
-(setq read-process-output-max (* 1024 1024)) 
+(setq read-process-output-max (* 1024 1024))
 
 (use-package lsp-mode
   :after (direnv evil)
   :hook (
 	 (rust-mode . lsp-deferred)
 	 (python-mode . lsp-deferred)
+	 (tuareg-mode . lsp-deferred)
 	 )
-  :config 
+  :config
   (setq lsp-enable-snippet nil)
   (setq lsp-file-watch-ignored '(
 				 "[/\\\\]\\.direnv$"
@@ -61,8 +76,13 @@
 
 
 (use-package hydra)
+;; remember that in evil mode, cntrl-z enters emacs mode
+;; and cntrl-z again undoes this
+
+;; for some reason this won't work when I put it in the :config section
+(setq evil-respect-visual-line-mode t)
 (use-package evil
-  :init (evil-mode )
+  :init (evil-mode)
   )
 (use-package counsel)
 (use-package projectile
@@ -75,6 +95,7 @@
 (define-key evil-visual-state-map (kbd "SPC") 'hydra-space/body)
 (define-key evil-motion-state-map (kbd "SPC") 'self-insert-command)
 (define-key evil-insert-state-map (kbd "SPC") 'self-insert-command)
+
 ;;; have to turn this off
 (hydra-set-property 'hydra-space :verbosity 0)
 (hydra-set-property 'hydra-buffers :verbosity 0)
@@ -108,7 +129,12 @@
   ;; jumping between syntax errors
   ("j" flycheck-next-error  :exit t)
   ("k" flycheck-previous-error  :exit t)
+  ("z" counsel-yank-pop  :exit t)
+  ;; reminder that for multiple shells, C-u <SPC> s
+  ("t" shell  :exit t)
+  ("m" toggle-frame-fullscreen :exit t)
   )
+
   ;; (lsp-command-map)
 ;; probably want top if I even want this on...
 (use-package lsp-ui
@@ -192,6 +218,7 @@
 (defhydra hydra-file
   (:hint nil)
   ("f" counsel-find-file :exit t)
+  ("r" counsel-recentf :exit t)
   )
 
 (defhydra hydra-projectile
@@ -199,7 +226,12 @@
   ("p" counsel-projectile-switch-project :exit t)
   ("f" counsel-projectile-find-file :exit t)
   ("a" projectile-add-known-project :exit t)
-  )
+  ;;  for further customization https://github.com/ericdanan/counsel-projectile/blob/master/counsel-projectile.el
+  ("g" (counsel-projectile-switch-project 13) :exit t)
+)
+
+(setq projectile-globally-ignored-file-suffixes '("^\#.*\#$"))
+(setq ivy-extra-directories  '("../"))
 
 ;; theming
 (use-package spacemacs-common)
@@ -215,13 +247,21 @@
 (use-package git-gutter)
 (global-git-gutter-mode t)
 
-(savehist-mode 1)
+(setq undo-tree-auto-save-history t)
 (setq savehist-file "~/.emacs.d/tmp/savehist")
+(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo")))
+(setq backup-directory-alist `(("." . "~/.emacs.d/tmp/")))
+
+(global-undo-tree-mode)
+(savehist-mode 1)
+
 
 (use-package ivy)
 (ivy-mode 1)
 (setq ivy-use-virtual-buffers t)
 (setq enable-recursive-minibuffers t)
+;; we really want to be able to browse
+(setq ivy-height 80)
 
 ;; no need for direnv show project details
 

@@ -34,6 +34,8 @@
     "cdh" = "cd $HOME";
     "emacs_headless" = "emacs -nw";
     "zathura" = "zathura_pwyal.sh";
+    "sl" = "ls";
+    "bahs" = "bash";
   };
   # keys.sh contains a bunch of my keys
   programs.zsh.initExtra = builtins.readFile ./keys.sh + builtins.readFile ./zshrc;

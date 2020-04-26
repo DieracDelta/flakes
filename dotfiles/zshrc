@@ -54,6 +54,19 @@ function post_image {
         echo -n "https://endpoints.justinrestivo.me/"$(echo -n '{"key": "'$ENDPOINTKEY'", "doCasify" : false, "src":"data:image/jpg;base64,'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST https://endpoints.justinrestivo.me/image -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | wl-copy
 }
 
+function post_image_rust {
+        ENDPOINTKEY_2="THIS_IS_A_KEY"
+        grim -g "$(slurp)" -t "png" $MAIM_LOCATION
+        echo -n "localhost:8000/image/view/"$(echo -n '{"key": "'$ENDPOINTKEY_2'", "src":"'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST localhost:8000/image/post -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | wl-copy
+}
+
+function post_code_rust {
+        ENDPOINTKEY_2="THIS_IS_A_KEY"
+        INPUT_UNESCAPED=$(cat)
+        INPUT=''${INPUT_UNESCAPED//\\/\\\\}
+        echo -n "localhost:8000/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl -X POST localhost:8000/code/post -H 'Content-Type: application/json' --data @- | jq -r '.link') | wl-copy
+}
+
 export FZF_COMPLETION_TRIGGER='~~'
 
 # Use fd (https://github.com/sharkdp/fd) instead of the default find
@@ -123,3 +136,4 @@ function da() {
 }
 # nix direnv hook
 eval "$(direnv hook zsh)"
+eval $(opam env)
