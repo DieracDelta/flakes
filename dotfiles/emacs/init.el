@@ -4,6 +4,7 @@
 (setenv "CAML_LD_LIBRARY_PATH" (concat "/home/jrestivo/.opam/4.09.1/lib/stublibs" ":" "/home/jrestivo/.opam/4.09.1/lib/ocaml/stublibs" ":" "/home/jrestivo/.opam/4.09.1/lib/ocaml"))
 
 (global-visual-line-mode nil)
+(winner-mode 1)
 
 (require 'package)
 (setq package-archives nil)
@@ -44,6 +45,7 @@
 	 (rust-mode . lsp-deferred)
 	 (python-mode . lsp-deferred)
 	 (tuareg-mode . lsp-deferred)
+	 (c++-mode . lsp-deferred)
 	 )
   :config
   (setq lsp-enable-snippet nil)
@@ -202,7 +204,12 @@
   ("h" evil-window-left :exit t)
   ("k" evil-window-up :exit t)
   ("j" evil-window-down :exit t)
+  ("m" (toggle_max) :exit t)
   )
+
+(defun toggle_max () (if (eq (length (window-list)) 1) (winner-undo) (delete-other-windows) ) )
+
+(toggle_max)
 
 ;; gs
 (defhydra hydra-gs
@@ -228,7 +235,11 @@
   ("a" projectile-add-known-project :exit t)
   ;;  for further customization https://github.com/ericdanan/counsel-projectile/blob/master/counsel-projectile.el
   ("g" (counsel-projectile-switch-project 13) :exit t)
+  ("r" (projectile-remove-current-project-from-known-projects) :exit t)
+  ;; ("c" (lambda-g-and-exit) :exit t)
 )
+
+(setq initial-scratch-message "")
 
 (setq projectile-globally-ignored-file-suffixes '("^\#.*\#$"))
 (setq ivy-extra-directories  '("../"))
@@ -242,6 +253,7 @@
 
 (use-package magit)
 (use-package evil-magit)
+(setq magit-display-buffer-function #'magit-display-buffer-fullframe-status-v1)
 
 ;; git magic markings
 (use-package git-gutter)
