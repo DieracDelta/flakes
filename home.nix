@@ -3,11 +3,15 @@
 {
   programs.home-manager.enable = true;
 
+  home.sessionVariables = {
+    EDITOR = "nvim";
+  };
+
   home.stateVersion = "19.09";
   programs.git.enable = true;
 
   programs.fzf.enableZshIntegration = true;
-  imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./creds.nix ./dotfiles/emacs.nix];
+  imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./creds.nix ./dotfiles/emacs.nix ];
 
   programs.tmux.enable = true;
   programs.tmux.historyLimit = 1000000;

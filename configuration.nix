@@ -27,12 +27,12 @@
   wlPack = with pkgs; [ chromium flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim unzip];
   cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd sd tealdeer htop wget ispell];
   devPack = with pkgs; [ nodejs git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua idea.idea-community gdb direnv ];
-  utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1];
+  utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1 zlib.dev];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
   gamingPack = with pkgs; [ steam mesa gnuchess angband winetricks protontricks cabextract];
   /*deploymentPack = with pkgs; [hugo];*/
   /*bapPack = with pkgs; [ libbap skopeo python27 m4];*/
-  appPack = with pkgs; [ discord-canary zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty keepass mimic];
+  appPack = with pkgs; [ discord-canary zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty keepass mimic zoom-us];
   hackPack = with pkgs; [ghidra-bin john];
   python37Pack = with pkgs;
   let my-python-packages = python-packages: with python-packages; [
@@ -59,21 +59,21 @@
   };
 
   services.gnome3.gnome-keyring.enable = true;
-  services.xserver = {
-    enable = true;
-
-    desktopManager = {
-      default = "none+i3";
-      xterm.enable = true;
-    };
-
-    windowManager.i3 = {
-      enable = true;
-      extraPackages = with pkgs; [
-        dmenu #application launcher most people use
-      ];
-    };
-  };
+#  services.xserver = {
+#    enable = true;
+#
+#    desktopManager = {
+#      default = "none+i3";
+#      xterm.enable = true;
+#    };
+#
+#    windowManager.i3 = {
+#      enable = true;
+#      extraPackages = with pkgs; [
+#        dmenu #application launcher most people use
+#      ];
+#    };
+#  };
 
   nix.allowedUsers = [ "jrestivo" ];
 
