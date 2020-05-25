@@ -35,42 +35,42 @@
 (use-package lsp-mode
   :after (direnv evil)
   :hook (
-	 (rust-mode . lsp-deferred)
-	 (python-mode . lsp-deferred)
-	 (tuareg-mode . lsp-deferred)
-	 (c++-mode . lsp-deferred))
+         (rust-mode . lsp-deferred)
+         (python-mode . lsp-deferred)
+         (tuareg-mode . lsp-deferred)
+         (c++-mode . lsp-deferred))
   :config
   ;; increase performance for lsp servers
   (setq gc-cons-threshold 100000000)
   (setq read-process-output-max (* 1024 1024))
   (setq lsp-enable-snippet nil)
   (setq lsp-file-watch-ignored
-	'(
-	  "[/\\\\]\\.direnv$"
-					; SCM tools
-	  "[/\\\\]\\.git$"
-	  "[/\\\\]\\.hg$"
-	  "[/\\\\]\\.bzr$"
-	  "[/\\\\]_darcs$"
-	  "[/\\\\]\\.svn$"
-	  "[/\\\\]_FOSSIL_$"
-					; IDE tools
-	  "[/\\\\]\\.idea$"
-	  "[/\\\\]\\.ensime_cache$"
-	  "[/\\\\]\\.eunit$"
-	  "[/\\\\]node_modules$"
-	  "[/\\\\]\\.fslckout$"
-	  "[/\\\\]\\.tox$"
-	  "[/\\\\]\\.stack-work$"
-	  "[/\\\\]\\.bloop$"
-	  "[/\\\\]\\.metals$"
-	  "[/\\\\]target$"
-					; Autotools output
-	  "[/\\\\]\\.deps$"
-	  "[/\\\\]build-aux$"
-	  "[/\\\\]autom4te.cache$"
-	  "[/\\\\]\\.reference$"))
-  )
+   '(
+     "[/\\\\]\\.direnv$"
+           ; SCM tools
+     "[/\\\\]\\.git$"
+     "[/\\\\]\\.hg$"
+     "[/\\\\]\\.bzr$"
+     "[/\\\\]_darcs$"
+     "[/\\\\]\\.svn$"
+     "[/\\\\]_FOSSIL_$"
+           ; IDE tools
+     "[/\\\\]\\.idea$"
+     "[/\\\\]\\.ensime_cache$"
+     "[/\\\\]\\.eunit$"
+     "[/\\\\]node_modules$"
+     "[/\\\\]\\.fslckout$"
+     "[/\\\\]\\.tox$"
+     "[/\\\\]\\.stack-work$"
+     "[/\\\\]\\.bloop$"
+     "[/\\\\]\\.metals$"
+     "[/\\\\]target$"
+           ; Autotools output
+     "[/\\\\]\\.deps$"
+     "[/\\\\]build-aux$"
+     "[/\\\\]autom4te.cache$"
+     "[/\\\\]\\.reference$")))
+
 
 
 (use-package hydra)
@@ -90,8 +90,8 @@
   ;; disable that so I don't keep on pressing it and crying
   (:map evil-visual-state-map ("C-z" . nil))
   (:map evil-motion-state-map ("C-z" . nil))
-  (:map evil-insert-state-map ("C-z" . nil))
-  )
+  (:map evil-insert-state-map ("C-z" . nil)))
+
 
 (use-package counsel)
 (use-package projectile
@@ -133,14 +133,15 @@
   ("z" counsel-yank-pop  :exit t)
   ;; reminder that for multiple shells, C-u <SPC> s
   ("t" shell  :exit t)
-  ("m" toggle-frame-fullscreen :exit t)
-  )
+  ("m" toggle-frame-fullscreen :exit t))
 
 ;; jump to defn of symbol if lsp isn't running else use lsp
 (defun jtd ()
   (if (eq 'emacs-lisp-mode major-mode) 
       (describe-symbol (intern-soft (thing-at-point 'symbol 1)))
-    (lsp-find-definition)))
+    (if (bound-and-true-p lsp-mode) (lsp-find-definition)
+     (dumb-jump-go))))
+ 
 
 ;; (lsp-command-map)
 ;; probably want top if I even want this on...
@@ -181,7 +182,8 @@
 
 
 (defhydra hydra-comments
-  ;; TODO do something a bit more fancy here (so you can do this without having a region selected)
+  ;; TODO do something a bit more fancy here
+  ;; (so you can do this without having a region selected)
   (:hint nil :verbosity 0)
   ("<SPC>" comment-or-uncomment-region :exit t))
 
@@ -233,7 +235,8 @@
   ("p" counsel-projectile-switch-project :exit t)
   ("f" counsel-projectile-find-file :exit t)
   ("a" projectile-add-known-project :exit t)
-  ;;  for further customization https://github.com/ericdanan/counsel-projectile/blob/master/counsel-projectile.el
+  ;;  for further customization
+  ;; https://github.com/ericdanan/counsel-projectile/blob/master/counsel-projectile.el
   ("g" (counsel-projectile-switch-project 13) :exit t)
   ("r" (projectile-remove-current-project-from-known-projects) :exit t))
 
@@ -252,14 +255,14 @@
   :after (evil magit)
   :config 
   ;; get fullscreen magit by default (instead of a split)
-  (setq magit-display-buffer-function #'magit-display-buffer-fullframe-status-v1)
-  )
+  (setq magit-display-buffer-function #'magit-display-buffer-fullframe-status-v1))
+
 
 ;; git magic markings
 (use-package git-gutter
   :config
-  (global-git-gutter-mode t)
-  )
+  (global-git-gutter-mode t))
+
 
 ;; sane, clean defaults for history
 (setq undo-tree-auto-save-history t)
@@ -274,18 +277,17 @@
 (global-display-line-numbers-mode)
 
 
-(use-package ivy
-  :config
-  (ivy-mode 1)
-  ;; don't show current directory
-  (setq ivy-extra-directories  '("../"))
-  (setq ivy-use-virtual-buffers t)
-  (setq enable-recursive-minibuffers t)
-  ;; we really want to be able to browse with a tall boi
-  (setq ivy-height 25)
-  (push (cons #'swiper (cdr (assq t ivy-re-builders-alist)))
-	ivy-re-builders-alist)
-  (push (cons t #'ivy--regex-fuzzy) ivy-re-builders-alist))
+;(use-package ivy
+  ;:config
+  ;(ivy-mode 1)
+  ;;; don't show current directory
+  ;(setq ivy-extra-directories  '("../"))
+  ;(setq ivy-use-virtual-buffers t)
+  ;(setq enable-recursive-minibuffers t)
+  ;;; we really want to be able to browse with a tall boi
+  ;(setq ivy-height 25)
+  ;(push (cons #'swiper (cdr (assq t ivy-re-builders-alist))) ivy-re-builders-alist)
+  ;(push (cons t #'ivy--regex-fuzzy) ivy-re-builders-alist))
 
 ;; TODOS 
 
@@ -310,20 +312,17 @@
 
 
 
-;; (global-set-key [f5] 'evil-write)
-
-
 ;; (defun highlight-symbol-mode-on () (highlight-symbol-mode 1))
-;; (define-globalized-minor-mode global-highlight-symbol-mode highlight-symbol-mode highlight-symbol-mode-on)
+;; (define-globalized-minor-mode
+;; global-highlight-symbol-mode highlight-symbol-mode highlight-symbol-mode-on)
 ;; (global-highlight-symbol-mode 1)
 
 ;; highlight globally
 (setq highlight-symbol-disable '())
 (add-hook 'after-change-major-mode-hook
-	  (lambda ()
-	    ;; if 
-	    (if (null (memql major-mode highlight-symbol-disable))
-		(highlight-symbol-mode))))
+    (lambda ()
+      (if (null (memql major-mode highlight-symbol-disable))
+          (highlight-symbol-mode))))
 ;; (highlight-symbol-mode nil)
 ;; (highlight-symbol-mode 1)
 (use-package highlight-symbol
@@ -333,15 +332,15 @@
   ;; 	 ([(shift f3)] highlight-symbol-prev)
   ;; 	 ([(meta f3)] highlight-symbol-query-replace))
   :config
-  (setq highlight-symbol-idle-delay 0 )
+  (setq highlight-symbol-idle-delay 0.1)
   (set-face-background 'highlight-symbol-face "#D48B2C")
-  (set-face-foreground 'highlight-symbol-face "#D44B2C")
-  )
+  (set-face-foreground 'highlight-symbol-face "#D44B2C"))
 
-(directory-files "/")
 
-(use-package swiper
-  :bind ("`" . swiper))
+;; (directory-files "/")
+
+;; (use-package swiper
+;;   :bind ("`" . swiper))
 
 ;; (global-set-key "C-f4" 'highlight-symbol)
 ;; ;; low effort search
@@ -364,12 +363,13 @@
   :hook  (prog-mode . config_indent_stuff)
   :config
   (defun config_indent_stuff ()
-    (highlight-indent-guides-mode)
+    ; TODO fix
+    ;(if (null (memql major-mode lisp-mode (highlight-indent-guides-mode))))
     (setq highlight-indent-guides-method 'character)
     (setq highlight-indent-guides-character ?\|)
     (set-face-background 'highlight-indent-guides-character-face nil)
-    (set-face-foreground 'highlight-indent-guides-character-face "#ff0000")
-    (set-face-background 'highlight-indent-guides-top-character-face nil )
+    (set-face-foreground 'highlight-indent-guides-character-face "#ff00000")
+    (set-face-background 'highlight-indent-guides-top-character-face nil)
     (set-face-foreground 'highlight-indent-guides-top-character-face "#00ff5f")
     (set-face-foreground 'highlight-indent-guides-stack-character-face "#3f00ff")
     (setq highlight-indent-guides-responsive 'stack)
@@ -381,7 +381,48 @@
 ;; they are very annoying
 (global-unset-key (kbd "C-z"))
 (global-unset-key (kbd "C-x C-z"))
+(global-unset-key (kbd "<f5>"))
+(global-set-key (kbd "<f5>") 'evil-write)
 
 ;; set up smtlib mode by adding it to the list of buffer filename-mode pairs
 (setq auto-mode-alist (cons '("\\.smt$" . smtlib-mode) auto-mode-alist))
+(blink-cursor-mode 0)
 (autoload 'smtlib-mode "smtlib" "Major mode for SMTLIB" t)
+
+(use-package parinfer-rust-mode
+  :hook (
+         ;(lisp-mode . parinfer-rust-mode)
+	 ;(emacs-lisp-mode . parinfer-rust-mode)
+	 (common-lisp-mode . parinfer-rust-mode))
+  :init
+  (module-load
+   "/nix/store/xdbkvlm537iglj6rx8f0sjli9afbjyn1-parinfer-rust-mode-\
+overlay-0.4.3/lib/libparinfer_rust.so")
+  (setq parinfer-rust-library "/nix/store/xdbkvlm537iglj6rx8f0sjli9afbjyn1-parinfer-rust\
+-mode-overlay-0.4.3/lib/libparinfer_rust.so"))
+
+(set-fill-column 80)
+(setq display-fill-column-indicator-character nil)
+(add-hook 'find-file-hook
+      (lambda () (display-fill-column-indicator-mode 1)))
+
+;; TODO set cntrl-g to escape
+
+(setq max-lisp-eval-depth 99999)
+(setq max-specpdl-size 99999)
+
+(use-package eros
+  :hook (emacs-lisp-mode . eros-mode)
+  :config
+  (setq eros-eval-result-duration 600))
+
+
+
+;; configure mode-line
+(setq column-number-mode 1)
+
+(use-package all-the-icons)
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :config (setq doom-modeline-lsp t))

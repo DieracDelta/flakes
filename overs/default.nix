@@ -6,7 +6,9 @@ self: super: rec {
   clipman = super.callPackage ./pkgs/clipman { };
   deepfry = super.callPackage ./pkgs/deepfry {};
   imagemagick = super.callPackage ./pkgs/imagemagick {};
-  wofi             = super.callPackage ./pkgs/wofi {};
+  wofi = super.callPackage ./pkgs/wofi {};
   zathura_rice = super.callPackage ./pkgs/zathura_rice {};
-  smtlib-mode = super.callPackage ./pkgs/smtlib-mode {};
+  parinfer-rust-mode = super.callPackage ./pkgs/parinfer-rust-mode {};
+  next-browser-head = super.callPackage ./pkgs/next {};
+  wl-clipboard-x11 = super.callPackage ./pkgs/wl-clipboard-x11 {};
 }

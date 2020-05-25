@@ -26,13 +26,13 @@
     let textPack = with pkgs; [ neovim ];
   wlPack = with pkgs; [ chromium flameshot wev swaylock gtk3 xdg_utils shared_mime_info wf-recorder slurp grim unzip];
   cliPack = with pkgs; [ fzf zsh oh-my-zsh ripgrep neofetch tmux playerctl fasd jq haskellPackages.cryptohash-sha256 mosh pstree tree ranger nix-index mpv youtube-dl file fd sd tealdeer htop wget ispell];
-  devPack = with pkgs; [ nodejs git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua idea.idea-community gdb direnv ];
+  devPack = with pkgs; [ cask nodejs git universal-ctags qemu virt-manager libvirt OVMF looking-glass-client nasm lua idea.idea-community gdb direnv ];
   utilsPack = with pkgs; [ binutils gcc gnumake openssl pkgconfig ytop pciutils usbutils lm_sensors liblqr1 zlib.dev];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
-  gamingPack = with pkgs; [ steam mesa gnuchess angband winetricks protontricks cabextract];
+  gamingPack = with pkgs; [ cowsay steam mesa gnuchess angband winetricks protontricks cabextract];
   /*deploymentPack = with pkgs; [hugo];*/
   /*bapPack = with pkgs; [ libbap skopeo python27 m4];*/
-  appPack = with pkgs; [ discord-canary zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty keepass mimic zoom-us];
+  appPack = with pkgs; [ discord-canary zathura mumble feh mplayer slack weechat llvm gmp.static.dev skypeforlinux spotify browsh firefox keybase keybase-gui kbfs qutebrowser obs-studio graphviz minecraft signal-desktop alacritty keepass mimic zoom-us ];
   hackPack = with pkgs; [ghidra-bin john];
   python37Pack = with pkgs;
   let my-python-packages = python-packages: with python-packages; [
@@ -98,9 +98,12 @@
 
   fonts.fonts = with pkgs; [
     d2coding
-      iosevka
-      aileron
-      nerdfonts
+    iosevka
+    aileron
+    nerdfonts
+    fira-code
+    fira-code-symbols
+    fira-mono
   ];
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -123,6 +126,11 @@
 
   system.stateVersion = "19.09"; # Did you read the comment? No I did not.
 
-    programs.mosh.enable = true;
+  programs.mosh.enable = true;
+
+  nixpkgs.config.permittedInsecurePackages = [
+    "openssl-1.0.2u"
+  ];
+
 }
 
