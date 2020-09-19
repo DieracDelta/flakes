@@ -45,31 +45,31 @@
   (setq read-process-output-max (* 1024 1024))
   (setq lsp-enable-snippet nil)
   (setq lsp-file-watch-ignored
-   '(
-     "[/\\\\]\\.direnv$"
-           ; SCM tools
-     "[/\\\\]\\.git$"
-     "[/\\\\]\\.hg$"
-     "[/\\\\]\\.bzr$"
-     "[/\\\\]_darcs$"
-     "[/\\\\]\\.svn$"
-     "[/\\\\]_FOSSIL_$"
-           ; IDE tools
-     "[/\\\\]\\.idea$"
-     "[/\\\\]\\.ensime_cache$"
-     "[/\\\\]\\.eunit$"
-     "[/\\\\]node_modules$"
-     "[/\\\\]\\.fslckout$"
-     "[/\\\\]\\.tox$"
-     "[/\\\\]\\.stack-work$"
-     "[/\\\\]\\.bloop$"
-     "[/\\\\]\\.metals$"
-     "[/\\\\]target$"
-           ; Autotools output
-     "[/\\\\]\\.deps$"
-     "[/\\\\]build-aux$"
-     "[/\\\\]autom4te.cache$"
-     "[/\\\\]\\.reference$")))
+        '(
+          "[/\\\\]\\.direnv$"
+                                        ; SCM tools
+          "[/\\\\]\\.git$"
+          "[/\\\\]\\.hg$"
+          "[/\\\\]\\.bzr$"
+          "[/\\\\]_darcs$"
+          "[/\\\\]\\.svn$"
+          "[/\\\\]_FOSSIL_$"
+                                        ; IDE tools
+          "[/\\\\]\\.idea$"
+          "[/\\\\]\\.ensime_cache$"
+          "[/\\\\]\\.eunit$"
+          "[/\\\\]node_modules$"
+          "[/\\\\]\\.fslckout$"
+          "[/\\\\]\\.tox$"
+          "[/\\\\]\\.stack-work$"
+          "[/\\\\]\\.bloop$"
+          "[/\\\\]\\.metals$"
+          "[/\\\\]target$"
+                                        ; Autotools output
+          "[/\\\\]\\.deps$"
+          "[/\\\\]build-aux$"
+          "[/\\\\]autom4te.cache$"
+          "[/\\\\]\\.reference$")))
 
 
 
@@ -257,7 +257,6 @@
   ;; get fullscreen magit by default (instead of a split)
   (setq magit-display-buffer-function #'magit-display-buffer-fullframe-status-v1))
 
-
 ;; git magic markings
 (use-package git-gutter
   :config
@@ -363,8 +362,8 @@
   :hook  (prog-mode . config_indent_stuff)
   :config
   (defun config_indent_stuff ()
-    ; TODO fix
-    ;(if (null (memql major-mode lisp-mode (highlight-indent-guides-mode))))
+                                        ; TODO fix
+                                        ;(if (null (memql major-mode lisp-mode (highlight-indent-guides-mode))))
     (setq highlight-indent-guides-method 'character)
     (setq highlight-indent-guides-character ?\|)
     (set-face-background 'highlight-indent-guides-character-face nil)

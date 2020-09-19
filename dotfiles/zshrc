@@ -1,4 +1,5 @@
 export _JAVA_AWT_WM_NONREPARENTING=1
+# UNCOMMENT IF YOU WANT YELLOW THEME
 cat $HOME/.cache/wal/sequences
 function post_code {
         INPUT_UNESCAPED=$(cat)

@@ -36,6 +36,7 @@
     "zathura" = "zathura_pwyal.sh";
     "sl" = "ls";
     "bahs" = "bash";
+    "heo" = "sshpass -f $HOME/work/.heopass ssh -p 2287 heo@70.126.197.80 -Y";
   };
   # keys.sh contains a bunch of my keys
   programs.zsh.initExtra = builtins.readFile ./keys.sh + builtins.readFile ./zshrc;

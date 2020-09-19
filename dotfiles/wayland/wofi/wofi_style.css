@@ -1,6 +1,5 @@
 window {
 	background-color: rgba(--wofi-rgb-color0,1);
-	font-family: iosevka;
 	transition: 1s ease-in-out;
 }
 #input {

@@ -3,13 +3,12 @@ bars=prim
 stylesheet=style.css
 watch_css=true
 
-prim-output=HDMI-A-1
+prim-output=DP-2
 prim-interval=100
 prim-height=35
 prim-left=ws
 prim-center=win
 prim-right=cpu,memory,date
-
 
 ws-dso=workspace
 ws-show_all=false

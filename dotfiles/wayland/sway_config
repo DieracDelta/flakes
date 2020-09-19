@@ -1,8 +1,10 @@
 include "$HOME/.cache/wal/colors-sway"
 
 #output DP-1 mode 1920x1080 pos 1920 0 bg $wallpaper stretch
-output HDMI-A-2 mode 1920x1080 pos 1920 0 bg $wallpaper stretch
-client.focused $color0 $background $foreground $color7 $background
+output HDMI-A-2 mode 1920x1080 pos 2560 0 bg $wallpaper stretch
+output DP-2 mode 2560x1440 pos 0 0 bg $wallpaper stretch
+#output DP-1 mode 1920x1080 pos 1920 0 bg $wallpaper stretch
+#client.focused $color0 $background $foreground $color7 $background
 
 set $mod Mod1
 set $mod_alt Mod4
@@ -109,6 +111,8 @@ bindsym $mod+Shift+p exec deepfry
 # Make the current focus fullscreen
 bindsym $mod+f fullscreen
 
+bindsym $mod+shift+f fullscreen global
+
 # Toggle the current focus between tiling and floating mode
 bindsym $mod+Shift+space floating toggle
 
@@ -167,7 +171,7 @@ bindsym $mod+Shift+Down exec playerctl pause
 bindsym $mod+Shift+d exec makoctl dismiss -a
 
 
-bindsym $mod+p exec zsh -c "source /home/jrestivo/.zshrc ; post_image"
+bindsym $mod+p exec zsh -c "grim -g '$(slurp)' -t 'png' - | wl-copy"
 
 
 exec Discord
