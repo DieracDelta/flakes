@@ -40,9 +40,10 @@
     #         url = https://github.com/nix-community/emacs-overlay/archive/977a98a80df29aa94aed9e1307aadfa79eed7624.tar.gz;
     #         }))
   ];
-  #home.packages = [
-  #  pkgs.imagemagick
-  #];
+  home.packages = [
+    pkgs.deepfry
+    pkgs.imagemagick
+  ];
 
   manual.html.enable = true;
   # for next browser

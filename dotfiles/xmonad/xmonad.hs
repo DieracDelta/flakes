@@ -46,23 +46,8 @@ main =
     =<< statusBar "xmobar" myXmobarPP (\x -> (XMonad.modMask x, xK_r)) myConfig
 
 -- color scheme:
--- #0d0b09 -- VERY DARK
--- #D0791A -- orange-ish
--- #B78B26 -- yellow
--- #DC9223 -- lighter yellow
--- #F49823 -- darker (ish) yellow
--- #F6AD2C
--- #DCC53A
--- #f4de94
--- #aa9b67
--- #D0791A
--- #B78B26
--- #DC9223
--- #F49823
--- #F6AD2C
--- #DCC53A
--- #f4de94
-
+-- #0d0b09 -- VERY DARK D0791A -- orange-ish B78B26 -- yellow DC9223 -- lighter yellow F49823 -- darker (ish) yellow
+-- F6AD2C -- DCC53A -- f4de94 -- aa9b67 -- D0791A -- B78B26 -- DC9223 -- F49823 -- F6AD2C -- DCC53A -- f4de94
 myXmobarPP = xmobarPP { ppCurrent = xmobarColor "#D0791A" "" . wrap "[" "]"  -- currently focused workspace
                       , ppHidden  = xmobarColor "#aa9b67" "" -- currently nonempty but unfocusued workspace
                       , ppTitle   = xmobarColor "#F49823" ""   -- title of currently focused program
@@ -105,6 +90,10 @@ myStartupHook :: X ()
 myStartupHook = do
   setWMName "LG3D"
   spawnOnce "feh --bg-fill ~/.wallpaper.jpg"
+  spawn "Discord"
+  spawn "pavucontrol"
+  spawn "slack"
+  spawn "firefox"
 
 myLayoutHook = smartBorders . avoidStruts $ myMainLayout
 
@@ -130,8 +119,9 @@ myManageHook = composeAll [spawnHook, manageDocks, manageHook def]
     [ transience
     , className =? "Slack" -?> doShift ws0
     , className =? "Firefox" -?> doShift ws9
-    , className =? "Discord" -?> doShift ws1
-    , className =? "pavucontrol" -?> doShift ws2
+    -- TODO figure out why this does not work
+    , className =? ".*Discord" -?> doShift ws1
+    , className =? "Pavucontrol" -?> doShift ws2
     ]
 
 
@@ -172,9 +162,10 @@ myKeys conf@XConfig { XMonad.modMask = modm } =
        , ( (modm, xK_p)
          , spawn "maim -s | xclip -selection clipboard -t image/png"
          )
-       , ((modm, xK_comma) , prevWS)
-       , ((modm, xK_period), nextWS)
-       , ((modm, xK_Tab)   , cycleRecentWS [xK_Tab] xK_Tab xK_Tab)
+       , ((modm .|. shiftMask, xK_p), spawn "deepfry")
+       , ((modm, xK_comma)          , prevWS)
+       , ((modm, xK_period)         , nextWS)
+       , ((modm, xK_Tab)            , cycleRecentWS [xK_Tab] xK_Tab xK_Tab)
        ]
     ++ [ ((m .|. modm, k), windows $ f i)
        | (f, m, _n) <-

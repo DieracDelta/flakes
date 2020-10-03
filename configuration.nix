@@ -138,6 +138,7 @@
     # deploymentPack = with pkgs; [hugo];
     # bapPack = with pkgs; [ libbap skopeo python27 m4];
     appPack = with pkgs; [
+      xorg.xwininfo
       riot-desktop
       pipenv
       latest.firefox-nightly-bin

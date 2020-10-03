@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchFromGitHub, wayland, wayland-protocols, bash, grim, slurp, python37, makeWrapper, imagemagick}:
+{ lib, stdenv, fetchFromGitHub, bash, xclip, python37, makeWrapper, imagemagick}:
 let metadata = import ./metadata.nix;
 in
   stdenv.mkDerivation rec {
@@ -13,13 +13,11 @@ in
     };
 
 
-  propagatedBuildInputs = [ grim slurp  ];
-  #propagatedUserEnvPackages = [ grim slurp python37Packages.tesserocr python37Packages.pillow ] ;
-  #propagatedUserEnvPackages = [ grim slurp python37Packages.tesserocr python37Packages.pillow ] ;
+  propagatedBuildInputs = [ xclip  ];
 
 
   meta = with stdenv.lib; {
-    description = "A wayland deepfrier";
+    description = "A deepfrier";
     homepage = "https://github.com/DieracDelta/deepfry";
     license = licenses.mit;
     platforms = platforms.linux;
@@ -38,6 +36,6 @@ in
 
 
   postFixup = ''
-    makeWrapper $out/bin/frier.py $out/bin/deepfry --set-default B_LOCATION $out/lib/bsmol.png --prefix PATH : ${lib.makeBinPath [ (python37.withPackages(ps: with ps; [ pillow tesserocr ] )) ] }
+    makeWrapper $out/bin/frier.py $out/bin/deepfry --set-default B_LOCATION $out/lib/bsmol.png --set-default DISPLAY_FRONTEND X11 --prefix PATH : ${lib.makeBinPath [ (python37.withPackages(ps: with ps; [ pillow tesserocr ] )) ] }
   '';
 }
