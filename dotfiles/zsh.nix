@@ -33,12 +33,12 @@
     "rl" = "lorri init && direnv allow";
     "cdh" = "cd $HOME";
     "emacs_headless" = "emacs -nw";
-    "zathura" = "zathura_pwyal.sh";
+    /*"zathura" = "zathura_pwyal.sh";*/
     "sl" = "ls";
     "bahs" = "bash";
   };
   # keys.sh contains a bunch of my keys
-  programs.zsh.initExtra = builtins.readFile ./keys.sh + builtins.readFile ./zshrc;
+  programs.zsh.initExtra = builtins.readFile ./zshrc;
   programs.zsh.oh-my-zsh.theme = "robbyrussell";
   programs.zsh.plugins =
     [

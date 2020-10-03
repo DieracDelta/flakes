@@ -1,5 +1,5 @@
 export _JAVA_AWT_WM_NONREPARENTING=1
-cat $HOME/.cache/wal/sequences
+#cat $HOME/.cache/wal/sequences
 function post_code {
         INPUT_UNESCAPED=$(cat)
         INPUT=''${INPUT_UNESCAPED//\\/\\\\}
