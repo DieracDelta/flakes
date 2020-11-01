@@ -32,10 +32,9 @@
   };
 
   imports = [ # Include the results of the hardware scan.
-    /etc/nixos/hardware-configuration.nix
-    ./dotfiles/docker.nix
+    ./hardware-configuration.nix
+    ./docker.nix
     ./block_hosts/hosts.nix
-    ./nixFlakes
   ];
   hardware.bluetooth.enable = true;
 
