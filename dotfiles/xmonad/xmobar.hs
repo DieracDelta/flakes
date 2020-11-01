@@ -1,6 +1,6 @@
  Config {
   font =
-  "xft:SauceCodePro Nerd Font:pixelsize=16:antialiase=true:autohinting=true:Regular"
+  "xft:Iosevka:pixelsize=16:antialiase=true:autohinting=true:Regular"
   , borderColor = "black"
   , border = TopB
   , bgColor = "#0d0b09"

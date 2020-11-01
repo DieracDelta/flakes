@@ -120,7 +120,7 @@ myManageHook = composeAll [spawnHook, manageDocks, manageHook def]
     , className =? "Slack" -?> doShift ws0
     , className =? "Firefox" -?> doShift ws9
     -- TODO figure out why this does not work
-    , className =? ".*Discord" -?> doShift ws1
+    , className =? "Discord" -?> doShift ws1
     , className =? "Pavucontrol" -?> doShift ws2
     ]
 
