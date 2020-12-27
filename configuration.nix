@@ -5,16 +5,44 @@
 { config, pkgs, lib, ... }:
 
 {
+  nix = {
+    package = pkgs.nixUnstable;
+    extraOptions = ''
+      experimental-features = nix-command flakes
+    '';
+  };
+
+  users.users.jrestivo.openssh.authorizedKeys.keys = [''
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCnVsxxx7yiI1yWh2+wkmH7jMDTfvypsLfVkYuz+WObIi3V+1gZN3cPjHFYwEa1SpUNSs4/c2zdM1CANR5b61YgBmvbxYUVCBFNSeO1B9JTPUDcyM20vhRdeUOFlPS0KJHkKnlzjq4sEnjDM+zXCtAKEekBRcWqcnK2WX/Q9CI6+ocaJ30r06T0Hqa4C7Gx6pNbVNxaTaza3Mzod68aBjyg7WShsKPF5nLSe9QJIjUQ2bjGdRCUlXshgmW+E127KqryZqYLmmodF9fynCK6Ne+MDM2jEruRHMwhv50MfnO0ntOOM0i37oR3JuKE+AzJj/+Ete/YVbbIxipMm0DkNJEEqFsZRO5qkiP2MpI4TCZxHaac/pl+W6HdhwzSKCUrVBUTwEacaz/3WFgGgTjebpW1hfYbcTalG6e9t2W0OSg+INYLklp4uHDWHjFqyl5J+FZMNQdtWgD3yRyZN9rf1ojVf5AgxSW6pXIcrqMf/6Kf+kr/O0FOakrLaEHTDmONVTM= justin.p.restivo@gmail.com
+  ''];
+  programs.adb.enable = true;
+  programs.java.enable = true;
+
+  # TODO fix
   nixpkgs.overlays = [
+
+    # (import (builtins.fetchTarball {
+    # url = https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz;
+    # sha256 = ''1zybp62zz0h077zm2zmqs2wcg3whg6jqaah9hcl1gv4x8af4zhs6'';
+    # }
+    # ))
+    # (self: super: {
+    #   discord = super.discord.overrideAttrs (_: {
+    #     src = builtins.fetchTarball
+    #       "https://discord.com/api/download?platform=linux&format=tar.gz";
+    #   });
+    # })
+
+    # (import (builtins.fetchTarball
+    #   "https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz"))
+
     (self: super: {
-      discord = super.discord.overrideAttrs (_: {
-        src = builtins.fetchTarball
-          "https://discord.com/api/download?platform=linux&format=tar.gz";
+      hwloc = super.hwloc.overrideAttrs (_: {
+        x11support = true;
+        libX11 = pkgs.xorg.libX11;
+        cairo = pkgs.cairo;
       });
     })
-
-    (import (builtins.fetchTarball
-      "https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz"))
   ];
 
   hardware.cpu.intel.updateMicrocode = true;
@@ -34,7 +62,7 @@
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./docker.nix
-    ./block_hosts/hosts.nix
+    # ./block_hosts/hosts.nix
   ];
   hardware.bluetooth.enable = true;
 
@@ -45,13 +73,41 @@
     enableOnBoot = true;
   };
 
+  # virtualisation.virtualbox.host.enable = true;
+  # users.extraGroups.vboxusers.members = [ "user-with-access-to-virtualbox" ];
+
   boot.loader.systemd-boot.enable = true;
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  services.zerotierone.enable = true;                # Default value is 'false'
+  services.zerotierone.joinNetworks = [ "af415e486feddf70" ];           # Default value is '[]'
 
   environment.systemPackages =
 
     let
       textPack = with pkgs; [
+        flameshot
+
+        (haskellPackages.ghcWithPackages
+          (pkgs: [ pkgs.sort pkgs.base pkgs.split pkgs.lens ]))
+        haskellPackages.hoogle
+        haskellPackages.hlint
+        haskellPackages.brittany
+        # cabal
+        # haskellPackages.Data
+        haskellPackages.ghcide
+        dante
+
+        tigervnc
+        (texlive.combine {
+          inherit (texlive) scheme-medium lipsum fmtcount datetime;
+        })
+        cargo
+        rustup
+        rustc
+        # rustChannels.stable.rust
+        hwloc
+        ngrok
+        nixos-generators
         vscode
         wine
         pdftk
@@ -63,6 +119,7 @@
         zoom
         uutils-coreutils
         nix-tree
+        android-studio
         # cudnn
         # cudaPackages.cudatoolkit_10_2
         # cudaPackages.cudatoolkit_11
@@ -166,7 +223,8 @@
         xorg.xwininfo
         element-desktop
         pipenv
-        latest.firefox-nightly-bin
+        # latest.firefox-nightly-bin
+        firefox
         discord
         zathura
         mumble
@@ -278,7 +336,8 @@
     home = "/home/jrestivo";
     shell = pkgs.zsh;
     description = "Justin --the owner-- Restivo";
-    extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" ];
+    extraGroups =
+      [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" ];
   };
 
   fonts.fonts = with pkgs; [
@@ -299,8 +358,8 @@
   time.timeZone = "America/New_York";
 
   services.openssh.enable = true;
-  services.openssh.authorizedKeysFiles =
-    [ "/home/jrestivo/.config/authorized_users" ];
+  # services.openssh.authorizedKeysFiles =
+  # [ "/home/jrestivo/.config/authorized_users" ];
   services.openssh.passwordAuthentication = false;
 
   sound.enable = true;
@@ -314,4 +373,3 @@
   programs.mosh.enable = true;
 
 }
-

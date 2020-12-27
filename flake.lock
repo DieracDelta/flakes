@@ -1,24 +1,74 @@
 {
   "nodes": {
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1609010567,
+        "narHash": "sha256-N6WslRAtrvCPCpQnxQqo+VlSivX/KylL9Xy/OZr0kMg=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "22f6736e628958f05222ddaadd7df7818fe8f59d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "release-20.09",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1603921147,
-        "narHash": "sha256-tnLqR9bIykefPjm0drs/e6zlIFUAFmuwMLgXssm0NqY=",
+        "lastModified": 1609106167,
+        "narHash": "sha256-q0/7a8igoGsOZn8VFsuBj4/LOuqoBInx13Ao73ZFFzk=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "504f993df9a5ca63317fe9c859df19daad30aa14",
+        "rev": "b65196ce11420e1f8c6cbbd0286876d3a0285476",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs-unstable": {
+      "locked": {
+        "lastModified": 1609106167,
+        "narHash": "sha256-q0/7a8igoGsOZn8VFsuBj4/LOuqoBInx13Ao73ZFFzk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b65196ce11420e1f8c6cbbd0286876d3a0285476",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "master",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1609026361,
+        "narHash": "sha256-/cvQozy7j2FTuXmpVgVv7H85kL89zWUVrmqhc42ehbo=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0c81b9a4f170f734bd7e587a39e56470c59733e7",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-20.03",
+        "ref": "nixos-20.09",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "home-manager": "home-manager",
+        "nixpkgs": "nixpkgs_2",
+        "nixpkgs-unstable": "nixpkgs-unstable"
       }
     }
   },
