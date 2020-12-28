@@ -21,7 +21,7 @@ let
           in [
             "nixpkgs=${inputs.master}"
             "nixos=${inputs.nixos}"
-            "nixos-hardware=${inputs.nixos-hardware}"
+            # "nixos-hardware=${inputs.nixos-hardware}"
           ];
 
           nix.package = os-pkgs.nixUnstable;
@@ -49,9 +49,9 @@ let
           home-manager.useUserPackages = true;
           home-manager.users.jrestivo = import ../home.nix;
         }
-        # TODO add these in
         (import ../nix-options)
-        (import "${toString ./.}/${hostName}.nix")
+        # (import "${toString ./.}/${hostName}.nix")
+        (import ./jrestivo.nix)
         global
         overrides
       ];

@@ -19,7 +19,7 @@
   programs.java.enable = true;
 
   # TODO fix
-  nixos.overlays = [
+  nixpkgs.overlays = [
 
     # (import (builtins.fetchTarball {
     # url = https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz;
@@ -61,7 +61,7 @@
 
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ./docker.nix
+    # ./docker.nix
     # ./block_hosts/hosts.nix
   ];
   hardware.bluetooth.enable = true;
@@ -300,6 +300,27 @@
 
   location.provider = "geoclue2";
 
+  # TODO to get working exwm, uncomment this
+  # services.xserver = {
+  #   enable = true;
+  #   layout = "us";
+  #   libinput = {
+  #     enable = true;
+  #   };
+  # displayManager.sessionCommands = "${pkgs.xorg.xhost}/bin/xorg +SI:localhost:$USER";
+  # };
+
+  # TODO to get working exwm, uncomment this
+  # services.xserver.windowManager.session = lib.singleton {
+  #         name = "exwm";
+  #         start = ''
+  #           ${pkgs.emacs}/bin/emacs --daemon -f exwm-enable
+  #           ${pkgs.emacs}/bin/emacsclient -c
+  #         '';
+  # };
+
+  /*services.xserver.displayManager = {lightdm.enable = true;};*/
+  # TODO im commenting this out at my own peril
   services.xserver = {
     enable = true;
     layout = "us";
@@ -332,7 +353,7 @@
     fira-mono
   ];
 
-  networking.hostName = "nixos"; # Define your hostname.
+  # networking.hostName = "nixos"; # Define your hostname.
 
   networking.useDHCP = false;
   networking.networkmanager.enable = true;
@@ -346,8 +367,8 @@
 
   sound.enable = true;
   hardware.pulseaudio.enable = true;
-  nixos.config.pulseaudio = true;
-  nixos.config.allowUnfree = true;
+  nixpkgs.config.pulseaudio = true;
+  nixpkgs.config.allowUnfree = true;
 
   services.lorri.enable = true;
 

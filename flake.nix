@@ -30,7 +30,7 @@
 
 #   };
 
-## }
+# }
 
 {
   description = "A highly awesome system configuration.";

@@ -10,15 +10,13 @@
   programs.git.enable = true;
   programs.git.userName = "Justin Restivo";
   programs.git.userEmail = "justin.p.restivo@gmail.com";
-  programs.git.extraConfig = ''
-    # Enforce SSH
-    [url "ssh://git@github.com/"]
-      insteadOf = https://github.com/
-    [url "ssh://git@gitlab.com/"]
-      insteadOf = https://gitlab.com/
-    [url "ssh://git@bitbucket.org/"]
-      insteadOf = https://bitbucket.org/
-  '';
+  programs.git.extraConfig = {
+    url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
+    url = { "ssh://git@gitlab.com" = { insteadOf = "https://gitlab.com"; }; };
+    url = {
+      "ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
+    };
+  };
 
   programs.fzf.enableZshIntegration = true;
   # imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./dotfiles/emacs.nix ];
