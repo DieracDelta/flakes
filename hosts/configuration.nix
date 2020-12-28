@@ -5,12 +5,12 @@
 { config, pkgs, lib, ... }:
 
 {
-  nix = {
-    package = pkgs.nixUnstable;
-    extraOptions = ''
-      experimental-features = nix-command flakes
-    '';
-  };
+  # nix = {
+  #   package = pkgs.nixUnstable;
+  #   extraOptions = ''
+  #     experimental-features = nix-command flakes
+  #   '';
+  # };
 
   users.users.jrestivo.openssh.authorizedKeys.keys = [''
     ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCnVsxxx7yiI1yWh2+wkmH7jMDTfvypsLfVkYuz+WObIi3V+1gZN3cPjHFYwEa1SpUNSs4/c2zdM1CANR5b61YgBmvbxYUVCBFNSeO1B9JTPUDcyM20vhRdeUOFlPS0KJHkKnlzjq4sEnjDM+zXCtAKEekBRcWqcnK2WX/Q9CI6+ocaJ30r06T0Hqa4C7Gx6pNbVNxaTaza3Mzod68aBjyg7WShsKPF5nLSe9QJIjUQ2bjGdRCUlXshgmW+E127KqryZqYLmmodF9fynCK6Ne+MDM2jEruRHMwhv50MfnO0ntOOM0i37oR3JuKE+AzJj/+Ete/YVbbIxipMm0DkNJEEqFsZRO5qkiP2MpI4TCZxHaac/pl+W6HdhwzSKCUrVBUTwEacaz/3WFgGgTjebpW1hfYbcTalG6e9t2W0OSg+INYLklp4uHDWHjFqyl5J+FZMNQdtWgD3yRyZN9rf1ojVf5AgxSW6pXIcrqMf/6Kf+kr/O0FOakrLaEHTDmONVTM= justin.p.restivo@gmail.com
@@ -19,7 +19,7 @@
   programs.java.enable = true;
 
   # TODO fix
-  nixpkgs.overlays = [
+  nixos.overlays = [
 
     # (import (builtins.fetchTarball {
     # url = https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz;
@@ -78,8 +78,9 @@
 
   boot.loader.systemd-boot.enable = true;
   boot.kernelPackages = pkgs.linuxPackages_latest;
-  services.zerotierone.enable = true;                # Default value is 'false'
-  services.zerotierone.joinNetworks = [ "af415e486feddf70" ];           # Default value is '[]'
+  services.zerotierone.enable = true; # Default value is 'false'
+  services.zerotierone.joinNetworks =
+    [ "af415e486feddf70" ]; # Default value is '[]'
 
   environment.systemPackages =
 
@@ -299,25 +300,6 @@
 
   location.provider = "geoclue2";
 
-  # TODO to get working exwm, uncomment this
-  # services.xserver = {
-  #   enable = true;
-  #   layout = "us";
-  #   libinput = {
-  #     enable = true;
-  #   };
-  # displayManager.sessionCommands = "${pkgs.xorg.xhost}/bin/xorg +SI:localhost:$USER";
-  # };
-
-  # TODO to get working exwm, uncomment this
-  # services.xserver.windowManager.session = lib.singleton {
-  #         name = "exwm";
-  #         start = ''
-  #           ${pkgs.emacs}/bin/emacs --daemon -f exwm-enable
-  #           ${pkgs.emacs}/bin/emacsclient -c
-  #         '';
-  # };
-
   services.xserver = {
     enable = true;
     layout = "us";
@@ -364,8 +346,8 @@
 
   sound.enable = true;
   hardware.pulseaudio.enable = true;
-  nixpkgs.config.pulseaudio = true;
-  nixpkgs.config.allowUnfree = true;
+  nixos.config.pulseaudio = true;
+  nixos.config.allowUnfree = true;
 
   services.lorri.enable = true;
 
