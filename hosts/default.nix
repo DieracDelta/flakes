@@ -3,8 +3,7 @@
 let
   inherit (builtins) attrValues removeAttrs readDir;
   inherit (lib) filterAttrs hasSuffix mapAttrs' nameValuePair removeSuffix;
-  inherit (pkgset)
-    os-pkgs unstable-pkgs custom-pkgs inputs package-overrides nix-options;
+  inherit (pkgset) os-pkgs unstable-pkgs custom-pkgs inputs package-overrides;
   inherit (utils) recImport overlay;
 
   mapFilterAttrs = seive: f: attrs: filterAttrs seive (mapAttrs' f attrs);
@@ -18,11 +17,7 @@ let
           networking.hostName = hostName;
           nixpkgs = { pkgs = os-pkgs; };
           nix.nixPath = let path = toString ../.;
-          in [
-            "nixpkgs=${inputs.master}"
-            "nixos=${inputs.nixos}"
-            # "nixos-hardware=${inputs.nixos-hardware}"
-          ];
+          in [ "nixpkgs=${inputs.master}" "nixos=${inputs.nixos}" ];
 
           nix.package = os-pkgs.nixUnstable;
           nix.extraOptions = ''
@@ -47,11 +42,9 @@ let
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.jrestivo = import ./shared/home.nix;
+          home-manager.users."${hostName}" = import ./shared/home.nix;
         }
-        (import ../nix-options)
-        # (import "${toString ./.}/${hostName}.nix")
-        (import ./jrestivo.nix)
+        (import "${toString ./.}/${hostName}.nix")
         global
         overrides
       ];
