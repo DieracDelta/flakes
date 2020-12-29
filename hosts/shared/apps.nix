@@ -1,6 +1,7 @@
 { config, pkgs, lib, ... }:
 
 {
+  /*firefoxFlake = pkgs.pkgset.inputs.firefox.packages.${pkgs.system};*/
 
   programs.mosh.enable = true;
   programs.adb.enable = true;
@@ -10,20 +11,22 @@
 
   environment.systemPackages = let
     haskellPack = with pkgs; [
-      (haskellPackages.ghcWithPackages
-        (pkgs: [ pkgs.sort pkgs.base pkgs.split pkgs.lens ]))
+    (haskellPackages.ghcWithPackages
+     (pkgs: [ pkgs.sort pkgs.base pkgs.split pkgs.lens ]))
       haskellPackages.hoogle
       haskellPackages.hlint
       haskellPackages.brittany
       haskellPackages.ghcide
     ];
-    /*texPack = with pkgs;*/
-      /*[*/
-        /*(texlive.combine {*/
-          /*inherit (texlive) scheme-medium lipsum fmtcount datetime;*/
-        /*})*/
-      /*];*/
-    textPack = with pkgs; [
+  /*texPack = with pkgs;*/
+  /*[*/
+  /*(texlive.combine {*/
+  /*inherit (texlive) scheme-medium lipsum fmtcount datetime;*/
+  /*})*/
+  /*];*/
+  textPack = with pkgs; [
+      firefox
+      cachix
       bat
       manix
       dante
@@ -31,7 +34,7 @@
       cargo
       rustup
       rustc
-      # rustChannels.stable.rust
+# rustChannels.stable.rust
       hwloc
       ngrok
       nixos-generators
@@ -39,7 +42,7 @@
       wine
       pdftk
       vimb
-      # libreoffice
+# libreoffice
       redshift
       brightnessctl
       arandr
@@ -64,18 +67,18 @@
       xdg_utils
       shared_mime_info
       emacs
-    ];
-    # wlPack = with pkgs; [
-    #   flameshot
-    #   wev
-    #   swaylock
-    #   wf-recorder
-    #   slurp
-    #   grim
-    # ];
-    xPack = with pkgs; [ maim xclip xmobar libGL libGLU glxinfo ];
-    cliPack = with pkgs; [
-      fzf
+      ];
+# wlPack = with pkgs; [
+#   flameshot
+#   wev
+#   swaylock
+#   wf-recorder
+#   slurp
+#   grim
+# ];
+  xPack = with pkgs; [ maim xclip xmobar libGL libGLU glxinfo ];
+  cliPack = with pkgs; [
+    fzf
       zsh
       oh-my-zsh
       ripgrep
@@ -99,9 +102,9 @@
       htop
       wget
       ispell
-    ];
-    devPack = with pkgs; [
-      cask
+      ];
+  devPack = with pkgs; [
+    cask
       nodejs
       git
       universal-ctags
@@ -115,9 +118,9 @@
       idea.idea-community
       gdb
       direnv
-    ];
-    utilsPack = with pkgs; [
-      binutils
+  ];
+  utilsPack = with pkgs; [
+    binutils
       gcc
       gnumake
       openssl
@@ -128,10 +131,10 @@
       lm_sensors
       liblqr1
       zlib.dev
-    ];
-    toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
-    gamingPack = with pkgs; [
-      cowsay
+  ];
+  toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
+  gamingPack = with pkgs; [
+    cowsay
       steam
       mesa
       gnuchess
@@ -140,15 +143,13 @@
       protontricks
       cabextract
       m4
-    ];
-    # deploymentPack = with pkgs; [hugo];
-    # bapPack = with pkgs; [ libbap skopeo python27 m4];
-    appPack = with pkgs; [
-      xorg.xwininfo
+  ];
+# deploymentPack = with pkgs; [hugo];
+# bapPack = with pkgs; [ libbap skopeo python27 m4];
+  appPack = with pkgs; [
+    xorg.xwininfo
       element-desktop
       pipenv
-      # latest.firefox-nightly-bin
-      firefox
       discord
       zathura
       mumble
@@ -172,49 +173,49 @@
       keepass
       mimic
       zoom-us
+      ];
+  hackPack = with pkgs; [ ghidra-bin john ];
+  python37Pack = with pkgs;
+  let
+    my-python-packages = python-packages:
+    with python-packages; [
+    pywal
+      jedi
+      flake8
+      pep8
+      tesserocr
+      pillow
+      autopep8
+      xdot
+      opencv4
+      numpy
     ];
-    hackPack = with pkgs; [ ghidra-bin john ];
-    python37Pack = with pkgs;
-      let
-        my-python-packages = python-packages:
-          with python-packages; [
-            pywal
-            jedi
-            flake8
-            pep8
-            tesserocr
-            pillow
-            autopep8
-            xdot
-            opencv4
-            numpy
-          ];
-        python-with-my-packages = python37.withPackages my-python-packages;
-      in [ python-with-my-packages ];
+  python-with-my-packages = python37.withPackages my-python-packages;
+  in [ python-with-my-packages ];
 
   in builtins.concatLists [
     /*texPack*/
     haskellPack
-    textPack
-    # wlPack
-    cliPack
-    devPack
-    toolPack
-    utilsPack
-    appPack
-    gamingPack
-    python37Pack
-    hackPack
-    xPack
+      textPack
+# wlPack
+      cliPack
+      devPack
+      toolPack
+      utilsPack
+      appPack
+      gamingPack
+      python37Pack
+      hackPack
+      xPack
   ];
 
   fonts.fonts = with pkgs; [
     d2coding
-    iosevka
-    aileron
-    nerdfonts
-    fira-code
-    fira-code-symbols
-    fira-mono
+      iosevka
+      aileron
+      nerdfonts
+      fira-code
+      fira-code-symbols
+      fira-mono
   ];
 }
