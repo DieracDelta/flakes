@@ -44,6 +44,9 @@
     # "zathura" = "zathura_pwyal.sh";
     "sl" = "ls";
     "bahs" = "bash";
+    "nixman" =
+      "manix '' | grep '^# ' | sed 's/^# (.*) (.*/1/;s/ (.*//;s/^# //' | fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
+
   };
   # keys.sh contains a bunch of my keys
   programs.zsh.initExtra = builtins.readFile ./zshrc;
@@ -56,15 +59,6 @@
         repo = "fast-syntax-highlighting";
         rev = "303eeee81859094385605f7c978801748d71056c";
         sha256 = "0y0jgkj9va8ns479x3dhzk8bwd58a1kcvm4s2mk6x3n19w7ynmnv";
-      };
-    }
-    {
-      name = "fzf-z";
-      src = pkgs.fetchFromGitHub {
-        owner = "andrewferrier";
-        repo = "fzf-z";
-        rev = "2db04c704360b5b303fb5708686cbfd198c6bf4f";
-        sha256 = "1ib98j7v6hy3x43dcli59q5rpg9bamrg335zc4fw91hk6jcxvy45";
       };
     }
     {

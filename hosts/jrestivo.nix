@@ -3,5 +3,5 @@
 {
 
   nix.allowedUsers = [ "jrestivo" ];
-  imports = [ ./configuration.nix ./shared ./hw/laptop.nix ];
+  imports = [ ./shared ./hw/laptop.nix ];
 }

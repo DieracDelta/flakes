@@ -29,15 +29,11 @@
         package-overrides = with unstable-pkgs; [ manix ];
         inputs = self.inputs;
         custom-pkgs = import ./pkgs;
-        nix-options = readDir ./nix-options;
       };
     in with pkgset; {
       nixosConfigurations = import ./hosts
         (recursiveUpdate inputs { inherit lib pkgset system utils; });
-
       overlay = pkgset.custom-pkgs;
       packages."${system}" = self.overlay;
-
-      nixosModules = (recImport pkgset.nix-options);
     };
 }

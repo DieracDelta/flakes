@@ -3,25 +3,31 @@
 {
 
   programs.mosh.enable = true;
+  programs.adb.enable = true;
+  programs.java.enable = true;
 
   nixpkgs.config.allowUnfree = true;
 
   environment.systemPackages = let
-    textPack = with pkgs; [
-      flameshot
-
+    haskellPack = with pkgs; [
       (haskellPackages.ghcWithPackages
         (pkgs: [ pkgs.sort pkgs.base pkgs.split pkgs.lens ]))
       haskellPackages.hoogle
       haskellPackages.hlint
       haskellPackages.brittany
       haskellPackages.ghcide
+    ];
+    texPack = with pkgs;
+      [
+        (texlive.combine {
+          inherit (texlive) scheme-medium lipsum fmtcount datetime;
+        })
+      ];
+    textPack = with pkgs; [
+      bat
+      manix
       dante
-
       tigervnc
-      (texlive.combine {
-        inherit (texlive) scheme-medium lipsum fmtcount datetime;
-      })
       cargo
       rustup
       rustc
@@ -52,21 +58,21 @@
       evemu
       opam
       opencl-headers
-    ];
-    wlPack = with pkgs; [
-      emacs
-      flameshot
-      wev
-      swaylock
+      clang
+      unzip
       gtk3
       xdg_utils
       shared_mime_info
-      wf-recorder
-      slurp
-      grim
-      clang
-      unzip
+      emacs
     ];
+    # wlPack = with pkgs; [
+    #   flameshot
+    #   wev
+    #   swaylock
+    #   wf-recorder
+    #   slurp
+    #   grim
+    # ];
     xPack = with pkgs; [ maim xclip xmobar libGL libGLU glxinfo ];
     cliPack = with pkgs; [
       fzf
@@ -187,8 +193,10 @@
       in [ python-with-my-packages ];
 
   in builtins.concatLists [
+    texPack
+    haskellPack
     textPack
-    wlPack
+    # wlPack
     cliPack
     devPack
     toolPack

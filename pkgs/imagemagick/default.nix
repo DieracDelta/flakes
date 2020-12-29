@@ -23,7 +23,7 @@ let
   }
   # Freeze version on mingw so we don't need to port the patch too often.
   # FIXME: This version has multiple security vulnerabilities
-    // lib.optionalAttrs (stdenv.hostPlatform.isMinGW) {
+    // stdenv.lib.optionalAttrs (stdenv.hostPlatform.isMinGW) {
       version = "6.9.2-0";
       sha256 = "17ir8bw1j7g7srqmsz3rx780sgnc21zfn0kwyj78iazrywldx8h7";
       patches = [
@@ -55,12 +55,12 @@ in stdenv.mkDerivation {
   enableParallelBuilding = true;
 
   configureFlags = [ "--with-frozenpaths" ] ++ [ "--with-gcc-arch=${arch}" ]
-    ++ lib.optional (librsvg != null) "--with-rsvg"
-    ++ lib.optional (liblqr1 != null) "--with-lqr=yes"
-    ++ lib.optionals (ghostscript != null) [
+    ++ stdenv.lib.optional (librsvg != null) "--with-rsvg"
+    ++ stdenv.lib.optional (liblqr1 != null) "--with-lqr=yes"
+    ++ stdenv.lib.optionals (ghostscript != null) [
       "--with-gs-font-dir=${ghostscript}/share/ghostscript/fonts"
       "--with-gslib"
-    ] ++ lib.optionals (stdenv.hostPlatform.isMinGW) [
+    ] ++ stdenv.lib.optionals (stdenv.hostPlatform.isMinGW) [
       "--enable-static"
       "--disable-shared"
     ] # due to libxml2 being without DLLs ATM
@@ -80,14 +80,14 @@ in stdenv.mkDerivation {
     libheif
     libde265
     djvulibre
-  ] ++ lib.optionals (!stdenv.hostPlatform.isMinGW) [
+  ] ++ stdenv.lib.optionals (!stdenv.hostPlatform.isMinGW) [
     openexr
     librsvg
     openjpeg
   ];
 
   propagatedBuildInputs = [ bzip2 freetype libjpeg lcms2 fftw ]
-    ++ lib.optionals (!stdenv.hostPlatform.isMinGW) [
+    ++ stdenv.lib.optionals (!stdenv.hostPlatform.isMinGW) [
       libX11
       libXext
       libXt
@@ -106,9 +106,9 @@ in stdenv.mkDerivation {
       substituteInPlace "$file" --replace ${pkgconfig}/bin/pkg-config \
         "PKG_CONFIG_PATH='$dev/lib/pkgconfig' '${pkgconfig}/bin/pkg-config'"
     done
-  '' + lib.optionalString (ghostscript != null) ''
+  '' + stdenv.lib.optionalString (ghostscript != null) ''
     for la in $out/lib/*.la; do
-      sed 's|-lgs|-L${lib.getLib ghostscript}/lib -lgs|' -i $la
+      sed 's|-lgs|-L${stdenv.lib.getLib ghostscript}/lib -lgs|' -i $la
     done
   '';
 
