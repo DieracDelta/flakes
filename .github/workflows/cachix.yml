@@ -21,5 +21,5 @@ jobs:
     - uses: cachix/cachix-action@v8
       with:
         name: gytix
-        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+        signingKey: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build .#nixosConfigurations.jrestivo.config.system.build.toplevel -L
