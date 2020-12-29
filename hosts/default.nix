@@ -42,7 +42,7 @@ let
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users."${hostName}" = import ./shared/home.nix;
+          home-manager.users.jrestivo = import ./shared/home.nix;
         }
         (import "${toString ./.}/${hostName}.nix")
         global

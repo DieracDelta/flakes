@@ -17,12 +17,12 @@
       haskellPackages.brittany
       haskellPackages.ghcide
     ];
-    texPack = with pkgs;
-      [
-        (texlive.combine {
-          inherit (texlive) scheme-medium lipsum fmtcount datetime;
-        })
-      ];
+    /*texPack = with pkgs;*/
+      /*[*/
+        /*(texlive.combine {*/
+          /*inherit (texlive) scheme-medium lipsum fmtcount datetime;*/
+        /*})*/
+      /*];*/
     textPack = with pkgs; [
       bat
       manix
@@ -193,7 +193,7 @@
       in [ python-with-my-packages ];
 
   in builtins.concatLists [
-    texPack
+    /*texPack*/
     haskellPack
     textPack
     # wlPack

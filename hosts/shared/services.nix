@@ -29,7 +29,7 @@
   virtualisation.docker = {
     enable = true;
     autoPrune.enable = true;
-    enableNvidia = true;
+    #enableNvidia = true;
     enableOnBoot = true;
   };
 
