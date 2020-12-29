@@ -20,6 +20,6 @@ jobs:
           experimental-features = nix-command flakes
     - uses: cachix/cachix-action@v8
       with:
-        name: gytix
+        name: jrestivo
         signingKey: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build .#nixosConfigurations.jrestivo.config.system.build.toplevel -L
