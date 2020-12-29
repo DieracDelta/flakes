@@ -1,5 +1,7 @@
 { config, pkgs, lib, ... }:
 
 {
-  imports = [ ./configuration.nix ];
+
+  nix.allowedUsers = [ "jrestivo" ];
+  imports = [ ./configuration.nix ./shared ./hw/laptop.nix ];
 }

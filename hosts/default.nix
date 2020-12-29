@@ -47,7 +47,7 @@ let
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.jrestivo = import ../home.nix;
+          home-manager.users.jrestivo = import ./shared/home.nix;
         }
         (import ../nix-options)
         # (import "${toString ./.}/${hostName}.nix")

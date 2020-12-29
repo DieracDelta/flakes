@@ -1,3 +1,4 @@
+# unused right now... morally speaking should be moved to hardware for desktop only
 { config, pkgs, lib, ... }:
 {
   environment.pathsToLink = [ "/share/zsh" ];
