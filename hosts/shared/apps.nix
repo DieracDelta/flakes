@@ -1,7 +1,10 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, pkgset, ... }:
 
 {
-  /*firefoxFlake = pkgs.pkgset.inputs.firefox.packages.${pkgs.system};*/
+
+  # to get zsh autocomplete to work
+  environment.pathsToLink = ["/share/zsh"];
+
 
   programs.mosh.enable = true;
   programs.adb.enable = true;
@@ -18,14 +21,28 @@
       haskellPackages.brittany
       haskellPackages.ghcide
     ];
-  /*texPack = with pkgs;*/
-  /*[*/
-  /*(texlive.combine {*/
-  /*inherit (texlive) scheme-medium lipsum fmtcount datetime;*/
-  /*})*/
-  /*];*/
+  texPack = with pkgs;
+  [
+    (texlive.combine {
+     inherit (texlive) scheme-medium lipsum fmtcount datetime;
+     })
+  ];
+  pentestPack = with pkgs; [nmap aircrack-ng];
   textPack = with pkgs; [
+      atop
+      rnix-lsp
+      neovim-nightly
+      pulseeffects
+      noip
+      remmina
+      dnsutils
+      mkpasswd
+      imagemagick
+      deepfry
+      pkgs.unstable.chromium
+      flameshot
       firefox
+      vscode
       cachix
       bat
       manix
@@ -55,7 +72,6 @@
       tdesktop
       nixfmt
       clang-tools
-      neovim
       evtest
       cmake
       evemu
@@ -194,7 +210,7 @@
   in [ python-with-my-packages ];
 
   in builtins.concatLists [
-    /*texPack*/
+    texPack
     haskellPack
       textPack
 # wlPack
@@ -207,6 +223,7 @@
       python37Pack
       hackPack
       xPack
+      pentestPack
   ];
 
   fonts.fonts = with pkgs; [

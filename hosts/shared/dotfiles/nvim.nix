@@ -1,7 +1,8 @@
 { config, pkgs, ...}:
 {
-
+  xdg.configFile."nvim/coc-settings.json".source = ./coc-settings.json;
   programs.neovim.enable = true;
+  programs.neovim.package = pkgs.neovim-nightly;
   programs.neovim.extraConfig = builtins.readFile ./init.vim;
   programs.neovim.extraPython3Packages = (ps: with ps; [ jedi flake8 pep8 ]);
   programs.neovim.plugins = [

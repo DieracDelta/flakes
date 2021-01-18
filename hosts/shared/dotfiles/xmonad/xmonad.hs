@@ -93,7 +93,7 @@ myStartupHook = do
   spawn "Discord"
   spawn "pavucontrol"
   spawn "slack"
-  spawn "firefox"
+  spawn "chromium"
 
 myLayoutHook = smartBorders . avoidStruts $ myMainLayout
 
