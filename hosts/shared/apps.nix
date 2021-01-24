@@ -27,8 +27,13 @@
      inherit (texlive) scheme-medium lipsum fmtcount datetime;
      })
   ];
+  embeddedPack = with pkgs; [ arduino arduino-cli platformio scala metals sbt];
   pentestPack = with pkgs; [nmap aircrack-ng];
   textPack = with pkgs; [
+      /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
+      shellcheck
+      nyxt
+      hunter
       atop
       rnix-lsp
       neovim-nightly
@@ -48,11 +53,9 @@
       manix
       dante
       tigervnc
-      cargo
-      rustup
-      rustc
-# rustChannels.stable.rust
       hwloc
+      nix-du
+      nox
       ngrok
       nixos-generators
       vscode
@@ -163,6 +166,7 @@
 # deploymentPack = with pkgs; [hugo];
 # bapPack = with pkgs; [ libbap skopeo python27 m4];
   appPack = with pkgs; [
+    blender
     xorg.xwininfo
       element-desktop
       pipenv
@@ -210,6 +214,7 @@
   in [ python-with-my-packages ];
 
   in builtins.concatLists [
+    embeddedPack
     texPack
     haskellPack
       textPack

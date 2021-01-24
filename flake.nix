@@ -4,12 +4,32 @@
 
 
   inputs = {
-    master.url = "nixpkgs/master";
-    nixos.url = "nixpkgs/release-20.09";
-    home.url = "github:nix-community/home-manager/release-20.09";
+    nixpkgs_head.url = "nixpkgs/master";
+    nixpkgs_stable.url = "nixpkgs/release-20.09";
+    home = {
+      url = "github:nix-community/home-manager/release-20.09";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs_stable";
+    };
     /*not used right now*/
-    mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };
-    neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
+    /*mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };*/
+    neovim-nightly-overlay =
+    {
+      url = "github:nix-community/neovim-nightly-overlay";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs_head";
+    };
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs_head";
+    };
+    /*doesn't work.. not sure why : /*/
+    /*nyxt-pkg = {*/
+      /*url = "github:atlas-engineer/nyxt";*/
+      /*flake = true;*/
+      /*follows = "master";*/
+    /*};*/
     /*these give me a infinite recursion error. Not obvious why...*/
     /*doom-emacs.url = "github:hlissner/doom-emacs/f7293fb67ef701244a421fd3bfc04b8e12689edc";*/
     /*doom-emacs.flake = false;*/
@@ -19,7 +39,7 @@
 
   outputs = inputs@{ self, ... }:
     let
-    inherit (self.inputs.nixos) lib;
+    inherit (self.inputs.nixpkgs_stable) lib;
   inherit (lib) recursiveUpdate;
   inherit (builtins) readDir;
   inherit (utils) pathsToImportedAttrs recImport;
@@ -33,22 +53,17 @@
       config = { allowUnfree = true; };
     };
 
-  unstable-pkgs = pkgImport self.inputs.master;
+  unstable-pkgs = pkgImport self.inputs.nixpkgs_head;
   pkgset = {
 
     inherit unstable-pkgs;
-    os-pkgs = pkgImport self.inputs.nixos;
-    package-overrides = (with unstable-pkgs; [ manix alacritty ]);
+    os-pkgs = pkgImport self.inputs.nixpkgs_stable;
+    package-overrides = (with unstable-pkgs; [ manix alacritty nyxt ]);
 
     inputs = self.inputs;
-
-
-    custom-pkgs = (import ./pkgs);# // ({nix-doom-emacs = inputs.nix-doom-emacs;});
-
-
+    custom-pkgs = (import ./pkgs);
     custom-overlays = [
       inputs.neovim-nightly-overlay.overlay
-      /*inputs.nix-doom-emacs.hmModule*/
     ];
   };
   in with pkgset; {

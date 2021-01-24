@@ -3,5 +3,6 @@ self: super: rec {
   imagemagick = super.callPackage ./imagemagick { };
   /*firefox = super.callPackage ./firefox {}*/
   unchromium = super.callPackage ./unchromium {};
+  hunter = super.callPackage ./hunter {};
 }
 

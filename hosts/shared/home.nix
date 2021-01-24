@@ -27,6 +27,9 @@
     ./dotfiles/emacs.nix
   ];
 
+  # hunter config stuff
+  xdg.configFile."hunter/keys".source = ./dotfiles/hunter_config;
+
   programs.tmux.enable = true;
   programs.tmux.historyLimit = 1000000;
   programs.tmux.extraConfig = builtins.readFile ./dotfiles/tmux.conf;

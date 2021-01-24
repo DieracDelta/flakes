@@ -17,17 +17,18 @@ lib.nixosSystem {
       networking.hostName = hostName;
       nixpkgs = { pkgs = os-pkgs; };
       nix.nixPath = let path = toString ../.;
-      in [ "nixpkgs=${inputs.master}" "nixos=${inputs.nixos}" ];
+      in [ "nixpkgs=${inputs.nixpkgs_head}" "nixos=${inputs.nixpkgs_stable}" ];
 
       nix.package = os-pkgs.nixUnstable;
       nix.extraOptions = ''
         experimental-features = nix-command flakes
         '';
 
+      /*wtf is going on with this*/
       nix.registry = {
-        nixos.flake = inputs.nixos;
+        nixos.flake = inputs.nixpkgs_stable;
         nixflk.flake = self;
-        nixpkgs.flake = inputs.master;
+        nixpkgs.flake = inputs.nixpkgs_head;
       };
 
       system.configurationRevision = lib.mkIf (self ? rev) self.rev;
