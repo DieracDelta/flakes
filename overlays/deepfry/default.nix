@@ -1,19 +1,19 @@
-{ lib, stdenv, fetchFromGitHub, bash, xclip, python37, makeWrapper, imagemagick}:
+{ lib, stdenv, fetchFromGitHub, bash, xclip, python37, makeWrapper, imagemagick }:
 let metadata = import ./metadata.nix;
 in
-  stdenv.mkDerivation rec {
-    name = "deepfrier";
-    version = metadata.rev;
+stdenv.mkDerivation rec {
+  name = "deepfrier";
+  version = metadata.rev;
 
-    src = fetchFromGitHub {
-      owner = "DieracDelta";
-      repo = "deepfry";
-      rev = metadata.rev;
-      sha256 = metadata.sha256;
-    };
+  src = fetchFromGitHub {
+    owner = "DieracDelta";
+    repo = "deepfry";
+    rev = metadata.rev;
+    sha256 = metadata.sha256;
+  };
 
 
-  propagatedBuildInputs = [ xclip  ];
+  propagatedBuildInputs = [ xclip ];
 
 
   meta = with stdenv.lib; {
@@ -36,6 +36,6 @@ in
 
 
   postFixup = ''
-    makeWrapper $out/bin/frier.py $out/bin/deepfry --set-default B_LOCATION $out/lib/bsmol.png --set-default DISPLAY_FRONTEND X11 --prefix PATH : ${lib.makeBinPath [ (python37.withPackages(ps: with ps; [ pillow tesserocr ] )) ] }
+    makeWrapper $out/bin/frier.py $out/bin/deepfry --set-default B_LOCATION $out/lib/bsmol.png --set-default DISPLAY_FRONTEND X11 --prefix PATH : ${lib.makeBinPath [ (python37.withPackages (ps: with ps; [ pillow tesserocr ])) ] }
   '';
 }

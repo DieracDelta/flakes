@@ -14,11 +14,11 @@
     /*not used right now, but once I get a router that I control....*/
     /*mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };*/
     neovim-nightly-overlay =
-    {
-      url = "github:nix-community/neovim-nightly-overlay";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
-    };
+      {
+        url = "github:nix-community/neovim-nightly-overlay";
+        flake = true;
+        inputs.nixpkgs.follows = "nixpkgs-head";
+      };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       flake = true;
@@ -68,9 +68,10 @@
 
 
       pkgs = (utils.pkgImport nixpkgs-stable self.overlays);
-      unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ] );
-      in
-  {
+      unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
+    in
+    {
+
 
       nixosModules = [
         home-manager.nixosModules.home-manager
@@ -89,10 +90,11 @@
 
       /*very simply get all the stuff in hosts/directory to provide as outputs*/
       nixosConfigurations =
-      let dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
-          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings ["/hosts/" name])) dirs);
-      in
-      utils.buildNixosConfigurations fullyQualifiedDirs;
+        let
+          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
+          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings [ "/hosts/" name ])) dirs);
+        in
+        utils.buildNixosConfigurations fullyQualifiedDirs;
 
       overlays = [
         neovim-nightly-overlay.overlay
@@ -107,5 +109,5 @@
       ];
 
       packages."${system}" = (stable-pkgs null pkgs);
-  };
+    };
 }

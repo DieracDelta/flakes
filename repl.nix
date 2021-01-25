@@ -1,9 +1,9 @@
 let
   flake = builtins.getFlake (toString ./.);
-  nixpkgs = import <nixpkgs> { };
+  nixpkgs-head = import <nixpkgs-head> { };
 in
 { inherit flake; }
 // flake
-// nixpkgs
-// nixpkgs.lib
-// flake.nixosConfigurations
+// nixpkgs-head
+// nixpkgs-head.lib
+  // flake.nixosConfigurations
