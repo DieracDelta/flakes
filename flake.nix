@@ -25,18 +25,18 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-    /*doesn't work.. not sure why : /*/
-   nyxt-overlay = {
+    /*doesn't work.. not sure why */
+    nyxt-overlay = {
       url = "github:atlas-engineer/nyxt";
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-   emacs-overlay = {
-     url = "github:nix-community/emacs-overlay";
-     flake = true;
-     inputs.nixpkgs.follows = "nixpkgs-stable";
-   };
+    emacs-overlay = {
+      url = "github:nix-community/emacs-overlay";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
 
     nix-doom-emacs = {
       url = "github:vlaci/nix-doom-emacs";
@@ -44,9 +44,16 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
       inputs.emacs-overlay.follows = "emacs-overlay";
     };
+
+    gytis-overlay = {
+      url = "github:gytis-ivaskevicius/nixfiles";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs-stable, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs-stable, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, ... }:
     let
       inherit (nixpkgs-stable) lib;
       inherit (lib) recursiveUpdate;
@@ -91,6 +98,7 @@
         neovim-nightly-overlay.overlay
         stable-pkgs
         emacs-overlay.overlay
+        gytis-overlay.overlay
 
         (final: prev: {
           inherit (unstable-pkgs) manix alacritty nyxt;

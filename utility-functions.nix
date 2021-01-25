@@ -41,7 +41,9 @@ in
                   experimental-features = nix-command flakes
                 '';
 
-                nix.nixPath = lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs;
+                nix.nixPath = 
+                  let path = toString ./.; in
+                  (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ ["repl=${path}"];
                 nix.registry =
                   (lib.mapAttrs'
                   (name : _v: lib.nameValuePair ("${name}") ({ flake = inputs."${name}";}))

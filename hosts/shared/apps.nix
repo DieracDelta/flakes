@@ -28,7 +28,7 @@
      inherit (texlive) scheme-medium lipsum fmtcount datetime;
      })
   ];
-  embeddedPack = with pkgs; [ arduino arduino-cli platformio scala metals sbt];
+  embeddedPack = with pkgs; [ g-alacritty arduino arduino-cli platformio scala metals sbt];
   pentestPack = with pkgs; [
     ghidra-bin
     john
@@ -90,6 +90,7 @@
     glxinfo
   ];
   cliPack = with pkgs; [
+      exa
       nixos-generators
       evtest
       redshift
