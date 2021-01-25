@@ -1,4 +1,4 @@
-{ config, pkgs, lib, pkgset, ... }:
+{ config, pkgs, lib,  ... }:
 
 {
 
@@ -23,81 +23,86 @@
     ];
   texPack = with pkgs;
   [
+    pdftk
     (texlive.combine {
      inherit (texlive) scheme-medium lipsum fmtcount datetime;
      })
   ];
   embeddedPack = with pkgs; [ arduino arduino-cli platformio scala metals sbt];
-  pentestPack = with pkgs; [nmap aircrack-ng];
-  textPack = with pkgs; [
-      /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
+  pentestPack = with pkgs; [
+    ghidra-bin
+    john
+    nmap
+    aircrack-ng
+  ];
+  languagePack = with pkgs; [
+      opam
+      cmake
+      clang
+      opencl-headers
+  ];
+  languageserverPack = with pkgs; [
       shellcheck
-      nyxt
-      hunter
-      atop
       rnix-lsp
-      neovim-nightly
+      nixfmt
+      clang-tools
+  ];
+  miscPack = with pkgs; [
+      /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
+      /*nyxt*/
       pulseeffects
       noip
       remmina
-      dnsutils
-      mkpasswd
-      imagemagick
-      deepfry
       pkgs.unstable.chromium
       flameshot
       firefox
       vscode
-      cachix
-      bat
-      manix
       dante
       tigervnc
       hwloc
       nix-du
       nox
       ngrok
-      nixos-generators
       vscode
-      wine
-      pdftk
-      vimb
-# libreoffice
-      redshift
-      brightnessctl
-      arandr
       zoom
-      uutils-coreutils
-      nix-tree
       android-studio
-      nixFlakes
       gimp
       tdesktop
-      nixfmt
-      clang-tools
-      evtest
-      cmake
       evemu
-      opam
-      opencl-headers
-      clang
-      unzip
       gtk3
       xdg_utils
       shared_mime_info
-      emacs
       ];
-# wlPack = with pkgs; [
-#   flameshot
-#   wev
-#   swaylock
-#   wf-recorder
-#   slurp
-#   grim
-# ];
-  xPack = with pkgs; [ maim xclip xmobar libGL libGLU glxinfo ];
+  wlPack = with pkgs; [
+    flameshot
+    wev
+    swaylock
+    wf-recorder
+    slurp
+    grim
+  ];
+  xPack = with pkgs; [ 
+    maim
+    xclip
+    xmobar
+    libGL
+    libGLU
+    glxinfo
+  ];
   cliPack = with pkgs; [
+      nixos-generators
+      evtest
+      redshift
+      emacs
+      unzip
+      nix-tree
+      nixFlakes
+      brightnessctl
+      arandr
     fzf
+      cachix
+      bat
+      manix
       zsh
       oh-my-zsh
       ripgrep
@@ -115,9 +120,16 @@
       mpv
       youtube-dl
       file
+      atop
+      hunter
+      neovim-nightly
       fd
       sd
       tealdeer
+      dnsutils
+      imagemagick
+      deepfry
+      mkpasswd
       htop
       wget
       ispell
@@ -153,6 +165,7 @@
   ];
   toolPack = with pkgs; [ pavucontrol keepass pywal pithos ];
   gamingPack = with pkgs; [
+      wine
     cowsay
       steam
       mesa
@@ -194,7 +207,6 @@
       mimic
       zoom-us
       ];
-  hackPack = with pkgs; [ ghidra-bin john ];
   python37Pack = with pkgs;
   let
     my-python-packages = python-packages:
@@ -214,10 +226,12 @@
   in [ python-with-my-packages ];
 
   in builtins.concatLists [
+  languagePack
+  languageserverPack
     embeddedPack
     texPack
     haskellPack
-      textPack
+      miscPack
 # wlPack
       cliPack
       devPack
@@ -226,7 +240,6 @@
       appPack
       gamingPack
       python37Pack
-      hackPack
       xPack
       pentestPack
   ];

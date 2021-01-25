@@ -36,7 +36,7 @@
     coc-python
     coc-emmet
     /*pkgset.unstable-pkgs.*/
-    /*vimPlugins.coc-diagnostic*/
+    pkgs.unstable.vimPlugins.coc-diagnostic
   ];
   programs.neovim.viAlias = true;
   programs.neovim.vimAlias = true;

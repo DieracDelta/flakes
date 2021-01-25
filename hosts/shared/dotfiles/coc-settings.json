@@ -17,7 +17,8 @@
                         "rootPatterns": ["build.sbt"],
                         "filetypes": ["scala", "sbt"]
                 }
-        }
+        },
         "diagnostic-languageserver.filetypes": {
                 "sh": "shellcheck"
         }
+}

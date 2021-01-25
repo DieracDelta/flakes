@@ -1,4 +1,4 @@
-{ config, pkgs, pkgset, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   programs.home-manager.enable = true;
@@ -20,7 +20,9 @@
 
   programs.fzf.enableZshIntegration = true;
   imports = [
-    /*pkgset.inputs.nix-doom-emacs.hmModule*/
+    /*inputs.nix-doom-emacs.hmModule*/
+    /*_module.args*/
+    /*config.doom*/
     ./dotfiles/zsh.nix
     ./dotfiles/nvim.nix
     ./dotfiles/xmonad/default.nix

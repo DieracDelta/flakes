@@ -46,6 +46,6 @@
 ;; our package manager can't deal with; see raxod502/straight.el#279)
 ;(package! builtin-package :recipe (:branch "develop"))
 
-(package! smtlib-mode :recipe (:host github :repo "LordYuuma/smtlib-mode"))
-(package! bap-mode)
-(package! dockerfile-mode :recipe (:host github :repo "spotify/dockerfile-mode"))
+;(package! smtlib-mode :recipe (:host github :repo "LordYuuma/smtlib-mode"))
+;(package! bap-mode)
+;(package! dockerfile-mode :recipe (:host github :repo "spotify/dockerfile-mode"))

@@ -4,73 +4,100 @@
 
 
   inputs = {
-    nixpkgs_head.url = "nixpkgs/master";
-    nixpkgs_stable.url = "nixpkgs/release-20.09";
-    home = {
+    nixpkgs-head.url = "nixpkgs/master";
+    nixpkgs-stable.url = "nixpkgs/release-20.09";
+    home-manager = {
       url = "github:nix-community/home-manager/release-20.09";
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs_stable";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
     };
-    /*not used right now*/
+    /*not used right now, but once I get a router that I control....*/
     /*mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };*/
     neovim-nightly-overlay =
     {
       url = "github:nix-community/neovim-nightly-overlay";
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs_head";
+      inputs.nixpkgs.follows = "nixpkgs-head";
     };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs_head";
+      inputs.nixpkgs.follows = "nixpkgs-head";
     };
+
     /*doesn't work.. not sure why : /*/
-    /*nyxt-pkg = {*/
-      /*url = "github:atlas-engineer/nyxt";*/
-      /*flake = true;*/
-      /*follows = "master";*/
-    /*};*/
-    /*these give me a infinite recursion error. Not obvious why...*/
-    /*doom-emacs.url = "github:hlissner/doom-emacs/f7293fb67ef701244a421fd3bfc04b8e12689edc";*/
-    /*doom-emacs.flake = false;*/
-    /*nix-doom-emacs.url = "github:vlaci/nix-doom-emacs";*/
-    /*nix-doom-emacs.inputs.doom-emacs.follows = "doom-emacs";*/
-  };
-
-  outputs = inputs@{ self, ... }:
-    let
-    inherit (self.inputs.nixpkgs_stable) lib;
-  inherit (lib) recursiveUpdate;
-  inherit (builtins) readDir;
-  inherit (utils) pathsToImportedAttrs recImport;
-  utils = import ./utility-functions.nix { inherit lib; };
-  system = "x86_64-linux";
-
-
-  pkgImport = pkgs:
-    import pkgs {
-      inherit system;
-      config = { allowUnfree = true; };
+   nyxt-overlay = {
+      url = "github:atlas-engineer/nyxt";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-  unstable-pkgs = pkgImport self.inputs.nixpkgs_head;
-  pkgset = {
+   emacs-overlay = {
+     url = "github:nix-community/emacs-overlay";
+     flake = true;
+     inputs.nixpkgs.follows = "nixpkgs-stable";
+   };
 
-    inherit unstable-pkgs;
-    os-pkgs = pkgImport self.inputs.nixpkgs_stable;
-    package-overrides = (with unstable-pkgs; [ manix alacritty nyxt ]);
-
-    inputs = self.inputs;
-    custom-pkgs = (import ./pkgs);
-    custom-overlays = [
-      inputs.neovim-nightly-overlay.overlay
-    ];
-  };
-  in with pkgset; {
-    nixosConfigurations = import ./hosts
-      (recursiveUpdate inputs { inherit lib pkgset system utils; });
-    overlay = pkgset.custom-pkgs;
-    packages."${system}" = self.overlay;
+    nix-doom-emacs = {
+      url = "github:vlaci/nix-doom-emacs";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+      inputs.emacs-overlay.follows = "emacs-overlay";
+    };
   };
 
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs-stable, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, ... }:
+    let
+      inherit (nixpkgs-stable) lib;
+      inherit (lib) recursiveUpdate;
+      system = "x86_64-linux";
+      /*final -> prev -> pkgs*/
+      stable-pkgs = import ./overlays;
+
+      utils = import ./utility-functions.nix {
+        inherit lib system pkgs inputs self;
+        nixosModules = self.nixosModules;
+      };
+
+
+      pkgs = (utils.pkgImport nixpkgs-stable self.overlays);
+      unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ] );
+      in
+  {
+
+      nixosModules = [
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.jrestivo = {
+            imports = [
+              inputs.nix-doom-emacs.hmModule
+              ./hosts/shared/home.nix
+            ];
+          };
+        }
+      ];
+
+
+      /*very simply get all the stuff in hosts/directory to provide as outputs*/
+      nixosConfigurations =
+      let dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
+          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings ["/hosts/" name])) dirs);
+      in
+      utils.buildNixosConfigurations fullyQualifiedDirs;
+
+      overlays = [
+        neovim-nightly-overlay.overlay
+        stable-pkgs
+        emacs-overlay.overlay
+
+        (final: prev: {
+          inherit (unstable-pkgs) manix alacritty nyxt;
+          unstable = unstable-pkgs;
+        })
+      ];
+
+      packages."${system}" = (stable-pkgs null pkgs);
+  };
 }

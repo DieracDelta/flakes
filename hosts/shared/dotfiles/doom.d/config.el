@@ -23,8 +23,9 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
-(use-package! smtlib-mode
-  :mode "\\.smt$")
+;TODO figure out why this is broken
+;(use-package! smtlib-mode
+  ;:mode "\\.smt$")
 
 (+global-word-wrap-mode +1)
 
@@ -131,19 +132,19 @@
 
 (setq evil-ex-substitute-global nil)
 
-(after! circe
-  (set-irc-server! "chat.freenode.net"
-    `(:tls t
-      :port 6697
-      :nick "kroneckerdelta"
-      :channels ("#next-browser" "nixos"))))
+;(after! circe
+  ;(set-irc-server! "chat.freenode.net"
+    ;`(:tls t
+      ;:port 6697
+      ;:nick "kroneckerdelta"
+      ;:channels ("#next-browser" "nixos"))))
 
 (setq +latex-viewers '(zathura))
 
-(use-package! dockerfile-mode
-  :mode "Dockerfile\\'"
-  :config
-  (put 'dockerfile-image-name 'safe-local-variable #'stringp))
+;(use-package! dockerfile-mode
+  ;:mode "Dockerfile\\'"
+  ;:config
+  ;(put 'dockerfile-image-name 'safe-local-variable #'stringp))
 
 (after! counsel
   (ivy-configure 'counsel-rg

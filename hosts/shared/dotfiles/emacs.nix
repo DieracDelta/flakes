@@ -1,9 +1,10 @@
 { config, pkgs, ...}:
 {
-  programs.emacs = {
-    enable = true;
-  };
   services.emacs = {
     enable = true;
+  };
+  programs.doom-emacs = {
+    enable = true;
+    doomPrivateDir = ./doom.d;
   };
 }
