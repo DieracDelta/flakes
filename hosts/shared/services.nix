@@ -21,6 +21,11 @@
 
   services.openssh.passwordAuthentication = false;
   services.openssh.enable = true;
+  programs.ssh.forwardX11 = true;
+  programs.ssh.setXAuthLocation = true;
+
+  services.xrdp.enable = true;
+  networking.firewall.allowedTCPPorts = [ 3389 ];
 
   services.lorri.enable = true;
 
