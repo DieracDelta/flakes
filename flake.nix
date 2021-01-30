@@ -74,6 +74,7 @@
 
 
       nixosModules = [
+        nixpkgs-stable.nixosModules.notDetected
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
@@ -103,7 +104,7 @@
         gytis-overlay.overlay
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt;
+          inherit (unstable-pkgs) manix alacritty nyxt maim;
           unstable = unstable-pkgs;
         })
       ];
