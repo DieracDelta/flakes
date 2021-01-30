@@ -21,4 +21,3 @@
 
   powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
 }
-

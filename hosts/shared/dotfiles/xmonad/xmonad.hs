@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-missing-signatures #-}
 
-import           System.Exit                    ( exitSuccess )
+--import           System.Exit                    ( exitSuccess )
 import           XMonad
 import           XMonad.Hooks.EwmhDesktops      ( ewmh
                                                 , fullscreenEventHook
@@ -92,8 +92,7 @@ myStartupHook = do
   spawnOnce "feh --bg-fill ~/.wallpaper.jpg"
   spawn "Discord"
   spawn "pavucontrol"
-  spawn "slack"
-  spawn "firefox"
+  spawn "chromium"
 
 myLayoutHook = smartBorders . avoidStruts $ myMainLayout
 
@@ -147,10 +146,13 @@ myKeys conf@XConfig { XMonad.modMask = modm } =
        , ((modm .|. shiftMask, xK_t)     , withFocused $ windows . W.sink)
        , ((modm .|. shiftMask, xK_v)     , sendMessage (IncMasterN 1))
        , ((modm .|. shiftMask, xK_b)     , sendMessage (IncMasterN (-1)))
-       , ( (modm .|. shiftMask, xK_c)
-         , io exitSuccess
-         )
+       --, ( (modm .|. shiftMask, xK_c)
+         --, io exitSuccess
+         --)
        -- , ((modm, xK_q), spawn "xmonad --recompile && xmonad --restart")
+       --
+       , ((modm, xK_b)                    , spawn "bluetoothctl connect 60:AB:D2:3A:F4:06")
+       , ((modm .|. shiftMask, xK_b)      , spawn "bluetoothctl connect 70:CE:8C:1B:4C:D5")
        , ((modm .|. shiftMask, xK_Up)     , spawn "playerctl play")
        , ((modm .|. shiftMask, xK_Down)   , spawn "playerctl pause")
        , ((modm .|. shiftMask, xK_Right)  , spawn "playerctl next")

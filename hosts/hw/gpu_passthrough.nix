@@ -6,8 +6,8 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelModules = [ "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" ];
   virtualisation.libvirtd.enable = true;
-  users.groups.libvirtd.members = [ "root" "jrestivo"];
-  boot.extraModprobeConfig ="options vfio-pci ids=1002:731f,1002:ab38";
+  users.groups.libvirtd.members = [ "root" "jrestivo" ];
+  boot.extraModprobeConfig = "options vfio-pci ids=1002:731f,1002:ab38";
   virtualisation.libvirtd.qemuVerbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
     user = "jrestivo"
@@ -21,6 +21,6 @@
     "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
     "/dev/rtc","/dev/hpet", "/dev/sev"
     ]
-    '';
-  boot.kernelPatches = [ { name = "novi reset patch"; patch = ./reset_bug_patch.patch; } ];
+  '';
+  boot.kernelPatches = [{ name = "novi reset patch"; patch = ./reset_bug_patch.patch; }];
 }

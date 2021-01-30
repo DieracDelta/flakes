@@ -1,11 +1,11 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   programs.home-manager.enable = true;
 
   home.sessionVariables = { EDITOR = "nvim"; };
 
-  home.stateVersion = "19.09";
+  home.stateVersion = "20.09";
 
   programs.git.enable = true;
   programs.git.userName = "Justin Restivo";
@@ -19,13 +19,18 @@
   };
 
   programs.fzf.enableZshIntegration = true;
-  # imports = [ ./dotfiles/zsh.nix ./dotfiles/nvim.nix ./dotfiles/emacs.nix ];
   imports = [
+    /*inputs.nix-doom-emacs.hmModule*/
+    /*_module.args*/
+    /*config.doom*/
     ./dotfiles/zsh.nix
     ./dotfiles/nvim.nix
     ./dotfiles/xmonad/default.nix
     ./dotfiles/emacs.nix
   ];
+
+  # hunter config stuff
+  xdg.configFile."hunter/keys".source = ./dotfiles/hunter_config;
 
   programs.tmux.enable = true;
   programs.tmux.historyLimit = 1000000;
@@ -34,7 +39,6 @@
   home.file.".wallpaper.jpg".source = ./dotfiles/wallpaper.jpg;
   home.file.".xmobarrc".source = ./dotfiles/xmonad/xmobar.hs;
 
-  # nixpkgs.overlays = [
   #   (import ./overs)
   #(import (builtins.fetchTarball {
   #         url = https://github.com/nix-community/emacs-overlay/archive/977a98a80df29aa94aed9e1307aadfa79eed7624.tar.gz;
@@ -43,7 +47,4 @@
   # home.packages = [ pkgs.deepfry pkgs.imagemagick ];
 
   manual.html.enable = true;
-  # for next browser
-  # environment.sessionVariables.LD_LIBRARY_PATH = [ "${pkgs.openssl.out}/lib" ];
-  # environment.sessionVariables. = [ "${pkgs.openssl.out}/lib" ]
 }

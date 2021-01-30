@@ -316,7 +316,7 @@ nnoremap <C-p> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/
 "Cntrl + l to fix previous spelling mistake
 inoremap <C-l> <c-g>u<Esc>[s1z=`]i<c-g>u
 "latex sane tabs + spelling
-autocmd FileType tex setlocal ts=2 sw=2 sts=0 expandtab spell
+"autocmd FileType tex setlocal ts=2 sw=2 sts=0 expandtab spell
 let g:vimtex_complete_enabled = 1
 let g:vimtex_complete_close_braces = 1
 let g:vimtex_complete_ignore_case = 1
@@ -325,8 +325,8 @@ let g:vimtex_complete_smart_case = 1
 "
 let g:deoplete#enable_at_startup=1
 let g:vimtex_compiler_progname='nvr'
-set spell spelllang=en_us
-set spellfile=/home/dieraca/.config/nvim/spell/en.utf-8.add
+"set spell spelllang=en_us
+"set spellfile=/home/dieraca/.config/nvim/spell/en.utf-8.add
 
 "colorizer config
 let g:colorizer_auto_color=1
@@ -461,6 +461,7 @@ let g:airline_section_z  = "%P"
 
 " really just to help me remember, with shitty regex:
 " peekaboo: ("|@)(space)?
+set nospell
 
 
 
@@ -514,4 +515,3 @@ for s:char in [ '_', '.', ':', ',', ';', '<bar>', '/', '<bslash>', '*', '+', '%'
         execute 'xmap a' . s:char . ' <Plug>(textobj-sandwich-query-a)' . s:char
         execute 'omap a' . s:char . ' <Plug>(textobj-sandwich-query-a)' . s:char
 endfor
-

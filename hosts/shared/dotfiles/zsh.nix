@@ -15,6 +15,14 @@
 
   # aliases
   programs.zsh.shellAliases = {
+    l = "ls -lF --time-style=long-iso --grid --icons";
+    la = "l -a";
+    ls = "exa -h --git --color=auto --group-directories-first -s extension";
+    lstree = "ls --tree";
+    tree = "lstree";
+    cat = "bat";
+
+    nix-repl = "export __NIXOS_SET_ENVIRONMENT_DONE='' && nix repl $(source /etc/profile && echo $NIX_PATH | perl -pe 's|.*(/nix/store/.*-source/repl.nix).*|\\1|')";
     "ll" = "ls -l";
     ".." = "cd ..";
     "query" =

@@ -22,4 +22,4 @@ jobs:
       with:
         name: jrestivo
         signingKey: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix build .#nixosConfigurations.jrestivo.config.system.build.toplevel -L
+    - run: nix build .#nixosConfigurations.laptop.config.system.build.toplevel -L

@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> { } }:
 let extraPackages = import ./extraPackages.nix;
-in with pkgs;
+in
+with pkgs;
 
 mkShell {
   buildInputs = [
