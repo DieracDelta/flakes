@@ -19,9 +19,9 @@
     # Setup Nextcloud virtual host to listen on ports
     virtualHosts = {
 
-      "nextcloud.local" = {
+      "localhost" = {
         ## Force HTTP redirect to HTTPS
-        /*forceSSL = true;*/
+        forceSSL = false;
         ## LetsEncrypt
         /*enableACME = true;*/
       };
@@ -43,14 +43,10 @@
   services.nextcloud = {
     package = pkgs.nextcloud20;
     enable = true;
-    hostName = "nextcloud.local";
+    hostName = "localhost";
     config.extraTrustedDomains = [ "localhost" "192.168.196.233" "192.168.196.136" "192.168.196.17"];
 
-    # Enable built-in virtual host management
-    # Takes care of somewhat complicated setup
-    # See here: https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/web-apps/nextcloud.nix#L529
-
-    # Use HTTPS for links
+    # Use HTTP for links
     https = false;
 
     # Auto-update Nextcloud Apps
@@ -59,7 +55,7 @@
     autoUpdateApps.startAt = "05:00:00";
 
     config = {
-      # Further forces Nextcloud to use HTTPS
+      # Further forces Nextcloud to use HTTP
       overwriteProtocol = "http";
 
       # Nextcloud PostegreSQL database configuration, recommended over using SQLite
