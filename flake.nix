@@ -40,6 +40,7 @@
 
     nix-doom-emacs = {
       url = "github:vlaci/nix-doom-emacs";
+      /*url = "github:vlaci/nix-doom-emacs/fix-gccemacs";*/
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs-stable";
       inputs.emacs-overlay.follows = "emacs-overlay";
