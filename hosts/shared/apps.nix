@@ -91,6 +91,7 @@
         glxinfo
       ];
       cliPack = with pkgs; [
+        nix-top
         nixpkgs-fmt
         zsh-forgit
         exa
@@ -202,6 +203,7 @@
         keybase
         keybase-gui
         kbfs
+        libreoffice
         obs-studio
         graphviz
         minecraft
