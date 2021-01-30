@@ -104,7 +104,7 @@
         gytis-overlay.overlay
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20;
           unstable = unstable-pkgs;
         })
       ];

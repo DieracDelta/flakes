@@ -51,6 +51,8 @@
       miscPack = with pkgs; [
         /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
         /*nyxt*/
+        nextcloud20
+        nextcloud-client
         pulseeffects
         noip
         remmina
@@ -60,6 +62,7 @@
         vscode
         dante
         tigervnc
+        dnsutils
         hwloc
         nix-du
         nox
@@ -91,9 +94,11 @@
         glxinfo
       ];
       cliPack = with pkgs; [
+        lsof
         nix-top
         nixpkgs-fmt
         zsh-forgit
+        procs
         exa
         nixos-generators
         evtest

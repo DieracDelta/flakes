@@ -25,7 +25,7 @@
   programs.ssh.setXAuthLocation = true;
 
   services.xrdp.enable = true;
-  networking.firewall.allowedTCPPorts = [ 3389 ];
+  networking.firewall.allowedTCPPorts = [ 3389 80 443 444 ];
 
   services.lorri.enable = true;
 
