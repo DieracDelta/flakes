@@ -165,6 +165,7 @@ myKeys conf@XConfig { XMonad.modMask = modm } =
          , spawn "maim -s | xclip -selection clipboard -t image/png"
          )
        , ((modm .|. shiftMask, xK_p), spawn "deepfry")
+       , ((modm , xK_o), spawn "flameshot gui")
        , ((modm, xK_comma)          , prevWS)
        , ((modm, xK_period)         , nextWS)
        , ((modm, xK_Tab)            , cycleRecentWS [xK_Tab] xK_Tab xK_Tab)
