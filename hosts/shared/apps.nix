@@ -29,7 +29,7 @@
             inherit (texlive) scheme-medium lipsum fmtcount datetime;
           })
         ];
-      embeddedPack = with pkgs; [ g-alacritty arduino arduino-cli platformio scala metals sbt ];
+      embeddedPack = with pkgs; [ patchelf avrdude g-alacritty arduino arduino-cli platformio scala metals sbt pkgsCross.avr.buildPackages.gcc];
       pentestPack = with pkgs; [
         ghidra-bin
         john
@@ -189,6 +189,7 @@
       # deploymentPack = with pkgs; [hugo];
       # bapPack = with pkgs; [ libbap skopeo python27 m4];
       appPack = with pkgs; [
+        bluejeans-gui
         blender
         xorg.xwininfo
         element-desktop

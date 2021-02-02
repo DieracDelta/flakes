@@ -3,13 +3,15 @@
   description = "A highly awesome system configuration.";
 
 
+  /*note that I'm aware that flake is true by default. However,*/
+  /*I'm sitting on the side of making the flake more clean .... */
   inputs = {
     nixpkgs-head.url = "nixpkgs/master";
-    nixpkgs-stable.url = "nixpkgs/release-20.09";
+    nixpkgs.url = "nixpkgs/release-20.09";
     home-manager = {
       url = "github:nix-community/home-manager/release-20.09";
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-stable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     /*not used right now, but once I get a router that I control....*/
     /*mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };*/
@@ -35,14 +37,14 @@
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-stable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-doom-emacs = {
       url = "github:vlaci/nix-doom-emacs";
       /*url = "github:vlaci/nix-doom-emacs/fix-gccemacs";*/
       flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-stable";
+      inputs.nixpkgs.follows = "nixpkgs";
       inputs.emacs-overlay.follows = "emacs-overlay";
     };
 
@@ -52,11 +54,18 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+      /*inputs.nixpkgs.follows = "nixpkgs-head";*/
+    };
+
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs-stable, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, deploy-rs, ... }:
     let
-      inherit (nixpkgs-stable) lib;
+      inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
       system = "x86_64-linux";
       /*final -> prev -> pkgs*/
@@ -68,14 +77,14 @@
       };
 
 
-      pkgs = (utils.pkgImport nixpkgs-stable self.overlays);
+      pkgs = (utils.pkgImport nixpkgs self.overlays);
       unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
     in
     {
 
 
       nixosModules = [
-        nixpkgs-stable.nixosModules.notDetected
+        nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;

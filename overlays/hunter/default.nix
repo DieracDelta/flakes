@@ -6,7 +6,6 @@
 , makeWrapper
 , glib
 , gst_all_1
-, libsixel
 }:
 /*with import <nixpkgs> {};*/
 
@@ -51,7 +50,6 @@ rustPlatform.buildRustPackage rec {
     gst_all_1.gst-plugins-good
     gst_all_1.gst-plugins-ugly
     gst_all_1.gst-plugins-bad
-    libsixel
   ] ++ stdenv.lib.optionals stdenv.isDarwin [ IOKit ];
 
   postInstall = ''
