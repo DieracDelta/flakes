@@ -35,6 +35,13 @@
   programs.tmux.enable = true;
   programs.tmux.historyLimit = 1000000;
   programs.tmux.extraConfig = builtins.readFile ./dotfiles/tmux.conf;
+  programs.tmux.plugins = with pkgs; [
+    {
+      plugin = tmuxPlugins.gruvbox;
+      extraConfig = "set -g @tmux-gruvbox 'dark'";
+
+    }
+  ];
 
   home.file.".wallpaper.jpg".source = ./dotfiles/wallpaper.jpg;
   home.file.".xmobarrc".source = ./dotfiles/xmonad/xmobar.hs;

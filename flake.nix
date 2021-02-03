@@ -3,6 +3,7 @@
   description = "A highly awesome system configuration.";
 
 
+
   /*note that I'm aware that flake is true by default. However,*/
   /*I'm sitting on the side of making the flake more clean .... */
   inputs = {
@@ -107,11 +108,18 @@
         in
         utils.buildNixosConfigurations fullyQualifiedDirs;
 
+
       overlays = [
         neovim-nightly-overlay.overlay
         stable-pkgs
         emacs-overlay.overlay
         gytis-overlay.overlay
+        /*(final: prev: import prev.stdenv {*/
+         /*stdenv.hostPlatform.libc = "musl";*/
+         /*stdenv.hostPlatform.isMusl = true;*/
+         /*stdenv.targetPlatform.libc = "musl";*/
+         /*stdenv.targetPlatform.isMusl = true;*/
+         /*})*/
 
         (final: prev: {
           inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20;
