@@ -163,3 +163,7 @@ function _nix() {
 }
 
 compdef _nix nix
+
+function ns() {
+  nix search --json $1 $2 | nix-search-pretty | bat
+}

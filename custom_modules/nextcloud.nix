@@ -1,9 +1,9 @@
 { config, pkgs, lib, ... }:
 {
   /*security.acme = {*/
-    /*acceptTerms = true;*/
-    /*# Replace the email here!*/
-    /*email = "justin@restivo.me";*/
+  /*acceptTerms = true;*/
+  /*# Replace the email here!*/
+  /*email = "justin@restivo.me";*/
   /*};*/
 
   /*# Enable Nginx*/
@@ -35,16 +35,17 @@
     # Ensure the database, user, and permissions always exist
     ensureDatabases = [ "nextcloud" ];
     ensureUsers = [
-    { name = "nextcloud";
-      ensurePermissions."DATABASE nextcloud" = "ALL PRIVILEGES";
-    }
+      {
+        name = "nextcloud";
+        ensurePermissions."DATABASE nextcloud" = "ALL PRIVILEGES";
+      }
     ];
   };
   services.nextcloud = {
     package = pkgs.nextcloud20;
     enable = true;
     hostName = "localhost";
-    config.extraTrustedDomains = [ "localhost" "192.168.196.233" "192.168.196.136" "192.168.196.17"];
+    config.extraTrustedDomains = [ "localhost" "192.168.196.233" "192.168.196.136" "192.168.196.17" ];
 
     # Use HTTP for links
     https = false;
@@ -72,9 +73,9 @@
     };
   };
   systemd.services."nextcloud-setup" = {
-    requires = ["postgresql.service"];
-    after = ["postgresql.service"];
+    requires = [ "postgresql.service" ];
+    after = [ "postgresql.service" ];
   };
-  networking.firewall.allowedTCPPorts = [ 3389 80 443 444];
+  networking.firewall.allowedTCPPorts = [ 3389 80 443 444 ];
 
 }

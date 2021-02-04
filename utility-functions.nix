@@ -20,7 +20,7 @@ in
     };
   };
 
-      /*nixpkgs-head.pkgs = nixpkgs.pkgsMusl;*/
+  /*nixpkgs-head.pkgs = nixpkgs.pkgsMusl;*/
 
   buildNixosConfigurations = paths:
     genAttrs' paths (path:

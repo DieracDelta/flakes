@@ -5,7 +5,8 @@
 
 
   /*note that I'm aware that flake is true by default. However,*/
-  /*I'm sitting on the side of making the flake more clean .... */
+  /*I'm sitting on the side of making the flake more explicit */
+  /*since I'm easily confused .... */
   inputs = {
     nixpkgs-head.url = "nixpkgs/master";
     nixpkgs.url = "nixpkgs/release-20.09";
@@ -28,7 +29,6 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-    /*doesn't work.. not sure why */
     nyxt-overlay = {
       url = "github:atlas-engineer/nyxt";
       flake = true;
@@ -55,12 +55,12 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-    deploy-rs = {
-      url = "github:serokell/deploy-rs";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
-      /*inputs.nixpkgs.follows = "nixpkgs-head";*/
-    };
+    /*deploy-rs = {*/
+    /*url = "github:serokell/deploy-rs";*/
+    /*flake = true;*/
+    /*inputs.nixpkgs.follows = "nixpkgs-head";*/
+    /*[>inputs.nixpkgs.follows = "nixpkgs-head";<]*/
+    /*};*/
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -78,7 +78,7 @@
 
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, deploy-rs, sops-nix, nix-dram, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -96,14 +96,15 @@
 
       tmp-pkgs = (import nixpkgs { inherit system; }).pkgs;
       nixFlakes-patched = tmp-pkgs.applyPatches {
-	src = tmp-pkgs.nix.path;
-	patches = [
+        src = tmp-pkgs.nix.path;
+        patches = [
           (tmp-pkgs.fetchpatch {
-           url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
-           sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI="; })
-	];
+            url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
+            sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI=";
+          })
+        ];
       };
-#  pkgs = utils.pkgImport nixpkgs self.overlays;
+      #  pkgs = utils.pkgImport nixpkgs self.overlays;
       /*pkgs = utils.pkgImport nixpkgs-patched self.overlays;*/
 
 
@@ -148,26 +149,29 @@
         stable-pkgs
         emacs-overlay.overlay
         gytis-overlay.overlay
+        nyxt-overlay.overlay
+
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
         })
         (final: prev: {
-	 nixUnstable = prev.nixUnstable.overrideAttrs (old: {
-	     patches = [
-	     (prev.fetchpatch {
-	      url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
-	      sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI="; })
-	     ];
-	     });
-	})
+          nixUnstable = prev.nixUnstable.overrideAttrs (old: {
+            patches = [
+              (prev.fetchpatch {
+                url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
+                sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI=";
+              })
+            ];
+          });
+        })
 
 
         /*(final: prev: import prev.stdenv {*/
-         /*stdenv.hostPlatform.libc = "musl";*/
-         /*stdenv.hostPlatform.isMusl = true;*/
-         /*stdenv.targetPlatform.libc = "musl";*/
-         /*stdenv.targetPlatform.isMusl = true;*/
-         /*})*/
+        /*stdenv.hostPlatform.libc = "musl";*/
+        /*stdenv.hostPlatform.isMusl = true;*/
+        /*stdenv.targetPlatform.libc = "musl";*/
+        /*stdenv.targetPlatform.isMusl = true;*/
+        /*})*/
 
         (final: prev: {
           inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20;

@@ -4,4 +4,5 @@ self: super: rec {
   /*firefox = super.callPackage ./firefox {}*/
   /*unchromium = super.callPackage ./unchromium {};*/
   hunter = super.callPackage ./hunter { };
+  /*nixFlakes = super.callPackage ./nixFlakes { };*/
 }
