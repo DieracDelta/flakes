@@ -64,8 +64,6 @@
         tigervnc
         dnsutils
         hwloc
-        nix-du
-        nox
         ngrok
         vscode
         zoom
@@ -94,8 +92,13 @@
         glxinfo
       ];
       cliPack = with pkgs; [
+        nix-search-pretty
+        gnupg
+        ssh-to-pgp
         lsof
+        nox
         nix-top
+        nix-du
         nixpkgs-fmt
         zsh-forgit
         procs

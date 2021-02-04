@@ -62,9 +62,23 @@
       /*inputs.nixpkgs.follows = "nixpkgs-head";*/
     };
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
+
+    nix-dram = {
+      url = "github:dramforever/nix-dram";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
+
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, deploy-rs, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, deploy-rs, sops-nix, nix-dram, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -79,12 +93,32 @@
 
 
       pkgs = (utils.pkgImport nixpkgs self.overlays);
+
+      tmp-pkgs = (import nixpkgs { inherit system; }).pkgs;
+      nixFlakes-patched = tmp-pkgs.applyPatches {
+	src = tmp-pkgs.nix.path;
+	patches = [
+          (tmp-pkgs.fetchpatch {
+           url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
+           sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI="; })
+	];
+      };
+#  pkgs = utils.pkgImport nixpkgs self.overlays;
+      /*pkgs = utils.pkgImport nixpkgs-patched self.overlays;*/
+
+
+      # thanks gytis : )))
+
+
+
       unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
     in
     {
 
 
       nixosModules = [
+        sops-nix.nixosModules.sops
+        /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
         {
@@ -114,6 +148,20 @@
         stable-pkgs
         emacs-overlay.overlay
         gytis-overlay.overlay
+        (final: prev: {
+          inherit (nix-dram.packages.${system}) nix-search-pretty;
+        })
+        (final: prev: {
+	 nixUnstable = prev.nixUnstable.overrideAttrs (old: {
+	     patches = [
+	     (prev.fetchpatch {
+	      url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
+	      sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI="; })
+	     ];
+	     });
+	})
+
+
         /*(final: prev: import prev.stdenv {*/
          /*stdenv.hostPlatform.libc = "musl";*/
          /*stdenv.hostPlatform.isMusl = true;*/
