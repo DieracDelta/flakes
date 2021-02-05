@@ -88,7 +88,7 @@
 
       utils = import ./utility-functions.nix {
         inherit lib system pkgs inputs self;
-        nixosModules = self.nixosModules;
+        nixosModules = nixosModules;
       };
 
 
@@ -113,10 +113,6 @@
 
 
       unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
-    in
-    {
-
-
       nixosModules = [
         sops-nix.nixosModules.sops
         /* for hardware*/
@@ -133,6 +129,10 @@
           };
         }
       ];
+    in
+    {
+
+
 
 
       /*very simply get all the stuff in hosts/directory to provide as outputs*/
@@ -174,7 +174,7 @@
         /*})*/
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du;
           unstable = unstable-pkgs;
         })
       ];

@@ -39,9 +39,20 @@ in
                 nixpkgs = { inherit pkgs; config = pkgs.config; };
 
                 nix.package = pkgs.nixUnstable;
-                nix.extraOptions = ''
-                  experimental-features = nix-command flakes
-                '';
+                nix = {
+                  extraOptions = ''
+                    experimental-features = nix-command flakes
+                  '';
+                  gc = {
+                    automatic = true;
+                    dates = "weekly";
+                    options = "--delete-older-than 7d --max-freed $((64 * 1024**3))";
+                  };
+                  optimise = {
+                    automatic = true;
+                    dates = [ "weekly" ];
+                  };
+                };
 
                 nix.nixPath =
                   let path = toString ./.; in

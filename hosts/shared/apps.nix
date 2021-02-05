@@ -50,7 +50,7 @@
       ];
       miscPack = with pkgs; [
         /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
-        /*nyxt*/
+        nyxt
         nextcloud20
         nextcloud-client
         pulseeffects
