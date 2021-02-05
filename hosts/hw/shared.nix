@@ -17,7 +17,6 @@
   hardware.bluetooth.enable = true;
 
   boot.loader.systemd-boot.enable = true;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
 }
