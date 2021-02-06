@@ -6,7 +6,10 @@
   services.zerotierone.joinNetworks = [ "af415e486feddf70" ];
 
   # even more OP ssh between all the devices
-  services.tailscale.enable = true;
+  services.tailscale = {
+    enable = true;
+    /*services.tailscale.port = 1618;*/
+  };
 
   # weird bug. Need this in order to get xmonad to work in home-manager.
   services.xserver = {
@@ -75,5 +78,6 @@
       "/usr/tmp"
     ];
   };
+
 
 }

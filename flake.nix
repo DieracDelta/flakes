@@ -2,8 +2,6 @@
 
   description = "A highly awesome system configuration.";
 
-
-
   /*note that I'm aware that flake is true by default. However,*/
   /*I'm sitting on the side of making the flake more explicit */
   /*since I'm easily confused .... */
@@ -92,23 +90,12 @@
       };
 
 
-      pkgs = (utils.pkgImport nixpkgs self.overlays);
+      pkgs = (utils.pkgImport nixpkgs overlays);
 
-      tmp-pkgs = (import nixpkgs { inherit system; }).pkgs;
-      nixFlakes-patched = tmp-pkgs.applyPatches {
-        src = tmp-pkgs.nix.path;
-        patches = [
-          (tmp-pkgs.fetchpatch {
-            url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
-            sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI=";
-          })
-        ];
-      };
-      #  pkgs = utils.pkgImport nixpkgs self.overlays;
-      /*pkgs = utils.pkgImport nixpkgs-patched self.overlays;*/
-
-
-      # thanks gytis : )))
+      hmImports = [
+        inputs.nix-doom-emacs.hmModule
+        ./hosts/shared/home.nix
+      ];
 
 
 
@@ -122,28 +109,10 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.jrestivo = {
-            imports = [
-              inputs.nix-doom-emacs.hmModule
-              ./hosts/shared/home.nix
-            ];
+            imports = hmImports;
           };
         }
       ];
-    in
-    {
-
-
-
-
-      /*very simply get all the stuff in hosts/directory to provide as outputs*/
-      nixosConfigurations =
-        let
-          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
-          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings [ "/hosts/" name ])) dirs);
-        in
-        utils.buildNixosConfigurations fullyQualifiedDirs;
-
-
       overlays = [
         neovim-nightly-overlay.overlay
         stable-pkgs
@@ -165,19 +134,36 @@
           });
         })
 
-
-        /*(final: prev: import prev.stdenv {*/
-        /*stdenv.hostPlatform.libc = "musl";*/
-        /*stdenv.hostPlatform.isMusl = true;*/
-        /*stdenv.targetPlatform.libc = "musl";*/
-        /*stdenv.targetPlatform.isMusl = true;*/
-        /*})*/
-
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale;
           unstable = unstable-pkgs;
         })
       ];
+
+    in
+    {
+
+      /*I should probably make this more involved but it's fine for now..*/
+      homeConfigurations = {
+        jrestivo =
+          home-manager.lib.homeManagerConfiguration {
+            inherit system ;
+            homeDirectory = /home/jrestivo;
+            username = "jrestivo";
+            configuration = {pkgs, ...} : {
+              imports = hmImports;
+              nixpkgs.overlays = overlays;
+            };
+          };
+      };
+
+      /*very simply get all the stuff in hosts/directory to provide as outputs*/
+      nixosConfigurations =
+        let
+          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
+          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings [ "/hosts/" name ])) dirs);
+        in
+        utils.buildNixosConfigurations fullyQualifiedDirs;
 
       packages."${system}" = (stable-pkgs null pkgs);
     };
