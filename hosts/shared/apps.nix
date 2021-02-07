@@ -29,7 +29,7 @@
             inherit (texlive) scheme-medium lipsum fmtcount datetime;
           })
         ];
-      embeddedPack = with pkgs; [ patchelf avrdude g-alacritty arduino arduino-cli platformio scala metals sbt pkgsCross.avr.buildPackages.gcc ];
+      embeddedPack = with pkgs; [ dtc patchelf avrdude g-alacritty arduino arduino-cli platformio scala metals sbt pkgsCross.avr.buildPackages.gcc ];
       pentestPack = with pkgs; [
         ghidra-bin
         john

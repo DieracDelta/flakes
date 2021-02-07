@@ -1,6 +1,14 @@
-{ config, pkgs, lib, options, ... }:
+{ config, pkgs, lib, options, users, ... }:
 
 {
+  sops.defaultSopsFile = ../../secrets/secrets.yaml;
+  sops.secrets.example_key = {};
+  sops.secrets.example-secret.mode = "0440";
+  sops.secrets.example-secret.owner = ${system}.users.users.jrestivo.jrestivo;
+  sops.secrets.example-secret.group = ${system}.users.users.jrestivo.group;
+
+
+
   # OP ssh between all the devices
   services.zerotierone.enable = true;
   services.zerotierone.joinNetworks = [ "af415e486feddf70" ];

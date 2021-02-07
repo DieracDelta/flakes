@@ -157,6 +157,16 @@
           };
       };
 
+      devShell.${system} = pkgs.mkShell {
+        # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
+        sopsPGPKeyDirs = [
+          "./secrets"
+        ];
+        nativeBuildInputs = [
+          (pkgs.callPackage sops-nix {}).sops-pgp-hook
+        ];
+      };
+
       /*very simply get all the stuff in hosts/directory to provide as outputs*/
       nixosConfigurations =
         let
