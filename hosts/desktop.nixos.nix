@@ -8,5 +8,5 @@
   custom_modules.jellyfin.enable = true;
   custom_modules.nextcloud.enable = true;
   custom_modules.core_services.enable = true;
-  custom_modules.workstation_services = true;
+  custom_modules.workstation_services.enable = true;
 }

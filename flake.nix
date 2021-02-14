@@ -189,12 +189,22 @@
       deploy.nodes = {
         laptop = {
           hostname = "100.100.105.124";
-          fastConnection = true;
           profiles = {
             system = {
               sshUser = "root";
               user = "root";
               path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.laptop;
+            };
+          };
+        };
+        desktop = {
+          hostname = "100.107.190.11";
+          fastConnection = true;
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.desktop;
             };
           };
         };
@@ -210,7 +220,6 @@
         };
         oracle_vps_2 = {
           hostname = "150.136.52.94";
-          fastConnection = true;
           profiles = {
             system = {
               sshUser = "root";
@@ -220,10 +229,8 @@
           };
         };
       };
-
       # This is highly advised, and will prevent many possible mistakes
-      /*checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;*/
-
+      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 
       packages."${system}" = (stable-pkgs null pkgs);
     };

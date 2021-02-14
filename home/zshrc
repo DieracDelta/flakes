@@ -140,7 +140,6 @@ function da() {
 }
 # nix direnv hook
 eval "$(direnv hook zsh)"
-eval $(opam env)
 
 function _nix() {
   local ifs_bk="$IFS"
