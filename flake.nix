@@ -8,6 +8,7 @@
   inputs = {
     nixpkgs-head.url = "nixpkgs/master";
     nixpkgs.url = "nixpkgs/release-20.09";
+    master.url = "nixpkgs/master";
     home-manager = {
       url = "github:nix-community/home-manager/release-20.09";
       flake = true;
@@ -52,15 +53,15 @@
       url = "github:gytis-ivaskevicius/nixfiles";
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.master.follows = "nixpkgs-head";
     };
 
     /*TODO figure out how this works...*/
-    /*deploy-rs = {*/
-    /*url = "github:serokell/deploy-rs";*/
-    /*flake = true;*/
-    /*inputs.nixpkgs.follows = "nixpkgs-head";*/
-    /*[>inputs.nixpkgs.follows = "nixpkgs-head";<]*/
-    /*};*/
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -78,7 +79,7 @@
 
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -127,6 +128,7 @@
 
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
+          inherit (deploy-rs.packages.${system}) deploy-rs;
         })
         (final: prev: {
           nixUnstable = prev.nixUnstable.overrideAttrs (old: {
@@ -182,6 +184,46 @@
           fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
         in
         utils.buildNixosConfigurations fullyQualifiedDirs;
+
+      # deployment stuff
+      deploy.nodes = {
+        laptop = {
+          hostname = "100.100.105.124";
+          fastConnection = true;
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.laptop;
+            };
+          };
+        };
+        oracle_vps_0 = {
+          hostname = "129.213.62.243";
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps;
+            };
+          };
+        };
+        oracle_vps_2 = {
+          hostname = "150.136.52.94";
+          fastConnection = true;
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps;
+            };
+          };
+        };
+      };
+
+      # This is highly advised, and will prevent many possible mistakes
+      /*checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;*/
+
 
       packages."${system}" = (stable-pkgs null pkgs);
     };

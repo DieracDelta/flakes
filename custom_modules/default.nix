@@ -2,6 +2,7 @@
 with lib;
 with builtins;
 let
+  /*make it stupid easy to add in a new module*/
   dirs = filterAttrs
     (name: fileType:
       (fileType == "regular") &&

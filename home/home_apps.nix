@@ -74,7 +74,10 @@ let
     graphviz
     minecraft
     signal-desktop
+    /*from gytis*/
     g-alacritty
+    lightcord
+
     keepass
     mimic
     zoom-us
