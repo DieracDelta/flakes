@@ -149,10 +149,14 @@ in
       ''
     ];
 
-    # cachix stuffs
     nix = {
-      extraOptions = "gc-keep-outputs = true";
+      /*warn-dirty = true;*/
+      extraOptions = ''
+      gc-keep-outputs = true
+      warn-dirty = false
+      '';
 
+      # cachix stuffs
       binaryCaches = [
         "https://cache.nixos.org"
         "https://cachix.cachix.org"
