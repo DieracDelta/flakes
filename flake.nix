@@ -33,6 +33,7 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
+
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       flake = true;
@@ -53,6 +54,7 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
+    /*TODO figure out how this works...*/
     /*deploy-rs = {*/
     /*url = "github:serokell/deploy-rs";*/
     /*flake = true;*/
@@ -94,25 +96,28 @@
 
       hmImports = [
         inputs.nix-doom-emacs.hmModule
-        ./hosts/shared/home.nix
+        ./home/home.nix
+        /*./hosts/laptop.nix*/
+        /*{isHomeManager = true;})*/
       ];
 
 
 
       unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
-      nixosModules = [
+      nixosModules = (hostname: [
+        (import ./custom_modules)
         sops-nix.nixosModules.sops
         /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
-        {
+        ({
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.jrestivo = {
-            imports = hmImports;
+            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
           };
-        }
-      ];
+        })
+      ]);
       overlays = [
         neovim-nightly-overlay.overlay
         stable-pkgs
@@ -134,6 +139,7 @@
           });
         })
 
+
         (final: prev: {
           inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale;
           unstable = unstable-pkgs;
@@ -143,7 +149,8 @@
     in
     {
 
-      /*I should probably make this more involved but it's fine for now..*/
+
+      /*TODO: I should probably make this more involved but it's fine for now..*/
       homeConfigurations = {
         jrestivo =
           home-manager.lib.homeManagerConfiguration {
@@ -165,13 +172,14 @@
         nativeBuildInputs = [
           (pkgs.callPackage sops-nix {}).sops-pgp-hook
         ];
+        shellhook = "zsh";
       };
 
       /*very simply get all the stuff in hosts/directory to provide as outputs*/
       nixosConfigurations =
         let
-          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nix" name)) (builtins.readDir ./hosts);
-          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + (lib.concatStrings [ "/hosts/" name ])) dirs);
+          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
+          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
         in
         utils.buildNixosConfigurations fullyQualifiedDirs;
 

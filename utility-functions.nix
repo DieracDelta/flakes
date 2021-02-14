@@ -25,7 +25,7 @@ in
   buildNixosConfigurations = paths:
     genAttrs' paths (path:
       let
-        hostName = removeSuffix ".nix" (baseNameOf path);
+        hostName = removeSuffix ".nixos.nix" (baseNameOf path);
       in
       {
         name = hostName;
@@ -67,15 +67,14 @@ in
 
             in
             [
-              /*this actually imports the hosts file*/
+              /*this actually imports the specific host file*/
               (import path)
               global
-            ] ++ nixosModules;
+            ] ++ (nixosModules hostName);
 
           extraArgs = {
-            inherit system inputs;
+            inherit system inputs builtins;
           };
-
         };
       });
 }
