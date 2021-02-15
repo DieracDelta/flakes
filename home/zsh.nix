@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 let cfg = config.profiles.zsh;
 in
 {
@@ -9,6 +9,17 @@ in
       default = true;
     };
   config = lib.mkIf cfg.enable {
+    programs.starship = {
+      enable = true;
+      enableZshIntegration = true;
+      enableBashIntegration = true;
+      /*settings = {*/
+      /*};*/
+    };
+    programs.dircolors = {
+      enable = true;
+      enableZshIntegration = true;
+    };
     programs.fzf = {
       enable = true;
       enableZshIntegration = true;
@@ -25,11 +36,11 @@ in
       history.save = 10000000;
       history.share = true;
       history.size = 10000000;
-      oh-my-zsh = {
-        enable = true;
-        plugins = [ "git" "sudo" "z" ];
-        theme = "robbyrussell";
-      };
+
+      plugins = [
+        pkgs.nix-z-fzf
+        pkgs.nix-fast-syntax-highlighting
+      ];
 
       # aliases
       shellAliases = {
@@ -76,26 +87,6 @@ in
       };
       # keys.sh contains a bunch of my keys
       initExtra = builtins.readFile ./zshrc;
-      plugins = [
-        {
-          name = "fast-syntax-highlighting";
-          src = pkgs.fetchFromGitHub {
-            owner = "zdharma";
-            repo = "fast-syntax-highlighting";
-            rev = "303eeee81859094385605f7c978801748d71056c";
-            sha256 = "0y0jgkj9va8ns479x3dhzk8bwd58a1kcvm4s2mk6x3n19w7ynmnv";
-          };
-        }
-        {
-          name = "fzf-z";
-          src = pkgs.fetchFromGitHub {
-            owner = "andrewferrier";
-            repo = "fzf-z";
-            rev = "2db04c704360b5b303fb5708686cbfd198c6bf4f";
-            sha256 = "1ib98j7v6hy3x43dcli59q5rpg9bamrg335zc4fw91hk6jcxvy45";
-          };
-        }
-      ];
     };
   };
 }

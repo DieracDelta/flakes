@@ -523,6 +523,22 @@
         "type": "github"
       }
     },
+    "nix-fast-syntax-highlighting": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1611248254,
+        "narHash": "sha256-4xJXH9Wn18/+Vfib/ZrhCRp/yB1PppsbZCx1/WafmU8=",
+        "owner": "zdharma",
+        "repo": "fast-syntax-highlighting",
+        "rev": "a62d721affc771de2c78201d868d80668a84c1e1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zdharma",
+        "repo": "fast-syntax-highlighting",
+        "type": "github"
+      }
+    },
     "nix-ld": {
       "inputs": {
         "nixpkgs": [
@@ -558,6 +574,22 @@
         "owner": "vlaci",
         "ref": "v2.1.0",
         "repo": "nix-straight.el",
+        "type": "github"
+      }
+    },
+    "nix-z-fzf": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1612116235,
+        "narHash": "sha256-3/FVhQJOqFENCzyFbv7X8FHvzI0crQG0KBF8tkEUyWQ=",
+        "owner": "agkozak",
+        "repo": "zsh-z",
+        "rev": "8eb87042639b88c7dce8d792a61cafd9c961dc0c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "agkozak",
+        "repo": "zsh-z",
         "type": "github"
       }
     },
@@ -780,6 +812,8 @@
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-dram": "nix-dram",
+        "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
+        "nix-z-fzf": "nix-z-fzf",
         "nixpkgs": "nixpkgs",
         "nixpkgs-head": "nixpkgs-head",
         "nyxt-overlay": "nyxt-overlay",

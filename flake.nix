@@ -69,17 +69,29 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-
     nix-dram = {
       url = "github:dramforever/nix-dram";
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
+    # zshell plugins
+    nix-z-fzf = {
+      url = "github:agkozak/zsh-z";
+      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
+    nix-fast-syntax-highlighting = {
+      url = "github:zdharma/fast-syntax-highlighting";
+      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
 
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, nix-z-fzf, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -129,6 +141,18 @@
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
           inherit (deploy-rs.packages.${system}) deploy-rs;
+          nix-z-fzf =
+            {
+              name = "z-fzf";
+              file = "zsh-z.plugin.zsh";
+              src = "${inputs.nix-z-fzf.outPath}";
+            };
+          nix-fast-syntax-highlighting  =
+            {
+              name = "z-fzf";
+              file = "fast-syntax-highlighting.plugin.zsh";
+              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+            };
         })
         (final: prev: {
           nixUnstable = prev.nixUnstable.overrideAttrs (old: {
@@ -186,7 +210,7 @@
         utils.buildNixosConfigurations fullyQualifiedDirs;
 
       # deployment stuff
-      deploy.nodes = {
+        deploy.nodes = {
         laptop = {
           hostname = "100.100.105.124";
           profiles = {
