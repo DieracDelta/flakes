@@ -11,18 +11,18 @@ in
     };
   config = lib.mkIf cfg.enable {
     networking.firewall.allowedTCPPorts = [ 80 443 8000];
-    /*security.acme = {*/
-      /*acceptTerms = true;*/
-      /*# Replace the email here!*/
-      /*email = "just@restivo.me";*/
-    /*};*/
+    security.acme = {
+      acceptTerms = true;
+      # Replace the email here!
+      email = "justin@restivo.me";
+    };
     services.nginx = {
       enable = true;
       # Use recommended settings
-      /*recommendedGzipSettings = true;*/
-      /*recommendedOptimisation = true;*/
+      recommendedGzipSettings = true;
+      recommendedOptimisation = true;
       recommendedProxySettings = true;
-      /*recommendedTlsSettings = true;*/
+      recommendedTlsSettings = true;
 
       # Only allow PFS-enabled ciphers with AES256
       /*sslCiphers = "AES256+EECDH:AES256+EDH:!aNULL";*/
@@ -30,9 +30,9 @@ in
       virtualHosts = {
         "filehost.restivo.me" = {
           ## Force HTTP redirect to HTTPS
-          /*forceSSL = true;*/
+          forceSSL = true;
           ## LetsEncrypt
-          /*enableACME = true;*/
+          enableACME = true;
           locations."/" = {
             proxyPass = "http://127.0.0.1:8000";
             proxyWebsockets = true; # needed if you need to use WebSocket
@@ -52,7 +52,8 @@ in
          Type = "simple";
          EnvironmentFile = config.sops.secrets.rust_filehost_secrets.path;
          ExecStart = ''${pkgs.rust-filehost}/bin/filehost'';
-         SupplementaryGroups = [ config.users.groups.keys.name ];
+         /*ExecStart = ''${pkgs.coreutils}/bin/cat /var/lib/acme/filehost.restivo.me/key.pem'';*/
+         SupplementaryGroups = [ config.users.groups.keys.name config.users.groups.nginx.name ];
        };
    };
   };

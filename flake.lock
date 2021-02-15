@@ -877,11 +877,11 @@
         "utils": "utils_3"
       },
       "locked": {
-        "lastModified": 1613418822,
-        "narHash": "sha256-tzRAY7Yf0JFxzU3IbYYRlsgTe+RGUpp9uEGttnhkW5o=",
+        "lastModified": 1613430205,
+        "narHash": "sha256-VOsT0Dd8DjDDo1b38zmQ0mCt+8Qc3ZnfIQaxO2CcdXo=",
         "owner": "DieracDelta",
         "repo": "filehost_rust",
-        "rev": "b84a3aaa86897b24ed497d41bd5f842b62f88a5b",
+        "rev": "00d853518049c27df90c7be585e52c5d0002f4ec",
         "type": "github"
       },
       "original": {

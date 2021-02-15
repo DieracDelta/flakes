@@ -29,13 +29,6 @@ export LESS_TERMCAP_ue=$'\e[0m'
 export LESS_TERMCAP_us=$'\e[1;4;32m'
 
 export _JAVA_AWT_WM_NONREPARENTING=1
-# for colors
-#cat $HOME/.cache/wal/sequences
-function post_code {
-        INPUT_UNESCAPED=$(cat)
-        INPUT=''${INPUT_UNESCAPED//\\/\\\\}
-        echo -n "filehost.restivo.me/"$(echo -n '{"key":"'hello world'","src":"' $(echo $INPUT | base64) '"}' | curl -X POST https://endpoints.justinrestivo.me/code -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
-}
 
 function find_pkg {
   readlink -f $(which $1)
@@ -86,21 +79,16 @@ function scp_mit {
 MAIM_LOCATION="/tmp/maim_screenshoot.png"
 
 function post_image {
+        ENDPOINTKEY_2="TODO"
         grim -g "$(slurp)" -t "png" $MAIM_LOCATION
-        echo -n "https://endpoints.justinrestivo.me/"$(echo -n '{"key": "'$ENDPOINTKEY'", "doCasify" : false, "src":"data:image/jpg;base64,'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST https://endpoints.justinrestivo.me/image -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | wl-copy
+        echo -n "https://filehost.restivo.me/image/view/"$(echo -n '{"key": "'$ENDPOINTKEY_2'", "src":"'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST localhost:8000/image/post -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | xclip -selection clipboard
 }
 
-function post_image_rust {
-        ENDPOINTKEY_2="THIS_IS_A_KEY"
-        grim -g "$(slurp)" -t "png" $MAIM_LOCATION
-        echo -n "localhost:8000/image/view/"$(echo -n '{"key": "'$ENDPOINTKEY_2'", "src":"'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST localhost:8000/image/post -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | wl-copy
-}
-
-function post_code_rust {
-        ENDPOINTKEY_2="hello world"
+function post_code {
+        ENDPOINTKEY_2="TODO"
         INPUT_UNESCAPED=$(cat)
         INPUT=''${INPUT_UNESCAPED//\\/\\\\}
-        echo -n "https://filehost.restivo.me/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl --insecure -X POST "https://filehost.restivo.me/code/post" -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
+        echo -n "https://filehost.restivo.me/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl -X POST https://filehost.restivo.me/code/post -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
 }
 
 export FZF_COMPLETION_TRIGGER='~~'
