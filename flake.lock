@@ -577,22 +577,6 @@
         "type": "github"
       }
     },
-    "nix-z-fzf": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1612116235,
-        "narHash": "sha256-3/FVhQJOqFENCzyFbv7X8FHvzI0crQG0KBF8tkEUyWQ=",
-        "owner": "agkozak",
-        "repo": "zsh-z",
-        "rev": "8eb87042639b88c7dce8d792a61cafd9c961dc0c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "agkozak",
-        "repo": "zsh-z",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1612229122,
@@ -813,7 +797,6 @@
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-dram": "nix-dram",
         "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
-        "nix-z-fzf": "nix-z-fzf",
         "nixpkgs": "nixpkgs",
         "nixpkgs-head": "nixpkgs-head",
         "nyxt-overlay": "nyxt-overlay",

@@ -9,12 +9,14 @@ in
       default = true;
     };
   config = lib.mkIf cfg.enable {
+    programs.autojump = {
+      enable = true;
+      enableZshIntegration = true;
+    };
     programs.starship = {
       enable = true;
       enableZshIntegration = true;
       enableBashIntegration = true;
-      /*settings = {*/
-      /*};*/
     };
     programs.dircolors = {
       enable = true;
@@ -38,7 +40,6 @@ in
       history.size = 10000000;
 
       plugins = [
-        pkgs.nix-z-fzf
         pkgs.nix-fast-syntax-highlighting
       ];
 

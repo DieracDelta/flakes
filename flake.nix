@@ -75,23 +75,14 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
-    # zshell plugins
-    nix-z-fzf = {
-      url = "github:agkozak/zsh-z";
-      flake = false;
-      inputs.nixpkgs.follows = "nixpkgs-head";
-    };
-
     nix-fast-syntax-highlighting = {
       url = "github:zdharma/fast-syntax-highlighting";
       flake = false;
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
-
-
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, nix-z-fzf, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -141,15 +132,9 @@
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
           inherit (deploy-rs.packages.${system}) deploy-rs;
-          nix-z-fzf =
-            {
-              name = "z-fzf";
-              file = "zsh-z.plugin.zsh";
-              src = "${inputs.nix-z-fzf.outPath}";
-            };
           nix-fast-syntax-highlighting  =
             {
-              name = "z-fzf";
+              name = "fast-sytax-highlighting";
               file = "fast-syntax-highlighting.plugin.zsh";
               src = "${inputs.nix-fast-syntax-highlighting.outPath}";
             };
