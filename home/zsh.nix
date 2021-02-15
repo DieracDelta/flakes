@@ -14,6 +14,9 @@ in
       enableZshIntegration = true;
     };
     programs.starship = {
+      settings = {
+        add_newline = false;
+      };
       enable = true;
       enableZshIntegration = true;
       enableBashIntegration = true;

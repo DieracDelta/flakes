@@ -80,9 +80,15 @@
       flake = false;
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
+
+    rust-filehost = {
+      url = "github:DieracDelta/filehost_rust";
+      flake = true;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, ... }:
+  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, rust-filehost, ... }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -138,6 +144,7 @@
               file = "fast-syntax-highlighting.plugin.zsh";
               src = "${inputs.nix-fast-syntax-highlighting.outPath}";
             };
+          rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev: {
           nixUnstable = prev.nixUnstable.overrideAttrs (old: {
@@ -148,11 +155,12 @@
               })
             ];
           });
+
         })
 
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone;
           unstable = unstable-pkgs;
         })
       ];
@@ -217,13 +225,13 @@
             };
           };
         };
-        oracle_vps_0 = {
+        oracle_vps_1 = {
           hostname = "129.213.62.243";
           profiles = {
             system = {
               sshUser = "root";
               user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps;
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_1;
             };
           };
         };
@@ -233,7 +241,7 @@
             system = {
               sshUser = "root";
               user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps;
+              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_2;
             };
           };
         };

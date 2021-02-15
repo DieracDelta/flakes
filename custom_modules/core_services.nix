@@ -1,11 +1,13 @@
 { config, pkgs, lib, options, system, builtins, ... }:
 /*TODO read these in from secrets.yaml by parsing yaml file*/
+/*TODO fix naming inconsistency*/
 let secrets = [
                 "desktop_public_key"
                 "laptop_public_key"
                 "desktop_private_key"
                 "laptop_private_key"
                 "zerotier_key"
+                "rust_filehost_secrets"
               ];
     genDefaultPerms = secret: {
       ${secret} = {
@@ -80,7 +82,7 @@ in
       setXAuthLocation = true;
     };
 
-    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 ];
+    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 9993];
 
     services.lorri.enable = true;
 

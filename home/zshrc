@@ -34,8 +34,13 @@ export _JAVA_AWT_WM_NONREPARENTING=1
 function post_code {
         INPUT_UNESCAPED=$(cat)
         INPUT=''${INPUT_UNESCAPED//\\/\\\\}
-        echo -n "https://endpoints.justinrestivo.me/"$(echo -n '{"key":"'$ENDPOINTKEY'","src":"' $(echo $INPUT | base64) '"}' | curl -X POST https://endpoints.justinrestivo.me/code -H 'Content-Type: application/json' --data @- | jq -r '.link') | wl-copy
+        echo -n "filehost.restivo.me/"$(echo -n '{"key":"'hello world'","src":"' $(echo $INPUT | base64) '"}' | curl -X POST https://endpoints.justinrestivo.me/code -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
 }
+
+function find_pkg {
+  readlink -f $(which $1)
+}
+
 function scp_mits_color {
         ssh -f -N -l $KERBEROS athena.dialup.mit.edu
         ssh $KERBEROS@athena.dialup.mit.edu "mkdir printer_files"
@@ -92,10 +97,10 @@ function post_image_rust {
 }
 
 function post_code_rust {
-        ENDPOINTKEY_2="THIS_IS_A_KEY"
+        ENDPOINTKEY_2="hello world"
         INPUT_UNESCAPED=$(cat)
         INPUT=''${INPUT_UNESCAPED//\\/\\\\}
-        echo -n "localhost:8000/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl -X POST localhost:8000/code/post -H 'Content-Type: application/json' --data @- | jq -r '.link') | wl-copy
+        echo -n "https://filehost.restivo.me/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl --insecure -X POST "https://filehost.restivo.me/code/post" -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
 }
 
 export FZF_COMPLETION_TRIGGER='~~'

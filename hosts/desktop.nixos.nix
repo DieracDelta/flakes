@@ -9,4 +9,5 @@
   custom_modules.nextcloud.enable = true;
   custom_modules.core_services.enable = true;
   custom_modules.workstation_services.enable = true;
+  custom_modules.rust-filehost.enable = false;
 }
