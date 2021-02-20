@@ -79,16 +79,16 @@ function scp_mit {
 MAIM_LOCATION="/tmp/maim_screenshoot.png"
 
 function post_image {
-        ENDPOINTKEY_2="TODO"
+        ENDPOINTKEY_2="$(cat /var/run/secrets/rust_filehost_secret_key)"
         grim -g "$(slurp)" -t "png" $MAIM_LOCATION
         echo -n "https://filehost.restivo.me/image/view/"$(echo -n '{"key": "'$ENDPOINTKEY_2'", "src":"'$(base64 -i $MAIM_LOCATION)'"}' | curl -X POST localhost:8000/image/post -H 'Content-Type: application/json' --data @- | jq -r '.link' )  | xclip -selection clipboard
 }
 
 function post_code {
-        ENDPOINTKEY_2="TODO"
+        source /var/run/secrets/rust_filehost_secret_key
         INPUT_UNESCAPED=$(cat)
         INPUT=''${INPUT_UNESCAPED//\\/\\\\}
-        echo -n "https://filehost.restivo.me/code/view/"$(echo -n '{"key":"'$ENDPOINTKEY_2'","src":"'$(echo $INPUT | base64)'"}' | curl -X POST https://filehost.restivo.me/code/post -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
+        echo -n "https://filehost.restivo.me/code/view/"$(echo -n '{"key":"'$SECRET_PASSWORD'","src":"'$(echo $INPUT | base64)'"}' | curl -X POST https://filehost.restivo.me/code/post -H 'Content-Type: application/json' --data @- | jq -r '.link') | xclip -selection clipboard
 }
 
 export FZF_COMPLETION_TRIGGER='~~'

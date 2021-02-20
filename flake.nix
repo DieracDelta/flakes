@@ -81,6 +81,12 @@
       inputs.nixpkgs.follows = "nixpkgs-head";
     };
 
+    nix-zsh-shell-integration = {
+      url = "github:chisui/zsh-nix-shell";
+      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs-head";
+    };
+
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
       flake = true;
@@ -138,11 +144,17 @@
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
           inherit (deploy-rs.packages.${system}) deploy-rs;
-          nix-fast-syntax-highlighting  =
+          nix-fast-syntax-highlighting =
             {
               name = "fast-sytax-highlighting";
               file = "fast-syntax-highlighting.plugin.zsh";
               src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+            };
+          nix-zsh-shell-integration =
+            {
+              name = "zsh-shell-integration";
+              file = "nix-shell.plugin.zsh";
+              src = "${inputs.nix-zsh-shell-integration.outPath}";
             };
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })

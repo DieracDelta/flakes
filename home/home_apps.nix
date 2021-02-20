@@ -1,16 +1,17 @@
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.profiles.dev;
-  haskellPack = with pkgs; [
-    (
-      haskellPackages.ghcWithPackages
-        (pkgs: [ pkgs.sort pkgs.base pkgs.split pkgs.lens ])
-    )
-    haskellPackages.hoogle
-    haskellPackages.hlint
-    haskellPackages.brittany
-    haskellPackages.ghcide
-  ];
+  haskellPack = with pkgs.haskellPackages; 
+    let
+      ps = p: with p;  [ async base containers lens mtl random stm text transformers unliftio ];
+      ghc = ghcWithHoogle ps;
+    in [
+      ghc
+      cabal-install
+      hlint
+      ghcide
+      hnix
+    ];
   devPack = with pkgs; [
     opam
     cmake
@@ -52,6 +53,7 @@ let
       /*[ python-with-my-packages ];*/
   /* user */
   appPack = with pkgs; [
+    teams
     bluejeans-gui
     blender
     element-desktop

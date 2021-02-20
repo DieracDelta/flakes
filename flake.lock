@@ -610,6 +610,22 @@
         "type": "github"
       }
     },
+    "nix-zsh-shell-integration": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1600944392,
+        "narHash": "sha256-C+6zHE0xDX2RndaR4T1b0hJ4xcf4bhBiADIc0amXw4M=",
+        "owner": "chisui",
+        "repo": "zsh-nix-shell",
+        "rev": "5dc081265cdd0d03631e9dc20b5e656530ae3af2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "chisui",
+        "repo": "zsh-nix-shell",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1612229122,
@@ -843,6 +859,7 @@
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-dram": "nix-dram",
         "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
+        "nix-zsh-shell-integration": "nix-zsh-shell-integration",
         "nixpkgs": "nixpkgs",
         "nixpkgs-head": "nixpkgs-head",
         "nyxt-overlay": "nyxt-overlay",

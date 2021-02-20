@@ -8,6 +8,7 @@ let secrets = [
                 "laptop_private_key"
                 "zerotier_key"
                 "rust_filehost_secrets"
+                "rust_filehost_secret_key"
               ];
     genDefaultPerms = secret: {
       ${secret} = {
@@ -29,6 +30,7 @@ in
     };
 
   config = lib.mkIf cfg.enable {
+    networking.nameservers = ["100.100.100.100" "1.1.1.1"];
     /*TODO pass in global root state to create path from*/
     sops.defaultSopsFile = ../secrets/secrets.yaml;
     sops.secrets = (((lib.foldl' lib.mergeAttrs) {}) (builtins.map genDefaultPerms secrets))
@@ -231,6 +233,7 @@ in
       htop
       wget
       ispell
+      whois
     ];
 
     programs.mosh.enable = true;

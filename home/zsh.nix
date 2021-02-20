@@ -29,6 +29,9 @@ in
       enable = true;
       enableZshIntegration = true;
     };
+    home.sessionVariables = {
+      NIX_BUILD_SHELL="zsh";
+    };
     programs.zsh = {
       enable = true;
       enableCompletion = true;
@@ -44,10 +47,12 @@ in
 
       plugins = [
         pkgs.nix-fast-syntax-highlighting
+        pkgs.nix-zsh-shell-integration
       ];
 
       # aliases
       shellAliases = {
+        nd = "nix develop -c zsh";
         l = "ls -lF --time-style=long-iso --grid --icons";
         la = "l -a";
         ls = "exa -h --git --color=auto --group-directories-first -s extension";
