@@ -1,6 +1,7 @@
-{config, pkgs, lib, ... }:
-let extraPackages = import ./extraPackages.nix;
-    cfg = config.profiles.xmonad;
+{ config, pkgs, lib, ... }:
+let
+  extraPackages = import ./extraPackages.nix;
+  cfg = config.profiles.xmonad;
 in
 {
   options.profiles.xmonad.enable =

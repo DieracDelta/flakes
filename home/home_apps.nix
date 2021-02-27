@@ -1,11 +1,12 @@
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.profiles.dev;
-  haskellPack = with pkgs.haskellPackages; 
+  haskellPack = with pkgs.haskellPackages;
     let
       ps = p: with p;  [ async base containers lens mtl random stm text transformers unliftio ];
       ghc = ghcWithHoogle ps;
-    in [
+    in
+    [
       ghc
       cabal-install
       hlint
@@ -34,23 +35,23 @@ let
   /* user if at all ... */
   /*really just an example of how creating python package works..*/
   /*python37Pack = with pkgs;*/
-    /*let*/
-      /*my-python-packages = python-packages:*/
-        /*with python-packages; [*/
-          /*pywal*/
-          /*jedi*/
-          /*flake8*/
-          /*pep8*/
-          /*tesserocr*/
-          /*pillow*/
-          /*autopep8*/
-          /*xdot*/
-          /*opencv4*/
-          /*numpy*/
-        /*];*/
-      /*python-with-my-packages = python37.withPackages my-python-packages;*/
-    /*in*/
-      /*[ python-with-my-packages ];*/
+  /*let*/
+  /*my-python-packages = python-packages:*/
+  /*with python-packages; [*/
+  /*pywal*/
+  /*jedi*/
+  /*flake8*/
+  /*pep8*/
+  /*tesserocr*/
+  /*pillow*/
+  /*autopep8*/
+  /*xdot*/
+  /*opencv4*/
+  /*numpy*/
+  /*];*/
+  /*python-with-my-packages = python37.withPackages my-python-packages;*/
+  /*in*/
+  /*[ python-with-my-packages ];*/
   /* user */
   appPack = with pkgs; [
     teams

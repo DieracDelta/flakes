@@ -30,7 +30,7 @@ in
       enableZshIntegration = true;
     };
     home.sessionVariables = {
-      NIX_BUILD_SHELL="zsh";
+      NIX_BUILD_SHELL = "zsh";
     };
     programs.zsh = {
       enable = true;

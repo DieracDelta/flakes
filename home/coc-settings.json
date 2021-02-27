@@ -16,6 +16,12 @@
                         "command": "metals-vim",
                         "rootPatterns": ["build.sbt"],
                         "filetypes": ["scala", "sbt"]
+                },
+                "haskell": {
+                        "command": "haskell-language-server-wrapper",
+                        "args": ["--lsp"],
+                        "rootPatterns": ["*.cabal", "stack.yaml", "cabal.project", "package.yaml", "hie.yaml"],
+                        "filetypes": ["haskell", "lhaskell"]
                 }
         },
         "diagnostic-languageserver.filetypes": {

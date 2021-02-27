@@ -1,23 +1,24 @@
 { config, pkgs, lib, options, system, builtins, ... }:
 /*TODO read these in from secrets.yaml by parsing yaml file*/
 /*TODO fix naming inconsistency*/
-let secrets = [
-                "desktop_public_key"
-                "laptop_public_key"
-                "desktop_private_key"
-                "laptop_private_key"
-                "zerotier_key"
-                "rust_filehost_secrets"
-                "rust_filehost_secret_key"
-              ];
-    genDefaultPerms = secret: {
-      ${secret} = {
-        mode = "0440";
-        owner = config.users.users.jrestivo.name;
-        group = config.users.users.jrestivo.group;
-      };
+let
+  secrets = [
+    "desktop_public_key"
+    "laptop_public_key"
+    "desktop_private_key"
+    "laptop_private_key"
+    "zerotier_key"
+    "rust_filehost_secrets"
+    "rust_filehost_secret_key"
+  ];
+  genDefaultPerms = secret: {
+    ${secret} = {
+      mode = "0440";
+      owner = config.users.users.jrestivo.name;
+      group = config.users.users.jrestivo.group;
     };
-    cfg = config.custom_modules.core_services;
+  };
+  cfg = config.custom_modules.core_services;
 in
 {
   options.custom_modules.core_services.enable =
@@ -30,11 +31,11 @@ in
     };
 
   config = lib.mkIf cfg.enable {
-    networking.nameservers = ["100.100.100.100" "1.1.1.1"];
+    networking.nameservers = [ "100.100.100.100" "1.1.1.1" ];
     /*TODO pass in global root state to create path from*/
     sops.defaultSopsFile = ../secrets/secrets.yaml;
-    sops.secrets = (((lib.foldl' lib.mergeAttrs) {}) (builtins.map genDefaultPerms secrets))
-      //   {tailscale_key.owner = "root"; };
+    sops.secrets = (((lib.foldl' lib.mergeAttrs) { }) (builtins.map genDefaultPerms secrets))
+      // { tailscale_key.owner = "root"; };
 
 
     # OP ssh between all the devices
@@ -46,7 +47,7 @@ in
     services.tailscale = {
       enable = true;
     };
-     # create a oneshot job to authenticate to Tailscale
+    # create a oneshot job to authenticate to Tailscale
     systemd.services.tailscale-autoconnect = {
       description = "Automatic authentication to Tailscale";
 
@@ -84,7 +85,7 @@ in
       setXAuthLocation = true;
     };
 
-    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 9993];
+    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 9993 ];
 
     services.lorri.enable = true;
 
@@ -97,13 +98,13 @@ in
       interval = "weekly";
       pruneNames = [
         ".git"
-          "cache"
-          ".cache"
-          ".cpcache"
-          ".aot_cache"
-          ".boot"
-          "node_modules"
-          "USB"
+        "cache"
+        ".cache"
+        ".cpcache"
+        ".aot_cache"
+        ".boot"
+        "node_modules"
+        "USB"
       ];
       prunePaths = options.services.locate.prunePaths.default ++ [
         "/dev"
@@ -123,7 +124,7 @@ in
         shell = pkgs.zsh;
         description = "Justin --the owner-- Restivo";
         extraGroups =
-          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys"];
+          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" ];
         initialPassword = "bruh";
       };
     };
@@ -156,8 +157,8 @@ in
     nix = {
       /*warn-dirty = true;*/
       extraOptions = ''
-      gc-keep-outputs = true
-      warn-dirty = false
+        gc-keep-outputs = true
+        warn-dirty = false
       '';
 
       # cachix stuffs

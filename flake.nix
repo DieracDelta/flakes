@@ -15,13 +15,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     /*not used right now, but once I get a router that I control....*/
-    /*mailserver = { url = "gitlab:simple-nixos-mailserver/nixos-mailserver"; flake = true; };*/
+    mailserver =
+    {
+      url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
+      flake = true;
+    };
     neovim-nightly-overlay =
-      {
+    {
         url = "github:nix-community/neovim-nightly-overlay";
         flake = true;
         inputs.nixpkgs.follows = "nixpkgs-head";
-      };
+    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       flake = true;
@@ -185,10 +189,10 @@
       homeConfigurations = {
         jrestivo =
           home-manager.lib.homeManagerConfiguration {
-            inherit system ;
+            inherit system;
             homeDirectory = /home/jrestivo;
             username = "jrestivo";
-            configuration = {pkgs, ...} : {
+            configuration = { pkgs, ... }: {
               imports = hmImports;
               nixpkgs.overlays = overlays;
             };
@@ -201,7 +205,7 @@
           "./secrets"
         ];
         nativeBuildInputs = [
-          (pkgs.callPackage sops-nix {}).sops-pgp-hook
+          (pkgs.callPackage sops-nix { }).sops-pgp-hook
         ];
         shellhook = "zsh";
       };
@@ -215,7 +219,7 @@
         utils.buildNixosConfigurations fullyQualifiedDirs;
 
       # deployment stuff
-        deploy.nodes = {
+      deploy.nodes = {
         laptop = {
           hostname = "100.100.105.124";
           profiles = {
