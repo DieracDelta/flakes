@@ -10,6 +10,8 @@ let
     "zerotier_key"
     "rust_filehost_secrets"
     "rust_filehost_secret_key"
+    "email_password"
+    "hashed_email_password"
   ];
   genDefaultPerms = secret: {
     ${secret} = {

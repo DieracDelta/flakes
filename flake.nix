@@ -18,6 +18,7 @@
     mailserver =
     {
       url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
+      inputs.nixpkgs.follows = "nixpkgs-head";
       flake = true;
     };
     neovim-nightly-overlay =
@@ -98,7 +99,25 @@
     };
   };
 
-  outputs = inputs@{ self, nixpkgs-head, nixpkgs, rust-overlay, neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay, nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs, rust-filehost, ... }:
+  outputs =
+    inputs@{
+      self,
+      nixpkgs-head,
+      nixpkgs,
+      rust-overlay,
+      neovim-nightly-overlay,
+      home-manager,
+      nyxt-overlay,
+      emacs-overlay,
+      nix-doom-emacs,
+      gytis-overlay,
+      sops-nix,
+      nix-dram,
+      deploy-rs,
+      rust-filehost,
+      mailserver,
+      ...
+    }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
@@ -125,6 +144,7 @@
 
       unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
       nixosModules = (hostname: [
+        mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
         /* for hardware*/
@@ -267,4 +287,5 @@
 
       packages."${system}" = (stable-pkgs null pkgs);
     };
+
 }

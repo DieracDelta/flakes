@@ -54,6 +54,7 @@ let
   /*[ python-with-my-packages ];*/
   /* user */
   appPack = with pkgs; [
+    thunderbird
     teams
     bluejeans-gui
     blender

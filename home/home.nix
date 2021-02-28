@@ -45,5 +45,50 @@
     ];
   };
 
+
+  /*programs.mbsync.enable = true;*/
+  programs.neomutt.enable = true;
+  programs.msmtp.enable = true;
+  accounts.email.accounts.jrestivo = {
+    /*getmail.enable = true;*/
+    neomutt.enable = true;
+    /*offlineimap.enable = true;*/
+    passwordCommand = "cat /var/run/secrets/email_password";
+
+    address = "justin@restivo.me";
+    maildir.path = "justinsMail";
+    folders = {
+      inbox = "Inbox";
+      sent = "Sent";
+      drafts = "Drafts";
+      trash = "Trash";
+    };
+    imap.host = "restivo.me";
+    mbsync = {
+        enable = true;
+        create = "maildir";
+    };
+    primary = true;
+    realName = "Justin Restivo";
+    signature = {
+        text = ''
+          Draper Research Staff
+          MIT SB '19 Meng '20
+          Justin Restivo
+          justin.restivo.me
+        '';
+        showSignature = "append";
+      };
+    smtp = {
+      host = "restivo.me";
+    };
+    userName = "justin@restivo.me";
+    msmtp.enable = true;
+    /*notmuch.enable = true;*/
+
+  };
+
+
+
   manual.html.enable = true;
 }
