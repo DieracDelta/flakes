@@ -196,7 +196,7 @@
 
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone neomutt;
           unstable = unstable-pkgs;
         })
       ];

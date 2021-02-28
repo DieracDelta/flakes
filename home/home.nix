@@ -46,27 +46,89 @@
   };
 
 
-  /*programs.mbsync.enable = true;*/
-  programs.neomutt.enable = true;
-  programs.msmtp.enable = true;
-  accounts.email.accounts.jrestivo = {
-    /*getmail.enable = true;*/
-    neomutt.enable = true;
-    /*offlineimap.enable = true;*/
-    passwordCommand = "cat /var/run/secrets/email_password";
+  programs.mbsync.enable = true;
+  programs.notmuch = {
+    enable = true;
+  };
+  programs.neomutt = {
+    enable = true;
+    sidebar.enable = true;
+    sort = "threads";
+    binds =
+      let
+        # Make a keybinding from the given values.
+        mkBind = m: k: a: {
+          action = a;
+          key = k;
+          map = m;
+        };
 
+        # Make bindings for each of the modes given.
+        # This is needed since home-manager doesn't allow us to specify multiple
+        # modes for a single binding like `index,pager` like (neo)mutt does.
+        repBind = ms: k: a: map (m: mkBind m k a) ms;
+      in
+      /*(repBind [ "index" "pager" ] "I" "imap-fetch-mail")*/
+      []
+      ;
+
+    macros = let
+      # A convenience function to make a macro from the given arguments.
+      mkMacro = m: k: a: {
+        action = a;
+        key = k;
+        map = m;
+      };
+
+      # Make a macro for each of the given modes.
+      # This is needed since home-manager doesn't allow us to specify multiple
+      # modes for a single macro like `index,pager` like (neo)mutt does.
+      repMacro = ms: k: a: map (m: mkMacro m k a) ms; in
+      [(mkMacro "index" "I" "!mbsync -a^M")];
+
+    vimKeys = true;
+  };
+  programs.msmtp.enable = true;
+  /*programs.msmtp.enable = true;*/
+  accounts.email.accounts.jrestivo = {
+    imapnotify = {
+      enable = true;
+      boxes = [ "Inbox" ];
+      onNotifyPost = {
+        mail = ''
+          ${pkgs.notmuch}/bin/notmuch new \*/
+          && ${pkgs.libnotify}/bin/notify-send "New mail has arrived!"
+          '';
+      };
+    };
+    msmtp = {
+      enable = true;
+      extraConfig = {auth = "login"; };
+    };
+
+    smtp = {
+      host = "mail.restivo.me";
+      /*tls.enable = false;*/
+    };
+    imap = {
+      host = "mail.restivo.me";
+    };
+
+    neomutt.enable = true;
+    mbsync = {
+      enable = true;
+      create = "maildir";
+    };
+    notmuch.enable = true;
+    /*offlineimap.enable = true;*/
+
+    passwordCommand = "cat /var/run/secrets/email_password";
     address = "justin@restivo.me";
-    maildir.path = "justinsMail";
     folders = {
       inbox = "Inbox";
       sent = "Sent";
       drafts = "Drafts";
       trash = "Trash";
-    };
-    imap.host = "restivo.me";
-    mbsync = {
-        enable = true;
-        create = "maildir";
     };
     primary = true;
     realName = "Justin Restivo";
@@ -79,12 +141,7 @@
         '';
         showSignature = "append";
       };
-    smtp = {
-      host = "restivo.me";
-    };
     userName = "justin@restivo.me";
-    msmtp.enable = true;
-    /*notmuch.enable = true;*/
 
   };
 
