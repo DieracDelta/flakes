@@ -7,6 +7,7 @@ let
       ghc = ghcWithHoogle ps;
     in
     [
+      threadscope
       ghc
       cabal-install
       hlint

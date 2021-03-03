@@ -414,6 +414,22 @@
         "type": "indirect"
       }
     },
+    "mutt-colors-solarized": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1301122944,
+        "narHash": "sha256-UWQ4M3/4PsZzt3UZguy10WufXDOp7IKABzgVjkGNJNQ=",
+        "owner": "altercation",
+        "repo": "mutt-colors-solarized",
+        "rev": "3b23c55eb43849975656dd89e3f35dacd2b93e69",
+        "type": "github"
+      },
+      "original": {
+        "owner": "altercation",
+        "repo": "mutt-colors-solarized",
+        "type": "github"
+      }
+    },
     "naersk": {
       "inputs": {
         "nixpkgs": [
@@ -877,6 +893,7 @@
         "home-manager": "home-manager_2",
         "mailserver": "mailserver",
         "master": "master",
+        "mutt-colors-solarized": "mutt-colors-solarized",
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-dram": "nix-dram",

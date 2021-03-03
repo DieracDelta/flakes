@@ -52,20 +52,88 @@
   };
   programs.neomutt = {
     enable = true;
-    sidebar.enable = true;
+    sidebar = {
+      enable = true;
+      shortPath = false;
+      format = "%D%?F? [%F]?%* %?N?%N/?%S";
+      width = 56;
+    };
+    extraConfig =
+    let
+      colorFile =
+        "${pkgs.mutt-colors-solarized}/mutt-colors-solarized-dark-16.muttrc";
+      findAllMailboxes =
+        let
+          # A script to take the paths to mail directories and turn them into
+          # mailbox-name mailbox-path pairs for mutt.
+          mkMailboxDescription = pkgs.writeScript "mailbox-description.pl" ''
+            #!${pkgs.perl}/bin/perl
+            BEGIN {
+              $basepath = q{${config.accounts.email.maildirBasePath}/}
+            }
+            while (<>) {
+              chomp;
+              $boxname = s/\Q$basepath\E//r;
+              print "\"$boxname\" ";
+              print "\"$_\" ";
+            }
+          '';
+          in
+        pkgs.writeScript "find-mailboxes.sh" ''
+          #!${pkgs.stdenv.shell}
+          ${pkgs.findutils}/bin/find \
+                "${config.accounts.email.maildirBasePath}" \
+                -type d \
+                \( -name cur -o -name new \) \
+                \( \! -empty \) \
+                -printf '%h\n' \
+            | ${pkgs.coreutils}/bin/sort \
+            | ${pkgs.coreutils}/bin/uniq \
+            | ${mkMailboxDescription}
+        '';
+        in
+    ''
+      # Mark anything marked by SpamAssassin as probably spam.
+      spam "X-Spam-Score: ([0-9\\.]+).*" "SA: %1"
+      # Only show the basic mail headers.
+      ignore *
+      unignore From To Cc Bcc Date Subject
+      # Show headers in the following order.
+      unhdr_order *
+      hdr_order From: To: Cc: Bcc: Date: Subject:
+      # Load solarized colors.
+      source "${colorFile}"
+      # Find all mailboxes dynamically.
+      named-mailboxes `${findAllMailboxes}`
+    '';
+    settings = {
+      assumed_charset = "iso-8859-1";
+      forward_format = "\"Fwd: %s\"";
+      edit_headers = "yes";
+      history = "10000";
+      history_file = "${config.xdg.configHome}/neomutt/history";
+      imap_check_subscribed = "yes";
+      imap_keepalive = "300";
+      imap_pipeline_depth = "5";
+      mail_check = "60";
+      mbox_type = "Maildir";
+      menu_scroll = "yes";
+      pager_context = "5";
+      pager_format = "\" %C - %[%H:%M] %.20v, %s%* %?H? [%H] ?\"";
+      pager_index_lines = "10";
+      pager_stop = "yes";
+      reverse_name = "yes";
+      send_charset = "utf-8";
+      sidebar_sort_method = "path";
+      sort_aux = "last-date-received";
+      spam_separator = ", ";
+      strict_threads = "yes";
+      tilde = "yes";
+    };
     sort = "threads";
     binds =
       let
-        # Make a keybinding from the given values.
-        mkBind = m: k: a: {
-          action = a;
-          key = k;
-          map = m;
-        };
-
-        # Make bindings for each of the modes given.
-        # This is needed since home-manager doesn't allow us to specify multiple
-        # modes for a single binding like `index,pager` like (neo)mutt does.
+        mkBind = m: k: a: { action = a; key = k; map = m; };
         repBind = ms: k: a: map (m: mkBind m k a) ms;
       in
       /*(repBind [ "index" "pager" ] "I" "imap-fetch-mail")*/
@@ -73,23 +141,13 @@
       ;
 
     macros = let
-      # A convenience function to make a macro from the given arguments.
-      mkMacro = m: k: a: {
-        action = a;
-        key = k;
-        map = m;
-      };
-
-      # Make a macro for each of the given modes.
-      # This is needed since home-manager doesn't allow us to specify multiple
-      # modes for a single macro like `index,pager` like (neo)mutt does.
+      mkMacro = m: k: a: { action = a; key = k; map = m; };
       repMacro = ms: k: a: map (m: mkMacro m k a) ms; in
       [(mkMacro "index" "I" "!mbsync -a^M")];
 
     vimKeys = true;
   };
   programs.msmtp.enable = true;
-  /*programs.msmtp.enable = true;*/
   accounts.email.accounts.jrestivo = {
     imapnotify = {
       enable = true;
@@ -108,7 +166,6 @@
 
     smtp = {
       host = "mail.restivo.me";
-      /*tls.enable = false;*/
     };
     imap = {
       host = "mail.restivo.me";
@@ -120,7 +177,7 @@
       create = "maildir";
     };
     notmuch.enable = true;
-    /*offlineimap.enable = true;*/
+    offlineimap.enable = true;
 
     passwordCommand = "cat /var/run/secrets/email_password";
     address = "justin@restivo.me";

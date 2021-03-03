@@ -14,12 +14,16 @@
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    /*not used right now, but once I get a router that I control....*/
     mailserver =
     {
       url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
       inputs.nixpkgs.follows = "nixpkgs-head";
       flake = true;
+    };
+     # Solarized mutt colorschemes.
+    mutt-colors-solarized = {
+      url = "github:altercation/mutt-colors-solarized";
+      flake = false;
     };
     neovim-nightly-overlay =
     {
@@ -116,6 +120,7 @@
       deploy-rs,
       rust-filehost,
       mailserver,
+      mutt-colors-solarized,
       ...
     }:
     let
@@ -168,6 +173,7 @@
         (final: prev: {
           inherit (nix-dram.packages.${system}) nix-search-pretty;
           inherit (deploy-rs.packages.${system}) deploy-rs;
+          mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {
               name = "fast-sytax-highlighting";
@@ -196,7 +202,7 @@
 
 
         (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone neomutt;
+          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone ;
           unstable = unstable-pkgs;
         })
       ];
