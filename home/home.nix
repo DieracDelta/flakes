@@ -136,8 +136,12 @@
         mkBind = m: k: a: { action = a; key = k; map = m; };
         repBind = ms: k: a: map (m: mkBind m k a) ms;
       in
-      /*(repBind [ "index" "pager" ] "I" "imap-fetch-mail")*/
-      []
+       # Ctrl-Shift-P - Previous Mailbox*/
+      (repBind [ "index" "pager" ] "\\CP" "sidebar-prev") ++
+      # Ctrl-Shift-N - Next Mailbox*/
+      (repBind [ "index" "pager" ] "\\CN" "sidebar-next") ++
+       # Ctrl-Shift-O - Open Highlighted Mailbox*/
+      (repBind [ "index" "pager" ] "\\CO" "sidebar-open")
       ;
 
     macros = let
