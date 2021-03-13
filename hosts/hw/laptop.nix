@@ -56,6 +56,6 @@
 
     hardware.cpu.intel.updateMicrocode = true;
 
-    boot.kernelPackages = pkgs.unstable.linuxPackages_latest;
+    #boot.kernelPackages = pkgs.unstable.linuxPackages_latest;
   };
 }
