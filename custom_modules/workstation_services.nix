@@ -88,6 +88,7 @@ in
       builtins.concatLists [
         gamingPack
         xPack
+        [pkgs.termite]
       ];
 
     fonts.fonts = with pkgs;
@@ -100,6 +101,7 @@ in
         fira-code-symbols
         fira-mono
       ];
+    services.picom.enable = true;
   };
 
 }

@@ -118,8 +118,7 @@
         overlays = [
           (final: prev: {
             inherit (self.pkgs.unstable-pkgs)
-              manix alacritty maim nextcloud20 nix-du tailscale
-              zerotierone;
+            manix maim nextcloud20 nix-du tailscale zerotierone;
             unstable = self.pkgs.unstable-pkgs;
           })
         ];
@@ -132,7 +131,6 @@
         allowUnfree = true;
         permittedInsecurePackages = [ "openssl-1.0.2u" ];
       };
-
       sharedModules = [
         (import "${gytis-overlay}/modules/clean-home.nix")
         mailserver.nixosModule
@@ -141,7 +139,7 @@
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
         {
-          gytix.cleanHome.enable = true;
+          #gytix.cleanHome.enable = true;
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
         }
