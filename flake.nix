@@ -14,6 +14,12 @@
       flake = true;
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    utilsGytis = {
+      url = "github:gytis-ivaskevicius/flake-utils-plus/ae5bd884e64caa3a71c93e034f412bf8485240fb";
+      flake = true;
+    };
+
     mailserver =
     {
       url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
@@ -121,6 +127,7 @@
       rust-filehost,
       mailserver,
       mutt-colors-solarized,
+      utilsGytis,
       ...
     }:
     let
@@ -208,90 +215,92 @@
       ];
 
     in
-    {
+    /*{*/
+      utilsGytis.lib.systemFlake {
+        inherit self inputs;
 
 
-      /*TODO: I should probably make this more involved but it's fine for now..*/
-      homeConfigurations = {
-        jrestivo =
-          home-manager.lib.homeManagerConfiguration {
-            inherit system;
-            homeDirectory = /home/jrestivo;
-            username = "jrestivo";
-            configuration = { pkgs, ... }: {
-              imports = hmImports;
-              nixpkgs.overlays = overlays;
+
+        /*TODO: I should probably make this more involved but it's fine for now..*/
+        homeConfigurations = {
+          jrestivo =
+            home-manager.lib.homeManagerConfiguration {
+              inherit system;
+              homeDirectory = /home/jrestivo;
+              username = "jrestivo";
+              configuration = { pkgs, ... }: {
+                imports = hmImports;
+                nixpkgs.overlays = overlays;
+              };
+            };
+        };
+
+        devShell.${system} = pkgs.mkShell {
+          # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
+          sopsPGPKeyDirs = [
+            "./secrets"
+          ];
+          nativeBuildInputs = [
+            (pkgs.callPackage sops-nix { }).sops-pgp-hook
+          ];
+          shellhook = "zsh";
+        };
+
+        /*very simply get all the stuff in hosts/directory to provide as outputs*/
+        nixosConfigurations =
+          let
+            dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
+            fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
+          in
+          utils.buildNixosConfigurations fullyQualifiedDirs;
+
+        # deployment stuff
+        deploy.nodes = {
+          laptop = {
+            hostname = "100.100.105.124";
+            profiles = {
+              system = {
+                sshUser = "root";
+                user = "root";
+                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.laptop;
+              };
             };
           };
+          desktop = {
+            hostname = "100.107.190.11";
+            fastConnection = true;
+            profiles = {
+              system = {
+                sshUser = "root";
+                user = "root";
+                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.desktop;
+              };
+            };
+          };
+          oracle_vps_1 = {
+            hostname = "129.213.62.243";
+            profiles = {
+              system = {
+                sshUser = "root";
+                user = "root";
+                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_1;
+              };
+            };
+          };
+          oracle_vps_2 = {
+            hostname = "150.136.52.94";
+            profiles = {
+              system = {
+                sshUser = "root";
+                user = "root";
+                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_2;
+              };
+            };
+          };
+        };
+        # This is highly advised, and will prevent many possible mistakes
+        checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+
+        packages."${system}" = (stable-pkgs null pkgs);
       };
-
-      devShell.${system} = pkgs.mkShell {
-        # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
-        sopsPGPKeyDirs = [
-          "./secrets"
-        ];
-        nativeBuildInputs = [
-          (pkgs.callPackage sops-nix { }).sops-pgp-hook
-        ];
-        shellhook = "zsh";
-      };
-
-      /*very simply get all the stuff in hosts/directory to provide as outputs*/
-      nixosConfigurations =
-        let
-          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
-          fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
-        in
-        utils.buildNixosConfigurations fullyQualifiedDirs;
-
-      # deployment stuff
-      deploy.nodes = {
-        laptop = {
-          hostname = "100.100.105.124";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.laptop;
-            };
-          };
-        };
-        desktop = {
-          hostname = "100.107.190.11";
-          fastConnection = true;
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.desktop;
-            };
-          };
-        };
-        oracle_vps_1 = {
-          hostname = "129.213.62.243";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_1;
-            };
-          };
-        };
-        oracle_vps_2 = {
-          hostname = "150.136.52.94";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_2;
-            };
-          };
-        };
-      };
-      # This is highly advised, and will prevent many possible mistakes
-      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
-
-      packages."${system}" = (stable-pkgs null pkgs);
-    };
-
 }

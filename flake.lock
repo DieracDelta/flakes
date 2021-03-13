@@ -904,7 +904,8 @@
         "nyxt-overlay": "nyxt-overlay",
         "rust-filehost": "rust-filehost",
         "rust-overlay": "rust-overlay_2",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "utilsGytis": "utilsGytis"
       }
     },
     "rotate-text": {
@@ -1040,6 +1041,22 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "utilsGytis": {
+      "locked": {
+        "lastModified": 1615645951,
+        "narHash": "sha256-TuvV12bqiCNKQeXk42YaGTC5axQ2MHE3x9riRVH7Uj8=",
+        "owner": "gytis-ivaskevicius",
+        "repo": "flake-utils-plus",
+        "rev": "ae5bd884e64caa3a71c93e034f412bf8485240fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "gytis-ivaskevicius",
+        "repo": "flake-utils-plus",
+        "rev": "ae5bd884e64caa3a71c93e034f412bf8485240fb",
         "type": "github"
       }
     },
