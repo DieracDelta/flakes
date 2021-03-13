@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, custom_modules, ... }:
 
 {
   nix.allowedUsers = [ "jrestivo" ];

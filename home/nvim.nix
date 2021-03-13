@@ -11,7 +11,7 @@ in
     };
 
   config = lib.mkIf cfg.enable {
-    home.packages = ["nixpkgs-fmt"];
+    home.packages = [pkgs.nixpkgs-fmt];
     xdg.configFile."nvim/coc-settings.json".source = ./coc-settings.json;
     programs.neovim = {
       enable = true;

@@ -122,12 +122,14 @@
       };
 
       sharedModules = [
+        (import "${gytis-overlay}/modules/clean-home.nix")
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
         {
+          gytix.cleanHome.enable = true;
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
         }

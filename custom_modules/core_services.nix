@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, system, builtins, ... }:
+{ config, pkgs, lib, options, system, ... }:
 /*TODO read these in from secrets.yaml by parsing yaml file*/
 /*TODO fix naming inconsistency*/
 let
@@ -178,6 +178,15 @@ in
         "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       ];
+      gc = {
+        automatic = true;
+        dates = "weekly";
+        options = "--delete-older-than 7d --max-freed $((64 * 1024**3))";
+      };
+      optimise = {
+        automatic = true;
+        dates = [ "weekly" ];
+      };
     };
 
     # to get zsh autocomplete to work

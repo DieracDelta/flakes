@@ -1047,7 +1047,6 @@
       "original": {
         "owner": "gytis-ivaskevicius",
         "repo": "flake-utils-plus",
-        "rev": "ae5bd884e64caa3a71c93e034f412bf8485240fb",
         "type": "github"
       }
     },
