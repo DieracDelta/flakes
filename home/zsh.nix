@@ -33,10 +33,10 @@ in
       enableCompletion = true;
       enableAutosuggestions = true;
       autocd = true;
+
       #programs.zsh.defaultKeymap = "vicmd";
       history.extended = true;
       history.ignoreDups = true;
-      history.path = ".zsh_history";
       history.save = 10000000;
       history.share = true;
       history.size = 10000000;

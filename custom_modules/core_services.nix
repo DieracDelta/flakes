@@ -161,6 +161,7 @@ in
       extraOptions = ''
         gc-keep-outputs = true
         warn-dirty = false
+        nix-command flakes
       '';
 
       # cachix stuffs

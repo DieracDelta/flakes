@@ -94,7 +94,7 @@ let
     pywal
     pithos
     /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
-    nyxt
+    /*nyxt*/
     nextcloud20
     nextcloud-client
     pulseeffects

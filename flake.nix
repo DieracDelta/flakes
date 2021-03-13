@@ -93,6 +93,16 @@
     , nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs
     , rust-filehost, mailserver, mutt-colors-solarized, utilsGytis, ... }:
     let
+      genNixosProfiles = (hostName: {
+        ${hostName}.modules = [
+          (import (./. + "/hosts/${hostName}.nixos.nix"))
+          {
+            home-manager.users.jrestivo = {
+              imports = hmImports ++ [ (./. + "/hosts/${hostName}.hm.nix") ];
+            };
+          }
+        ];
+      });
       stable-pkgs = import ./overlays;
       pkgs = self.pkgs.nixpkgs;
 
@@ -100,6 +110,7 @@
 
     in utilsGytis.lib.systemFlake {
       inherit self inputs;
+      extraArgs = {inherit inputs builtins; };
 
       # TODO do I need this? YES YOU DO!
       pkgs.nixpkgs = {
@@ -107,12 +118,13 @@
         overlays = [
           (final: prev: {
             inherit (self.pkgs.unstable-pkgs)
-              manix alacritty nyxt maim nextcloud20 nix-du tailscale
+              manix alacritty maim nextcloud20 nix-du tailscale
               zerotierone;
             unstable = self.pkgs.unstable-pkgs;
           })
         ];
       };
+
 
       pkgs.unstable-pkgs.input = unstable;
 
@@ -169,32 +181,35 @@
         })
       ];
 
-      nixosProfiles.oracle_vps_1 = {
-        modules = [
-          (import ./hosts/oracle_vps_1.nixos.nix)
-          {
-            home-manager.users.jrestivo = {
-              imports = hmImports ++ [ (./. + "/hosts/oracle_vps_1.hm.nix") ];
-            };
-          }
-        ];
-      };
+      /*nixosProfiles.oracle_vps_1 = {*/
+        /*modules = [*/
+          /*(import ./hosts/oracle_vps_1.nixos.nix)*/
+          /*{*/
+            /*home-manager.users.jrestivo = {*/
+              /*imports = hmImports ++ [ (./. + "/hosts/oracle_vps_1.hm.nix") ];*/
+            /*};*/
+          /*}*/
+        /*];*/
+      /*};*/
 
 
       devShell.${pkgs.system} = pkgs.mkShell {
         # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
         sopsPGPKeyDirs = [ "./secrets" ];
         nativeBuildInputs =
-          [ (self.pkgs.callPackage sops-nix { }).sops-pgp-hook ];
+          [ (pkgs.callPackage sops-nix { }).sops-pgp-hook ];
         shellhook = "zsh";
       };
 
       # very simply get all the stuff in hosts/directory to provide as outputs
-      #nixosConfigurations = let
-      #  dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
-      #  fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
-      #in
-      #utils.buildNixosConfigurations fullyQualifiedDirs;
+      nixosProfiles = 
+      let
+        dirs = pkgs.lib.filterAttrs (name: fileType: (fileType == "regular") && (pkgs.lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
+        fullyQualifiedDirs = (pkgs.lib.mapAttrsToList (name: _v: "${name}") dirs);
+        hostName = map (path: pkgs.lib.removeSuffix ".nixos.nix" (baseNameOf "${path}" )) fullyQualifiedDirs;
+        gennedProfiles = map genNixosProfiles hostName;
+      in
+      builtins.foldl' pkgs.lib.mergeAttrs {} (gennedProfiles);
 
       # deployment stuff
       deploy.nodes = {
