@@ -2,175 +2,139 @@
 
   description = "A highly awesome system configuration.";
 
-  /*note that I'm aware that flake is true by default. However,*/
-  /*I'm sitting on the side of making the flake more explicit */
-  /*since I'm easily confused .... */
   inputs = {
-    nixpkgs-head.url = "nixpkgs/master";
-    nixpkgs.url = "nixpkgs/release-20.09";
+    unstable.url = "nixpkgs/master";
     master.url = "nixpkgs/master";
+    nixpkgs.url = "nixpkgs/release-20.09";
+    utilsGytis.url = github:gytis-ivaskevicius/flake-utils-plus;
+
+    gytis-overlay = {
+      url = "github:gytis-ivaskevicius/nixfiles/master";
+      inputs.nixpkgs.follows = "unstable";
+      inputs.master.follows = "unstable";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager/release-20.09";
-      flake = true;
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    utilsGytis = {
-      url = "github:gytis-ivaskevicius/flake-utils-plus/ae5bd884e64caa3a71c93e034f412bf8485240fb";
-      flake = true;
+    mailserver = {
+      url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
+      inputs.nixpkgs.follows = "unstable";
     };
 
-    mailserver =
-    {
-      url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
-      inputs.nixpkgs.follows = "nixpkgs-head";
-      flake = true;
-    };
-     # Solarized mutt colorschemes.
     mutt-colors-solarized = {
       url = "github:altercation/mutt-colors-solarized";
       flake = false;
     };
-    neovim-nightly-overlay =
-    {
-        url = "github:nix-community/neovim-nightly-overlay";
-        flake = true;
-        inputs.nixpkgs.follows = "nixpkgs-head";
+    neovim-nightly-overlay = {
+      url = "github:nix-community/neovim-nightly-overlay";
+      flake = true;
+      inputs.nixpkgs.follows = "unstable";
     };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     nyxt-overlay = {
       url = "github:atlas-engineer/nyxt";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
-
 
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
-      flake = true;
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-doom-emacs = {
       url = "github:vlaci/nix-doom-emacs";
-      /*url = "github:vlaci/nix-doom-emacs/fix-gccemacs";*/
-      flake = true;
+      # url = "github:vlaci/nix-doom-emacs/fix-gccemacs";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.emacs-overlay.follows = "emacs-overlay";
     };
 
-    gytis-overlay = {
-      url = "github:gytis-ivaskevicius/nixfiles";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
-      inputs.master.follows = "nixpkgs-head";
-    };
-
-    /*TODO figure out how this works...*/
     deploy-rs = {
       url = "github:serokell/deploy-rs";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     nix-dram = {
       url = "github:dramforever/nix-dram";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     nix-fast-syntax-highlighting = {
       url = "github:zdharma/fast-syntax-highlighting";
       flake = false;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     nix-zsh-shell-integration = {
       url = "github:chisui/zsh-nix-shell";
       flake = false;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
-      flake = true;
-      inputs.nixpkgs.follows = "nixpkgs-head";
+      inputs.nixpkgs.follows = "unstable";
     };
   };
 
-  outputs =
-    inputs@{
-      self,
-      nixpkgs-head,
-      nixpkgs,
-      rust-overlay,
-      neovim-nightly-overlay,
-      home-manager,
-      nyxt-overlay,
-      emacs-overlay,
-      nix-doom-emacs,
-      gytis-overlay,
-      sops-nix,
-      nix-dram,
-      deploy-rs,
-      rust-filehost,
-      mailserver,
-      mutt-colors-solarized,
-      utilsGytis,
-      ...
-    }:
+  outputs = inputs@{ self, unstable, nixpkgs, rust-overlay
+    , neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay
+    , nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs
+    , rust-filehost, mailserver, mutt-colors-solarized, utilsGytis, ... }:
     let
-      inherit (nixpkgs) lib;
-      inherit (lib) recursiveUpdate;
-      system = "x86_64-linux";
-      /*final -> prev -> pkgs*/
       stable-pkgs = import ./overlays;
+      pkgs = self.pkgs.nixpkgs;
 
-      utils = import ./utility-functions.nix {
-        inherit lib system pkgs inputs self;
-        nixosModules = nixosModules;
+      hmImports = [ inputs.nix-doom-emacs.hmModule ./home/home.nix ];
+
+    in utilsGytis.lib.systemFlake {
+      inherit self inputs;
+
+      # TODO do I need this? YES YOU DO!
+      pkgs.nixpkgs = {
+        input = nixpkgs;
+        overlays = [
+          (final: prev: {
+            inherit (self.pkgs.unstable-pkgs)
+              manix alacritty nyxt maim nextcloud20 nix-du tailscale
+              zerotierone;
+            unstable = self.pkgs.unstable-pkgs;
+          })
+        ];
       };
 
+      pkgs.unstable-pkgs.input = unstable;
 
-      pkgs = (utils.pkgImport nixpkgs overlays);
+      pkgsConfig = {
+        allowUnfree = true;
+        permittedInsecurePackages = [ "openssl-1.0.2u" ];
+      };
 
-      hmImports = [
-        inputs.nix-doom-emacs.hmModule
-        ./home/home.nix
-        /*./hosts/laptop.nix*/
-        /*{isHomeManager = true;})*/
-      ];
-
-
-
-      unstable-pkgs = (utils.pkgImport nixpkgs-head [ stable-pkgs ]);
-      nixosModules = (hostname: [
+      sharedModules = [
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
-        /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
-        ({
+        {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.jrestivo = {
-            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
-          };
-        })
-      ]);
-      overlays = [
+        }
+      ];
+
+      sharedOverlays = [
+        (import ./overlays)
         neovim-nightly-overlay.overlay
         stable-pkgs
         emacs-overlay.overlay
@@ -178,24 +142,20 @@
         nyxt-overlay.overlay
 
         (final: prev: {
-          inherit (nix-dram.packages.${system}) nix-search-pretty;
-          inherit (deploy-rs.packages.${system}) deploy-rs;
+          inherit (nix-dram.packages.${prev.system}) nix-search-pretty;
+          inherit (deploy-rs.packages.${prev.system}) deploy-rs;
           mutt-colors-solarized = inputs.mutt-colors-solarized;
-          nix-fast-syntax-highlighting =
-            {
-              name = "fast-sytax-highlighting";
-              file = "fast-syntax-highlighting.plugin.zsh";
-              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
-            };
-          nix-zsh-shell-integration =
-            {
-              name = "zsh-shell-integration";
-              file = "nix-shell.plugin.zsh";
-              src = "${inputs.nix-zsh-shell-integration.outPath}";
-            };
-          rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
-        })
-        (final: prev: {
+          nix-fast-syntax-highlighting = {
+            name = "fast-sytax-highlighting";
+            file = "fast-syntax-highlighting.plugin.zsh";
+            src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+          };
+          nix-zsh-shell-integration = {
+            name = "zsh-shell-integration";
+            file = "nix-shell.plugin.zsh";
+            src = "${inputs.nix-zsh-shell-integration.outPath}";
+          };
+          rust-filehost = inputs.rust-filehost.packages.${prev.system}.filehost;
           nixUnstable = prev.nixUnstable.overrideAttrs (old: {
             patches = [
               (prev.fetchpatch {
@@ -204,103 +164,92 @@
               })
             ];
           });
-
-        })
-
-
-        (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud20 nix-du tailscale zerotierone ;
-          unstable = unstable-pkgs;
         })
       ];
 
-    in
-    /*{*/
-      utilsGytis.lib.systemFlake {
-        inherit self inputs;
-
-
-
-        /*TODO: I should probably make this more involved but it's fine for now..*/
-        homeConfigurations = {
-          jrestivo =
-            home-manager.lib.homeManagerConfiguration {
-              inherit system;
-              homeDirectory = /home/jrestivo;
-              username = "jrestivo";
-              configuration = { pkgs, ... }: {
-                imports = hmImports;
-                nixpkgs.overlays = overlays;
-              };
+      nixosProfiles.oracle_vps_1 = {
+        modules = [
+          (import ./hosts/oracle_vps_1.nixos.nix)
+          {
+            home-manager.users.jrestivo = {
+              imports = hmImports ++ [ (./. + "/hosts/oracle_vps_1.hm.nix") ];
             };
-        };
-
-        devShell.${system} = pkgs.mkShell {
-          # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
-          sopsPGPKeyDirs = [
-            "./secrets"
-          ];
-          nativeBuildInputs = [
-            (pkgs.callPackage sops-nix { }).sops-pgp-hook
-          ];
-          shellhook = "zsh";
-        };
-
-        /*very simply get all the stuff in hosts/directory to provide as outputs*/
-        nixosConfigurations =
-          let
-            dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
-            fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
-          in
-          utils.buildNixosConfigurations fullyQualifiedDirs;
-
-        # deployment stuff
-        deploy.nodes = {
-          laptop = {
-            hostname = "100.100.105.124";
-            profiles = {
-              system = {
-                sshUser = "root";
-                user = "root";
-                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.laptop;
-              };
-            };
-          };
-          desktop = {
-            hostname = "100.107.190.11";
-            fastConnection = true;
-            profiles = {
-              system = {
-                sshUser = "root";
-                user = "root";
-                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.desktop;
-              };
-            };
-          };
-          oracle_vps_1 = {
-            hostname = "129.213.62.243";
-            profiles = {
-              system = {
-                sshUser = "root";
-                user = "root";
-                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_1;
-              };
-            };
-          };
-          oracle_vps_2 = {
-            hostname = "150.136.52.94";
-            profiles = {
-              system = {
-                sshUser = "root";
-                user = "root";
-                path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.oracle_vps_2;
-              };
-            };
-          };
-        };
-        # This is highly advised, and will prevent many possible mistakes
-        checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
-
-        packages."${system}" = (stable-pkgs null pkgs);
+          }
+        ];
       };
+
+
+      devShell.${pkgs.system} = pkgs.mkShell {
+        # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
+        sopsPGPKeyDirs = [ "./secrets" ];
+        nativeBuildInputs =
+          [ (self.pkgs.callPackage sops-nix { }).sops-pgp-hook ];
+        shellhook = "zsh";
+      };
+
+      # very simply get all the stuff in hosts/directory to provide as outputs
+      #nixosConfigurations = let
+      #  dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
+      #  fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
+      #in
+      #utils.buildNixosConfigurations fullyQualifiedDirs;
+
+      # deployment stuff
+      deploy.nodes = {
+        laptop = {
+          hostname = "100.100.105.124";
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos
+                self.nixosConfigurations.laptop;
+            };
+          };
+        };
+
+        desktop = {
+          hostname = "100.107.190.11";
+          fastConnection = true;
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos
+                self.nixosConfigurations.desktop;
+            };
+          };
+        };
+
+        oracle_vps_1 = {
+          hostname = "129.213.62.243";
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos
+                self.nixosConfigurations.oracle_vps_1;
+            };
+          };
+        };
+
+        oracle_vps_2 = {
+          hostname = "150.136.52.94";
+          profiles = {
+            system = {
+              sshUser = "root";
+              user = "root";
+              path = deploy-rs.lib.x86_64-linux.activate.nixos
+                self.nixosConfigurations.oracle_vps_2;
+            };
+          };
+        };
+      };
+
+      # This is highly advised, and will prevent many possible mistakes
+      checks = builtins.mapAttrs
+        (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+
+    };
 }
+
