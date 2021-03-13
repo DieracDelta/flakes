@@ -158,6 +158,7 @@ in
       type = with lib.types; bool;
       default = true;
     };
+
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [
       haskellPack

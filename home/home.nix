@@ -207,6 +207,7 @@
   };
 
 
+  programs.go.enable = true;
 
   manual.html.enable = true;
 }

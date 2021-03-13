@@ -11,6 +11,7 @@ in
     };
 
   config = lib.mkIf cfg.enable {
+    home.packages = ["nixpkgs-fmt"];
     xdg.configFile."nvim/coc-settings.json".source = ./coc-settings.json;
     programs.neovim = {
       enable = true;
@@ -43,7 +44,7 @@ in
         delimitMate
         wal-vim
         vim-sandwich
-        vim-addon-nix
+        vim-nix
         coc-nvim
         coc-python
         coc-emmet
