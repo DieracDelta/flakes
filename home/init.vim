@@ -163,23 +163,23 @@ let g:vimtex_view_method='zathura'
 let g:vimtex_quickfix_mode=0
 set conceallevel=1
 let g:tex_conceal='abdmg'
-"let g:vimtex_compiler_latexmk = {
-                        "\ 'options' : [
-                        "\   '-pdf',
-                        "\   '-pdflatex="xelatex --shell-escape %O %S"',
-                        "\   '-verbose',
-                        "\   '-file-line-error',
-                        "\   '-synctex=1',
-                        "\   '-interaction=nonstopmode',
-                        "\ ]
-"\}
 let g:vimtex_compiler_latexmk = {
                         \ 'options' : [
-                        \   'main.tex',
-                        \   '-shell-escape',
+                        \   '-pdf',
+                        \   '-pdflatex="xelatex --shell-escape %O %S"',
+                        \   '-verbose',
+                        \   '-file-line-error',
+                        \   '-synctex=1',
                         \   '-interaction=nonstopmode',
                         \ ]
-                        \}
+\}
+"let g:vimtex_compiler_latexmk = {
+                        "\ 'options' : [
+                        "\   'main.tex',
+                        "\   '-shell-escape',
+                        "\   '-interaction=nonstopmode',
+                        "\ ]
+                        "\}
 " my macros don't work withtectonic not sure why...
 "let g:vimtex_compiler_latexmk = {
                         "\ 'options' : [
@@ -515,3 +515,8 @@ for s:char in [ '_', '.', ':', ',', ';', '<bar>', '/', '<bslash>', '*', '+', '%'
         execute 'xmap a' . s:char . ' <Plug>(textobj-sandwich-query-a)' . s:char
         execute 'omap a' . s:char . ' <Plug>(textobj-sandwich-query-a)' . s:char
 endfor
+
+set tabstop=4
+set shiftwidth=4
+set expandtab
+

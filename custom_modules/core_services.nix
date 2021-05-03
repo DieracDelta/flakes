@@ -194,6 +194,7 @@ in
     environment.pathsToLink = [ "/share/zsh" ];
     /*ONLY cli stuff*/
     environment.systemPackages = with pkgs; [
+      dmidecode
       deploy-rs
       ytop
       direnv

@@ -43,7 +43,7 @@ in
       ];
     };
     services.nextcloud = {
-      package = pkgs.nextcloud20;
+      package = pkgs.nextcloud21;
       enable = true;
       hostName = "localhost";
       config.extraTrustedDomains = [ "localhost" "192.168.196.233" "192.168.196.136" "192.168.196.17" "100.107.190.11" "100.100.105.124" "100.83.203.21" ];

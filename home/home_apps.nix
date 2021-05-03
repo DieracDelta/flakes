@@ -82,20 +82,23 @@ let
     /*from gytis*/
     g-alacritty
     lightcord
+    nyxt
+    vscode
 
+    yubikey-manager
     keepass
     mimic
     zoom-us
   ];
   /* user */
   workstationPack = with pkgs; [
+    termite
     pavucontrol
-    keepass
     pywal
     pithos
     /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
     /*nyxt*/
-    nextcloud20
+    nextcloud21
     nextcloud-client
     pulseeffects
     noip
@@ -150,6 +153,11 @@ let
     nixfmt
     clang-tools
   ];
+  cPack = with pkgs; [
+    clang
+    valgrind
+    perf-tools
+  ];
 in
 {
   options.profiles.dev.enable =
@@ -169,6 +177,7 @@ in
       pentestPack
       texPack
       languageserverPack
+      cPack
     ];
   };
 

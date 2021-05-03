@@ -6,7 +6,9 @@
     unstable.url = "nixpkgs/master";
     master.url = "nixpkgs/master";
     nixpkgs.url = "nixpkgs/release-20.09";
-    utilsGytis.url = github:gytis-ivaskevicius/flake-utils-plus;
+    utilsGytis = {
+      url = "github:gytis-ivaskevicius/flake-utils-plus?rev=ae5bd884e64caa3a71c93e034f412bf8485240fb";
+    };
 
     gytis-overlay = {
       url = "github:gytis-ivaskevicius/nixfiles/master";
@@ -38,10 +40,11 @@
       inputs.nixpkgs.follows = "unstable";
     };
 
-    nyxt-overlay = {
-      url = "github:atlas-engineer/nyxt";
-      inputs.nixpkgs.follows = "unstable";
-    };
+    #broken
+    #nyxt-overlay = {
+      #url = "github:atlas-engineer/nyxt";
+      #inputs.nixpkgs.follows = "unstable";
+    #};
 
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
@@ -89,7 +92,7 @@
   };
 
   outputs = inputs@{ self, unstable, nixpkgs, rust-overlay
-    , neovim-nightly-overlay, home-manager, nyxt-overlay, emacs-overlay
+    , neovim-nightly-overlay, home-manager, emacs-overlay # nyxt-overlay,
     , nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs
     , rust-filehost, mailserver, mutt-colors-solarized, utilsGytis, ... }:
     let
@@ -112,13 +115,12 @@
       inherit self inputs;
       extraArgs = {inherit inputs builtins; };
 
-      # TODO do I need this? YES YOU DO!
       pkgs.nixpkgs = {
         input = nixpkgs;
         overlays = [
           (final: prev: {
             inherit (self.pkgs.unstable-pkgs)
-            manix maim nextcloud20 nix-du tailscale zerotierone;
+            manix maim nextcloud21 nix-du tailscale zerotierone nyxt;
             unstable = self.pkgs.unstable-pkgs;
           })
         ];
@@ -151,11 +153,11 @@
         stable-pkgs
         emacs-overlay.overlay
         gytis-overlay.overlay
-        nyxt-overlay.overlay
 
         (final: prev: {
           inherit (nix-dram.packages.${prev.system}) nix-search-pretty;
           inherit (deploy-rs.packages.${prev.system}) deploy-rs;
+          # inherit (nyxt-overlay.packages.${prev.system}) nyxt;
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting = {
             name = "fast-sytax-highlighting";
@@ -179,18 +181,6 @@
         })
       ];
 
-      /*nixosProfiles.oracle_vps_1 = {*/
-        /*modules = [*/
-          /*(import ./hosts/oracle_vps_1.nixos.nix)*/
-          /*{*/
-            /*home-manager.users.jrestivo = {*/
-              /*imports = hmImports ++ [ (./. + "/hosts/oracle_vps_1.hm.nix") ];*/
-            /*};*/
-          /*}*/
-        /*];*/
-      /*};*/
-
-
       devShell.${pkgs.system} = pkgs.mkShell {
         # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
         sopsPGPKeyDirs = [ "./secrets" ];
@@ -200,7 +190,7 @@
       };
 
       # very simply get all the stuff in hosts/directory to provide as outputs
-      nixosProfiles = 
+      nixosProfiles =
       let
         dirs = pkgs.lib.filterAttrs (name: fileType: (fileType == "regular") && (pkgs.lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
         fullyQualifiedDirs = (pkgs.lib.mapAttrsToList (name: _v: "${name}") dirs);
@@ -210,56 +200,95 @@
       builtins.foldl' pkgs.lib.mergeAttrs {} (gennedProfiles);
 
       # deployment stuff
-      deploy.nodes = {
-        laptop = {
-          hostname = "100.100.105.124";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos
-                self.nixosConfigurations.laptop;
-            };
-          };
-        };
+      deploy.nodes =
+        let
+          nodes = [
+            {
+              ip_addr = "100.100.105.124";
+              host = "laptop";
+            }
+            {
+              ip_addr = "100.107.190.11";
+              host = "desktop";
+            }
+            {
+              ip_addr = "100.80.195.77";
+              host = "oracle_vps_1";
+            }
+            {
+              ip_addr = "100.87.232.34";
+              host = "oracle_vps_2";
+            }
+          ];
 
-        desktop = {
-          hostname = "100.107.190.11";
-          fastConnection = true;
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos
-                self.nixosConfigurations.desktop;
-            };
-          };
-        };
+          gen_node =
+            (_node@{ip_addr, host, ...}:
+            {
+              ${host} = {
+                hostname = "${ip_addr}";
+                profiles = {
+                  system = {
+                    sshUser = "root";
+                    user = "root";
+                    path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.${host};
+                  };
+                };
+              };
+            });
+          results = map gen_node nodes;
+        in
+          builtins.foldl' pkgs.lib.mergeAttrs {} (results);
+      #in
+      #{
+      #  laptop = {
+      #    hostname = "100.100.105.124";
+      #    profiles = {
+      #      system = {
+      #        sshUser = "root";
+      #        user = "root";
+      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
+      #          self.nixosConfigurations.laptop;
+      #      };
+      #    };
+      #  };
 
-        oracle_vps_1 = {
-          hostname = "129.213.62.243";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos
-                self.nixosConfigurations.oracle_vps_1;
-            };
-          };
-        };
+      #  desktop = {
+      #    hostname = "100.107.190.11";
+      #    fastConnection = true;
+      #    profiles = {
+      #      system = {
+      #        sshUser = "root";
+      #        user = "root";
+      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
+      #          self.nixosConfigurations.desktop;
+      #      };
+      #    };
+      #  };
 
-        oracle_vps_2 = {
-          hostname = "150.136.52.94";
-          profiles = {
-            system = {
-              sshUser = "root";
-              user = "root";
-              path = deploy-rs.lib.x86_64-linux.activate.nixos
-                self.nixosConfigurations.oracle_vps_2;
-            };
-          };
-        };
-      };
+      #  oracle_vps_1 = {
+      #    hostname = "129.213.62.243";
+      #    profiles = {
+      #      system = {
+      #        sshUser = "root";
+      #        user = "root";
+      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
+      #          self.nixosConfigurations.oracle_vps_1;
+      #      };
+      #    };
+      #  };
+
+      #  oracle_vps_2 = {
+      #    hostname = "150.136.52.94";
+      #    profiles = {
+      #      system = {
+      #        sshUser = "root";
+      #        user = "root";
+      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
+      #          self.nixosConfigurations.oracle_vps_2;
+      #      };
+      #    };
+      #  };
+      #};
 
       # This is highly advised, and will prevent many possible mistakes
       checks = builtins.mapAttrs

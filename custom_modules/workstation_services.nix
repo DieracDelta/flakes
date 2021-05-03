@@ -39,6 +39,9 @@ let
     libGLU
     glxinfo
   ];
+  yubikeyPack = with pkgs; [
+    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools
+  ];
 in
 {
   options.custom_modules.workstation_services.enable =
@@ -86,9 +89,9 @@ in
     programs.java.enable = true;
     environment.systemPackages =
       builtins.concatLists [
+        yubikeyPack
         gamingPack
         xPack
-        [pkgs.termite]
       ];
 
     fonts.fonts = with pkgs;
@@ -102,6 +105,20 @@ in
         fira-mono
       ];
     services.picom.enable = true;
+
+    #services.atd.enable = true;
+
+    #services.udev.packages = [ pkgs.yubikey-personalization ];
+    #environment.shellInit = ''
+    #  export GPG_TTY="$(tty)"
+    #  gpg-connect-agent /bye
+    #  export SSH_AUTH_SOCK="/run/user/$UID/gnupg/S.gpg-agent.ssh"
+    #'';
+    #programs.ssh.startAgent = false;
+    #programs.gnupg.agent = {
+    #  enable = true;
+    #  enableSSHSupport = true;
+    #};
   };
 
 }
