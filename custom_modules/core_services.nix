@@ -214,7 +214,7 @@ in
       nix-top
       nix-du
       nixpkgs-fmt
-      zsh-forgit
+      #zsh-forgit
       procs
       exa
       nixos-generators

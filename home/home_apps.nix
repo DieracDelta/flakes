@@ -107,7 +107,7 @@ let
     remmina
     pkgs.unstable.chromium
     flameshot
-    firefox
+    #firefox
     vscode
     dante
     vscode
