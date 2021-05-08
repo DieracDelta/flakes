@@ -84,6 +84,8 @@ let
     lightcord
     nyxt
     vscode
+    rust-analyzer
+    wally-cli
 
     yubikey-manager
     keepass

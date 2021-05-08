@@ -10,6 +10,11 @@
       url = "github:gytis-ivaskevicius/flake-utils-plus?rev=ae5bd884e64caa3a71c93e034f412bf8485240fb";
     };
 
+    hydra = {
+      url = "github:NixOS/hydra";
+      inputs.nixpkgs.follows = "unstable";
+    };
+
     gytis-overlay = {
       url = "github:gytis-ivaskevicius/nixfiles/master";
       inputs.nixpkgs.follows = "unstable";
@@ -94,7 +99,8 @@
   outputs = inputs@{ self, unstable, nixpkgs, rust-overlay
     , neovim-nightly-overlay, home-manager, emacs-overlay # nyxt-overlay,
     , nix-doom-emacs, gytis-overlay, sops-nix, nix-dram, deploy-rs
-    , rust-filehost, mailserver, mutt-colors-solarized, utilsGytis, ... }:
+    , rust-filehost, mailserver, mutt-colors-solarized, utilsGytis, hydra,
+    ... }:
     let
       genNixosProfiles = (hostName: {
         ${hostName}.modules = [
@@ -120,7 +126,7 @@
         overlays = [
           (final: prev: {
             inherit (self.pkgs.unstable-pkgs)
-            manix maim nextcloud21 nix-du tailscale zerotierone nyxt;
+            manix maim nextcloud21 nix-du tailscale zerotierone nyxt zsa-udev-rules;
             unstable = self.pkgs.unstable-pkgs;
           })
         ];
@@ -133,7 +139,11 @@
         allowUnfree = true;
         permittedInsecurePackages = [ "openssl-1.0.2u" ];
       };
+
       sharedModules = [
+        #hydra.nixosModules.hydra
+        (import "${unstable}/nixos/modules/hardware/keyboard/zsa.nix")
+
         (import "${gytis-overlay}/modules/clean-home.nix")
         mailserver.nixosModule
         (import ./custom_modules)
@@ -153,6 +163,7 @@
         stable-pkgs
         emacs-overlay.overlay
         gytis-overlay.overlay
+        #hydra.overlay
 
         (final: prev: {
           inherit (nix-dram.packages.${prev.system}) nix-search-pretty;
@@ -238,57 +249,6 @@
           results = map gen_node nodes;
         in
           builtins.foldl' pkgs.lib.mergeAttrs {} (results);
-      #in
-      #{
-      #  laptop = {
-      #    hostname = "100.100.105.124";
-      #    profiles = {
-      #      system = {
-      #        sshUser = "root";
-      #        user = "root";
-      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
-      #          self.nixosConfigurations.laptop;
-      #      };
-      #    };
-      #  };
-
-      #  desktop = {
-      #    hostname = "100.107.190.11";
-      #    fastConnection = true;
-      #    profiles = {
-      #      system = {
-      #        sshUser = "root";
-      #        user = "root";
-      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
-      #          self.nixosConfigurations.desktop;
-      #      };
-      #    };
-      #  };
-
-      #  oracle_vps_1 = {
-      #    hostname = "129.213.62.243";
-      #    profiles = {
-      #      system = {
-      #        sshUser = "root";
-      #        user = "root";
-      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
-      #          self.nixosConfigurations.oracle_vps_1;
-      #      };
-      #    };
-      #  };
-
-      #  oracle_vps_2 = {
-      #    hostname = "150.136.52.94";
-      #    profiles = {
-      #      system = {
-      #        sshUser = "root";
-      #        user = "root";
-      #        path = deploy-rs.lib.x86_64-linux.activate.nixos
-      #          self.nixosConfigurations.oracle_vps_2;
-      #      };
-      #    };
-      #  };
-      #};
 
       # This is highly advised, and will prevent many possible mistakes
       checks = builtins.mapAttrs

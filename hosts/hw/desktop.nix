@@ -23,6 +23,7 @@
   swapDevices = [ ];
 
   nix.maxJobs = lib.mkDefault 12;
+  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
   # end hw file stuff
 

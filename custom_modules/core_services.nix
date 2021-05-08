@@ -12,6 +12,7 @@ let
     "rust_filehost_secret_key"
     "email_password"
     "hashed_email_password"
+    "gitlab_password"
   ];
   genDefaultPerms = secret: {
     ${secret} = {
@@ -126,7 +127,7 @@ in
         shell = pkgs.zsh;
         description = "Justin --the owner-- Restivo";
         extraGroups =
-          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" ];
+          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" ];
         initialPassword = "bruh";
       };
     };
