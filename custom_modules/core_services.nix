@@ -165,6 +165,7 @@ in
         experimental-features = nix-command flakes
       '';
 
+
       # cachix stuffs
       binaryCaches = [
         "https://cache.nixos.org"
@@ -206,7 +207,6 @@ in
       dnsutils
       hwloc
       ngrok
-      nix-search-pretty
       gnupg
       ssh-to-pgp
       lsof
@@ -239,7 +239,7 @@ in
       nix-index
       file
       hunter
-      neovim-nightly
+      #neovim-nightly
       fd
       sd
       tealdeer

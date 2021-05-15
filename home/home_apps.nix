@@ -15,6 +15,11 @@ let
       hnix
     ];
   devPack = with pkgs; [
+    github-cli
+    neovitality
+    stack
+    nixpkgs-fmt
+    hls
     opam
     cmake
     clang
@@ -55,6 +60,7 @@ let
   /*[ python-with-my-packages ];*/
   /* user */
   appPack = with pkgs; [
+    lshw
     thunderbird
     teams
     bluejeans-gui
@@ -80,9 +86,9 @@ let
     minecraft
     signal-desktop
     /*from gytis*/
-    g-alacritty
-    lightcord
-    nyxt
+    #g-alacritty
+    #lightcord
+    #nyxt
     vscode
     rust-analyzer
     wally-cli

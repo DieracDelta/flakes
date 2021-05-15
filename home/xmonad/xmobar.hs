@@ -13,7 +13,7 @@
   , persistent = True
   , hideOnStart = False
   , iconRoot = "."
-  , allDesktops = True
+  , allDesktops = False
   , overrideRedirect = True
   , commands =
     [ Run Memory ["-t","<usedratio>%"] 10

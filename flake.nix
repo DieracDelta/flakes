@@ -2,83 +2,100 @@
 
   description = "A highly awesome system configuration.";
 
-  /*note that I'm aware that flake is true by default. However,*/
-  /*I'm sitting on the side of making the flake more explicit */
-  /*since I'm easily confused .... */
   inputs = {
-    master.url = "nixpkgs/master";
-    nixpkgs.url = "nixpkgs/release-20.09";
-    home-manager = {
-      url = "github:nix-community/home-manager/release-20.09";
-      flake = true;
+    master = {
+      url = "github:NixOS/nixpkgs/master";
+    };
+    unstable = {
+      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    };
+    nixpkgs = {
+      url = "github:NixOS/nixpkgs/release-20.09";
+    };
+
+    naersk = {
+      url = github:nmattia/naersk;
+      inputs.nixpkgs.follows = "master";
+    };
+
+    hls = {
+      url = "github:jkachmar/easy-hls-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    rnix-lsp = {
+      url = "github:nix-community/rnix-lsp";
+      inputs.naersk.follows = "naersk";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.utils.follows = "flake-utils";
+    };
+
+    home-manager = {
+      url = "github:nix-community/home-manager/release-20.09";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mailserver =
     {
       url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
       inputs.nixpkgs.follows = "master";
-      flake = true;
+      inputs.utils.follows = "flake-utils";
     };
+
      # Solarized mutt colorschemes.
     mutt-colors-solarized = {
       url = "github:altercation/mutt-colors-solarized";
       flake = false;
     };
-    neovim-nightly-overlay =
-    {
-        url = "github:nix-community/neovim-nightly-overlay";
-        flake = true;
-        inputs.nixpkgs.follows = "master";
-    };
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      flake = true;
       inputs.nixpkgs.follows = "master";
+      inputs.flake-utils.follows = "flake-utils";
     };
-
-    #nyxt-overlay = {
-      #url = "github:atlas-engineer/nyxt";
-      #flake = true;
-      #inputs.nixpkgs.follows = "master";
-    #};
-
 
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
-      flake = true;
       inputs.nixpkgs.follows = "master";
+    };
+
+    flake-utils = {
+      url = github:numtide/flake-utils;
+      inputs.nixpkgs.follows = "master";
+    };
+
+    neovim = {
+      url = "github:neovim/neovim/d67dcaba02d76fe92ba818dde7b672fe6956a100?dir=contrib";
+      inputs.nixpkgs.follows = "unstable";
+      inputs.flake-utils.follows = "flake-utils";
+    };
+
+    neovitality = {
+      url = "github:vi-tality/neovitality";
+      inputs.nixpkgs.follows = "master";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.naersk.follows = "naersk";
+      inputs.rnix-lsp.follows = "rnix-lsp";
+      inputs.clojure-lsp-flake.inputs.nixpkgs.follows = "master";
+      inputs.clojure-lsp-flake.inputs.flake-utils.follows = "flake-utils";
+      inputs.neovim.follows = "neovim";
     };
 
     nix-doom-emacs = {
       url = "github:vlaci/nix-doom-emacs";
-      flake = true;
+      inputs.flake-utils.follows = "flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.emacs-overlay.follows = "emacs-overlay";
     };
 
-    gytis-overlay = {
-      url = "github:gytis-ivaskevicius/nixfiles";
-      flake = true;
-      inputs.nixpkgs.follows = "master";
-      inputs.master.follows = "master";
-    };
-
-    /*TODO figure out how this works...*/
     deploy-rs = {
+      inputs.naersk.follows = "naersk";
       url = "github:serokell/deploy-rs";
-      flake = true;
       inputs.nixpkgs.follows = "master";
     };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      flake = true;
-      inputs.nixpkgs.follows = "master";
-    };
-
-    nix-dram = {
-      url = "github:dramforever/nix-dram";
-      flake = true;
       inputs.nixpkgs.follows = "master";
     };
 
@@ -96,8 +113,10 @@
 
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
-      flake = true;
       inputs.nixpkgs.follows = "master";
+      inputs.naersk.follows = "naersk";
+      inputs.rust-overlay.follows = "rust-overlay";
+      inputs.utils.follows = "flake-utils";
     };
   };
 
@@ -107,17 +126,15 @@
       master,
       nixpkgs,
       rust-overlay,
-      neovim-nightly-overlay,
       home-manager,
       emacs-overlay,
       nix-doom-emacs,
-      gytis-overlay,
       sops-nix,
-      nix-dram,
       deploy-rs,
       rust-filehost,
       mailserver,
       mutt-colors-solarized,
+      neovitality,
       ...
     }:
     let
@@ -157,14 +174,15 @@
         })
       ]);
       overlays = [
-        neovim-nightly-overlay.overlay
         stable-pkgs
         emacs-overlay.overlay
-        gytis-overlay.overlay
+        (final: prev: {
+          hls = inputs.hls.defaultPackage.${system};
+        })
 
         (final: prev: {
-          inherit (nix-dram.packages.${system}) nix-search-pretty;
           inherit (deploy-rs.packages.${system}) deploy-rs;
+          neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {
@@ -181,19 +199,7 @@
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev: {
-          nixUnstable = prev.nixUnstable.overrideAttrs (old: {
-            patches = [
-              (prev.fetchpatch {
-                url = "https://raw.githubusercontent.com/dramforever/nix-dram/main/nix-patches/nix-search-meta.patch";
-                sha256 = "sha256-MW9Qc4MZ1tYlSxunxKVCnDLJ7+LMY/JynMIrtp8lBlI=";
-              })
-            ];
-          });
-
-        })
-
-        (final: prev: {
-          inherit (unstable-pkgs) manix alacritty nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli;
+          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen;
           unstable = unstable-pkgs;
         })
       ];
@@ -215,7 +221,9 @@
           };
       };
 
-      devShell.${system} = pkgs.mkShell {
+      devShell.${system} =
+        let xmonadPkgs = import ./home/xmonad/extraPackages.nix; in
+        pkgs.mkShell {
         # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
         sopsPGPKeyDirs = [
           "./secrets"
@@ -223,6 +231,7 @@
         nativeBuildInputs = [
           (pkgs.callPackage sops-nix { }).sops-pgp-hook
         ];
+        buildInputs = [ pkgs.sops (pkgs.haskellPackages.ghcWithHoogle xmonadPkgs)];
         shellhook = "zsh";
       };
 
@@ -274,7 +283,6 @@
         in
           builtins.foldl' pkgs.lib.mergeAttrs {} (results);
 
-      # This is highly advised, and will prevent many possible mistakes
       checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 
       packages."${system}" = (stable-pkgs null pkgs);

@@ -1,5 +1,5 @@
 let
   flake = builtins.getFlake (toString ./.);
 in
-  flake.inputs
+  { inherit flake;}
 #// flake.nixosConfigurations

@@ -346,6 +346,7 @@ nnoremap <silent> <leader>s  :<C-u>CocList -I symbols<cr>
 nnoremap <silent> <leader>p  :<C-u>CocListResume<CR>
 " fix current line
 nmap <leader>qq  <Plug>(coc-fix-current)
+nmap <leader>R <Plug>(coc-rename)
 
 "" Use K to show documentation in preview window
 nnoremap <silent> K :call <SID>show_documentation()<CR>

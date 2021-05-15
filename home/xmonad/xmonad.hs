@@ -43,7 +43,7 @@ main =
   xmonad
     .   ewmh
     .   docks
-    =<< statusBar "xmobar" myXmobarPP (\x -> (XMonad.modMask x, xK_r)) myConfig
+    =<< statusBar "xmobar" myXmobarPP (\x -> (XMonad.modMask x, xK_u)) myConfig
 
 -- color scheme:
 -- #0d0b09 -- VERY DARK D0791A -- orange-ish B78B26 -- yellow DC9223 -- lighter yellow F49823 -- darker (ish) yellow
@@ -182,4 +182,7 @@ myKeys conf@XConfig { XMonad.modMask = modm } =
        | (i, k) <- zip (workspaces conf) [xK_1 ..]
        , (f, m) <-
          [(W.view, 0), (W.shift, shiftMask), (copy, shiftMask .|. controlMask)]
-       ]
+       ] ++
+      [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
+          | (key, sc) <- zip [xK_r, xK_w] [0..]
+          , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
