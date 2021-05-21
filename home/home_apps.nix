@@ -16,7 +16,7 @@ let
     ];
   devPack = with pkgs; [
     github-cli
-    neovitality
+    #neovitality
     stack
     nixpkgs-fmt
     hls
@@ -86,7 +86,7 @@ let
     minecraft
     signal-desktop
     /*from gytis*/
-    #g-alacritty
+    alacritty
     #lightcord
     #nyxt
     vscode

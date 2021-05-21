@@ -36,13 +36,13 @@
     };
 
     mailserver =
-    {
-      url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
-      inputs.nixpkgs.follows = "master";
-      inputs.utils.follows = "flake-utils";
-    };
+      {
+        url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
+        inputs.nixpkgs.follows = "master";
+        inputs.utils.follows = "flake-utils";
+      };
 
-     # Solarized mutt colorschemes.
+    # Solarized mutt colorschemes.
     mutt-colors-solarized = {
       url = "github:altercation/mutt-colors-solarized";
       flake = false;
@@ -118,24 +118,30 @@
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.utils.follows = "flake-utils";
     };
+
+    vendor-reset = {
+      url = "github:gnif/vendor-reset";
+      flake = false;
+    };
+
   };
 
   outputs =
-    inputs@{
-      self,
-      master,
-      nixpkgs,
-      rust-overlay,
-      home-manager,
-      emacs-overlay,
-      nix-doom-emacs,
-      sops-nix,
-      deploy-rs,
-      rust-filehost,
-      mailserver,
-      mutt-colors-solarized,
-      neovitality,
-      ...
+    inputs@{ self
+    , master
+    , nixpkgs
+    , rust-overlay
+    , home-manager
+    , emacs-overlay
+    , nix-doom-emacs
+    , sops-nix
+    , deploy-rs
+    , rust-filehost
+    , mailserver
+    , mutt-colors-solarized
+    , neovitality
+    , vendor-reset
+    , ...
     }:
     let
       inherit (nixpkgs) lib;
@@ -153,6 +159,7 @@
         inputs.nix-doom-emacs.hmModule
         ./home/home.nix
       ];
+      linux_kernel = unstable-pkgs.linuxPackages_5_11.kernel;
 
 
 
@@ -179,10 +186,29 @@
         (final: prev: {
           hls = inputs.hls.defaultPackage.${system};
         })
+        (final: prev: {
+          latest_kernel = unstable-pkgs.linuxPackages_5_11;
+        })
+        (final: prev: {
+          vendor-reset = unstable-pkgs.stdenv.mkDerivation rec {
+            pname = "vendor-reset";
+            name = "${pname}-${linux_kernel.version}-${version}";
+            version = "0.1.1";
+            src = vendor-reset;
+            hardeningDisable = [ "pic" ];
+            #enableParallelBuilding = true;
+            nativeBuildInputs = linux_kernel.moduleBuildDependencies;
+            makeFlags = [
+              "KVER=${linux_kernel.modDirVersion}"
+              "KDIR=${linux_kernel.dev}/lib/modules/${linux_kernel.modDirVersion}/build/"
+              "INSTALL_MOD_PATH=$(out)"
+            ];
+          };
+        })
 
         (final: prev: {
           inherit (deploy-rs.packages.${system}) deploy-rs;
-          neovitality = neovitality.defaultPackage.${system};
+          #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {
@@ -199,7 +225,7 @@
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev: {
-          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen;
+          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen linuxPackages_5_11;
           unstable = unstable-pkgs;
         })
       ];
@@ -224,16 +250,16 @@
       devShell.${system} =
         let xmonadPkgs = import ./home/xmonad/extraPackages.nix; in
         pkgs.mkShell {
-        # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
-        sopsPGPKeyDirs = [
-          "./secrets"
-        ];
-        nativeBuildInputs = [
-          (pkgs.callPackage sops-nix { }).sops-pgp-hook
-        ];
-        buildInputs = [ pkgs.sops (pkgs.haskellPackages.ghcWithHoogle xmonadPkgs)];
-        shellhook = "zsh";
-      };
+          # imports all files ending in .asc/.gpg and sets $SOPS_PGP_FP.
+          sopsPGPKeyDirs = [
+            "./secrets"
+          ];
+          nativeBuildInputs = [
+            (pkgs.callPackage sops-nix { }).sops-pgp-hook
+          ];
+          buildInputs = [ pkgs.sops (pkgs.haskellPackages.ghcWithHoogle xmonadPkgs) ];
+          shellhook = "zsh";
+        };
 
       /*very simply get all the stuff in hosts/directory to provide as outputs*/
       nixosConfigurations =
@@ -266,22 +292,22 @@
           ];
 
           gen_node =
-            (_node@{ip_addr, host, ...}:
-            {
-              ${host} = {
-                hostname = "${ip_addr}";
-                profiles = {
-                  system = {
-                    sshUser = "root";
-                    user = "root";
-                    path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.${host};
+            (_node@{ ip_addr, host, ... }:
+              {
+                ${host} = {
+                  hostname = "${ip_addr}";
+                  profiles = {
+                    system = {
+                      sshUser = "root";
+                      user = "root";
+                      path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.${host};
+                    };
                   };
                 };
-              };
-            });
+              });
           results = map gen_node nodes;
         in
-          builtins.foldl' pkgs.lib.mergeAttrs {} (results);
+        builtins.foldl' pkgs.lib.mergeAttrs { } (results);
 
       checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 

@@ -3,7 +3,7 @@
 {
   environment.pathsToLink = [ "/share/zsh" ];
   boot.kernelParams = [ "amd_iommu=on" ];
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.latest_kernel;
   boot.kernelModules = [ "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" ];
   virtualisation.libvirtd.enable = true;
   users.groups.libvirtd.members = [ "root" "jrestivo" ];
@@ -22,5 +22,21 @@
     "/dev/rtc","/dev/hpet", "/dev/sev"
     ]
   '';
-  boot.kernelPatches = [{ name = "novi reset patch"; patch = ./reset_bug_patch.patch; }];
+  boot.kernelPatches = [
+    {
+      name = "vendor-reset";
+      patch = null;
+      extraConfig = ''
+        FTRACE y
+        KPROBES y
+        PCI_QUIRKS y
+        KALLSYMS y
+        KALLSYMS_ALL y
+        FUNCTION_TRACER y
+        KALLSYMS_ABSOLUTE_PERCPU y
+        KALLSYMS_BASE_RELATIVE y
+      '';
+    }
+  ];
+  boot.extraModulePackages = [ pkgs.vendor-reset ];
 }

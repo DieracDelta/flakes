@@ -1185,7 +1185,8 @@
         "rust-filehost": "rust-filehost",
         "rust-overlay": "rust-overlay",
         "sops-nix": "sops-nix",
-        "unstable": "unstable"
+        "unstable": "unstable",
+        "vendor-reset": "vendor-reset"
       }
     },
     "rotate-text": {
@@ -1624,6 +1625,22 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "vendor-reset": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1613431788,
+        "narHash": "sha256-xa7P7+mRk4FVgi+YYCcsFLfyNqPmXvy3xhGoTDVqPxw=",
+        "owner": "gnif",
+        "repo": "vendor-reset",
+        "rev": "225a49a40941e350899e456366265cf82b87ad25",
+        "type": "github"
+      },
+      "original": {
+        "owner": "gnif",
+        "repo": "vendor-reset",
         "type": "github"
       }
     },
