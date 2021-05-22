@@ -8,6 +8,7 @@
   virtualisation.libvirtd.enable = true;
   users.groups.libvirtd.members = [ "root" "jrestivo" ];
   boot.extraModprobeConfig = "options vfio-pci ids=1002:731f,1002:ab38";
+  # TODO make sure the OVMF/OVMF_VARS are uniquely named files otherwise will conflict when you have multiple VMs
   virtualisation.libvirtd.qemuVerbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
     user = "jrestivo"
