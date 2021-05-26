@@ -186,24 +186,26 @@
         (final: prev: {
           hls = inputs.hls.defaultPackage.${system};
         })
+        # wait for ATI driver to get fixed
         (final: prev: {
+          #linuxPackagesFor = kernel:
+            #(unstable-pkgs.linuxPackagesFor kernel).extend (_: _: { ati_drivers_x11 = null; });
+
           latest_kernel = unstable-pkgs.linuxPackages_5_11;
-        })
-        (final: prev: {
-          vendor-reset = unstable-pkgs.stdenv.mkDerivation rec {
-            pname = "vendor-reset";
-            name = "${pname}-${linux_kernel.version}-${version}";
-            version = "0.1.1";
-            src = vendor-reset;
-            hardeningDisable = [ "pic" ];
-            #enableParallelBuilding = true;
-            nativeBuildInputs = linux_kernel.moduleBuildDependencies;
-            makeFlags = [
-              "KVER=${linux_kernel.modDirVersion}"
-              "KDIR=${linux_kernel.dev}/lib/modules/${linux_kernel.modDirVersion}/build/"
-              "INSTALL_MOD_PATH=$(out)"
-            ];
-          };
+          #vendor-reset = unstable-pkgs.stdenv.mkDerivation rec {
+            #pname = "vendor-reset";
+            #name = "${pname}-${linux_kernel.version}-${version}";
+            #version = "0.1.1";
+            #src = vendor-reset;
+            #hardeningDisable = [ "pic" ];
+            ##enableParallelBuilding = true;
+            #nativeBuildInputs = linux_kernel.moduleBuildDependencies;
+            #makeFlags = [
+              #"KVER=${linux_kernel.modDirVersion}"
+              #"KDIR=${linux_kernel.dev}/lib/modules/${linux_kernel.modDirVersion}/build/"
+              #"INSTALL_MOD_PATH=$(out)"
+            #];
+          #};
         })
 
         (final: prev: {
@@ -225,7 +227,7 @@
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev: {
-          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen linuxPackages_5_11;
+          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11;
           unstable = unstable-pkgs;
         })
       ];

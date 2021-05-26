@@ -2,11 +2,19 @@
 { config, pkgs, lib, ... }:
 {
   environment.pathsToLink = [ "/share/zsh" ];
-  boot.kernelParams = [ "amd_iommu=on" ];
+  boot.kernelParams = [ "amd_iommu=on" "hugepagesz=1G" "hugepages=64"];
   boot.kernelPackages = pkgs.latest_kernel;
-  boot.kernelModules = [ "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" ];
+
   virtualisation.libvirtd.enable = true;
   users.groups.libvirtd.members = [ "root" "jrestivo" ];
+  #boot.postBootCommands = ''
+    #DEVS="0000:2f:00.0 0000:2f:00.1"
+
+    #for DEV in $DEVS; do
+      #echo "vfio-pci" > /sys/bus/pci/devices/$DEV/driver_override
+    #done
+    #modprobe -i vfio-pci
+  #'';
   boot.extraModprobeConfig = "options vfio-pci ids=1002:731f,1002:ab38";
   virtualisation.libvirtd.qemuVerbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
@@ -33,10 +41,15 @@
         KALLSYMS y
         KALLSYMS_ALL y
         FUNCTION_TRACER y
-        KALLSYMS_ABSOLUTE_PERCPU y
-        KALLSYMS_BASE_RELATIVE y
       '';
     }
   ];
   boot.extraModulePackages = [ pkgs.vendor-reset ];
+  boot.initrd.availableKernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"  "amdgpu" ];
+  boot.initrd.kernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" "amdgpu"  ];
+  services.xserver.videoDrivers = [ "amdgpu" ];
+  hardware.opengl.driSupport = true;
+  hardware.opengl.extraPackages = with pkgs; [
+    amdvlk
+  ];
 }

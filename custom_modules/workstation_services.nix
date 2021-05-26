@@ -92,6 +92,7 @@ in
         yubikeyPack
         gamingPack
         xPack
+        virtualizationPack
       ];
 
     fonts.fonts = with pkgs;
