@@ -11,4 +11,5 @@
   custom_modules.workstation_services.enable = true;
   custom_modules.rust-filehost.enable = false;
   custom_modules.hydra.enable = false;
+  custom_modules.yubikey.enable = true;
 }

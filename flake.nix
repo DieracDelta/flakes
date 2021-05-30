@@ -124,6 +124,8 @@
       flake = false;
     };
 
+    construct.url = "github:matrix-construct/construct";
+
   };
 
   outputs =
@@ -141,6 +143,7 @@
     , mutt-colors-solarized
     , neovitality
     , vendor-reset
+    , construct
     , ...
     }:
     let
@@ -165,6 +168,7 @@
 
       unstable-pkgs = (utils.pkgImport master [ stable-pkgs ]);
       nixosModules = (hostname: [
+        construct.nixosModules.matrix-construct
         mailserver.nixosModule
         (import "${master}/nixos/modules/hardware/keyboard/zsa.nix")
         (import ./custom_modules)
@@ -183,15 +187,21 @@
       overlays = [
         stable-pkgs
         emacs-overlay.overlay
+        construct.overlay
         (final: prev: {
           hls = inputs.hls.defaultPackage.${system};
         })
+        # stolen from git@github.com:bqv/nixrc.git 
+        #(final: prev: {
+          #riot-web = prev.element-web;
+          #matrix-construct = (prev.callPackage "${inputs.construct}/default.nix" { pkgs = prev; });
+        #})
         # wait for ATI driver to get fixed
-        (final: prev: {
+        #(final: prev: {
           #linuxPackagesFor = kernel:
             #(unstable-pkgs.linuxPackagesFor kernel).extend (_: _: { ati_drivers_x11 = null; });
 
-          latest_kernel = unstable-pkgs.linuxPackages_5_11;
+          #latest_kernel = unstable-pkgs.linuxPackages_5_11;
           #vendor-reset = unstable-pkgs.stdenv.mkDerivation rec {
             #pname = "vendor-reset";
             #name = "${pname}-${linux_kernel.version}-${version}";
@@ -206,7 +216,7 @@
               #"INSTALL_MOD_PATH=$(out)"
             #];
           #};
-        })
+        #})
 
         (final: prev: {
           inherit (deploy-rs.packages.${system}) deploy-rs;

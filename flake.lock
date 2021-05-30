@@ -35,7 +35,7 @@
     "clojure-lsp": {
       "inputs": {
         "flake-utils": "flake-utils_2",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
         "lastModified": 1621932470,
@@ -48,6 +48,24 @@
       "original": {
         "owner": "zachcoyle",
         "repo": "clojure-lsp-flake",
+        "type": "github"
+      }
+    },
+    "construct": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1613071881,
+        "narHash": "sha256-Oebq2SP8K3vwYuYy0i6zGI51SOl5lgrGr/r6cKa4508=",
+        "owner": "matrix-construct",
+        "repo": "construct",
+        "rev": "daee7001fba34961a8e24579b1e12068435482cc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "matrix-construct",
+        "repo": "construct",
         "type": "github"
       }
     },
@@ -695,11 +713,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1621926806,
-        "narHash": "sha256-VmtlCyZx4GKiEs8WKAdgI1UdiLtNrhBI3wbP/r8oKqw=",
+        "lastModified": 1589389290,
+        "narHash": "sha256-K5etYl0wKAPvU/B9LliwIgH/m/hYo1WyVlEIhLm8cV0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "528a33727ff3db9712e79b21b6d120afb0e4221a",
+        "rev": "d5ba826821ae7d895c6385ea99af73c7052e2e79",
         "type": "github"
       },
       "original": {
@@ -724,6 +742,20 @@
       }
     },
     "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1621926806,
+        "narHash": "sha256-VmtlCyZx4GKiEs8WKAdgI1UdiLtNrhBI3wbP/r8oKqw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "528a33727ff3db9712e79b21b6d120afb0e4221a",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_3": {
       "locked": {
         "lastModified": 1621951541,
         "narHash": "sha256-SpWKzuPhnqNHCQRmR0KBCkD9GCHaCPL9Sc/I9f30Clc=",
@@ -1166,6 +1198,7 @@
     },
     "root": {
       "inputs": {
+        "construct": "construct",
         "deploy-rs": "deploy-rs",
         "emacs-overlay": "emacs-overlay",
         "flake-utils": "flake-utils",
@@ -1180,7 +1213,7 @@
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
         "nix-zsh-shell-integration": "nix-zsh-shell-integration",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "rnix-lsp": "rnix-lsp",
         "rust-filehost": "rust-filehost",
         "rust-overlay": "rust-overlay",
