@@ -10,7 +10,7 @@
   programs.git = {
     enable = true;
     userName = "Justin Restivo";
-    userEmail = "justin.p.restivo@gmail.com";
+    userEmail = "justin@restivo.me";
     extraConfig = {
       url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
       url = { "ssh://git@gitlab.com" = { insteadOf = "https://gitlab.com"; }; };
@@ -18,7 +18,31 @@
         "ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
       };
     };
+    # TODO turn this on
+    signing.signByDefault = true;
+    signing.key = "0D99 B31B 4A4E F70D 2F74  5EF1 6912 69F4 E7A6 3FC8";
   };
+
+
+
+  programs.gpg = {
+    enable = true;
+    settings = {
+      #pinentry-program = "${pkgs.pinentry}/bin/pinentry";
+      #pinentryFlavor = "qt";
+    };
+  };
+  services.gpg-agent = {
+    enable = true;
+    pinentryFlavor = "curses";
+  };
+
+  # gpg-agent
+  #programs.gnupg.agent = {
+    #enable = true;
+    #enableSSHSupport = true;
+    #pinentryFlavor = "curses";
+  #};
 
   /*morally speaking should automate this in the same way im doing modules*/
   imports = [

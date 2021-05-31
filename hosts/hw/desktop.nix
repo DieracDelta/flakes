@@ -8,7 +8,7 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
-  boot.kernelPackages = pkgs.latest_kernel;
+  #boot.kernelPackages = pkgs.latest_kernel;
 
   fileSystems."/" =
     {
