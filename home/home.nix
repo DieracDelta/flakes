@@ -17,10 +17,12 @@
       url = {
         "ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
       };
+      github.user = "DieracDelta";
+      tag.gpgSign = true;
     };
     # TODO turn this on
     signing.signByDefault = true;
-    signing.key = "0D99 B31B 4A4E F70D 2F74  5EF1 6912 69F4 E7A6 3FC8";
+    signing.key = "691269F4E7A63FC8";
   };
 
 
@@ -35,6 +37,12 @@
   services.gpg-agent = {
     enable = true;
     pinentryFlavor = "curses";
+    enableSshSupport = true;
+    defaultCacheTtlSsh = 36000;
+    defaultCacheTtl = 36000;
+    maxCacheTtlSsh = 36000;
+    maxCacheTtl = 36000;
+    sshKeys = [ "73A5C29470975403A7A76BB31A3F1101F27AB2ED" ];
   };
 
   # gpg-agent
