@@ -191,6 +191,7 @@
         (final: prev: {
           hls = inputs.hls.defaultPackage.${system};
         })
+
         # stolen from git@github.com:bqv/nixrc.git 
         #(final: prev: {
           #riot-web = prev.element-web;
