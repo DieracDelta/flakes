@@ -127,7 +127,7 @@ in
         shell = pkgs.zsh;
         description = "Justin --the owner-- Restivo";
         extraGroups =
-          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" ];
+          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" ];
         initialPassword = "bruh";
       };
     };

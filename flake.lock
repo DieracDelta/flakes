@@ -1254,11 +1254,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1613443543,
-        "narHash": "sha256-ECFYwQSPLhbGF2bJz/umSWljkzMvnvipjVEXJnBTtMI=",
+        "lastModified": 1622507670,
+        "narHash": "sha256-yDmuCHHjhUpk8BJev1/mr4OSEUDm7adezDvGfGvFCtU=",
         "owner": "DieracDelta",
         "repo": "filehost_rust",
-        "rev": "f52ed70398cb794a9aaf1896a5fbedbac1c4de87",
+        "rev": "101e40c18549efe7b8515970af81985507bdac92",
         "type": "github"
       },
       "original": {

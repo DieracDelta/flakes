@@ -23,6 +23,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    trezor-suite
     redshift
     xorg.xwininfo
     brightnessctl
