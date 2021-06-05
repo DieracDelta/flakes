@@ -35,6 +35,7 @@
     };
   };
   services.gpg-agent = {
+    enableScDaemon = true;
     enable = true;
     pinentryFlavor = "curses";
     enableSshSupport = true;
