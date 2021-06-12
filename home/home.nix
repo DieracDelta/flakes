@@ -170,6 +170,38 @@
       spam_separator = ", ";
       strict_threads = "yes";
       tilde = "yes";
+      # https://chipsenkbeil.com/posts/applying-gpg-and-yubikey-part-4-signing/
+      # Use GPGME backend instead of classic code
+      crypt_use_gpgme = "yes";
+      # Attempt to cryptographically sign outgoing messages
+      crypt_autosign = "yes";
+      # Always attempt to veryify email signatures
+      # NOTE: Set by d"efault
+      crypt_autopgp = "yes";
+      crypt_verify_sig = "yes";
+      # Automatically sign replies to signed emails
+      crypt_replysign = "yes";
+      # Automatically encrypt replies to encrypted emails
+      # NOTE: Set by default
+      crypt_replyencrypt = "yes";
+      # Automatically sign replies to encrypted emails, gets
+      # around issues with pure replysign
+      crypt_replysignencrypted = "yes";
+      # Only encrypt if all recipients are found in public key
+      crypt_opportunistic_encrypt = "yes";
+      # Use a gpg-agent for private key password prompts
+      # NOTE: Set by default because GnuPG 2.1+ requires it
+      pgp_use_gpg_agent = "yes";
+      # Check status of gpg commands using file descriptor output from
+      # decrypt and decode commands
+      # NOTE: Set by default
+      pgp_check_gpg_decrypt_status_fd = "yes";
+      # When encrypting email, always include own key to be able to read sent mail
+      pgp_self_encrypt = "yes";
+      # Set the key to use for encryption/decryption of email
+      pgp_default_key = "\"65AF3C834FD4070F\"";
+      # Set the key to use for signing email
+      pgp_sign_as = "\"747652E87F063539\"";
     };
     sort = "threads";
     binds =
