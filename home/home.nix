@@ -22,7 +22,7 @@
     };
     # TODO turn this on
     signing.signByDefault = true;
-    signing.key = "691269F4E7A63FC8";
+    signing.key = "E68281EB2ABCE9B8";
   };
 
 
@@ -35,15 +35,23 @@
     };
   };
   services.gpg-agent = {
-    enableScDaemon = true;
+    /*enableScDaemon = true;*/
     enable = true;
-    pinentryFlavor = "curses";
+    pinentryFlavor = "qt";
     enableSshSupport = true;
     defaultCacheTtlSsh = 36000;
     defaultCacheTtl = 36000;
     maxCacheTtlSsh = 36000;
     maxCacheTtl = 36000;
-    sshKeys = [ "73A5C29470975403A7A76BB31A3F1101F27AB2ED" ];
+    sshKeys = [ "47FE9F64C6AD1CD29A0142BD96CD77C03DBCB1D4" ];
+    extraConfig = ''
+    allow-loopback-pinentry
+    '';
+  };
+
+  home.file.".gnupg/sshgrips" = {
+    recursive = true;
+    source = ./sshgrips;
   };
 
   # gpg-agent

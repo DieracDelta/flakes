@@ -15,6 +15,9 @@ let
       hnix
     ];
   devPack = with pkgs; [
+    yubico-piv-tool
+    yubikey-manager-qt
+    #matrix-construct
     github-cli
     #neovitality
     stack
@@ -40,10 +43,12 @@ let
   ];
   /* user if at all ... */
   /*really just an example of how creating python package works..*/
-  /*python37Pack = with pkgs;*/
-  /*let*/
-  /*my-python-packages = python-packages:*/
-  /*with python-packages; [*/
+  #python37Pack = with pkgs;
+  #let
+  #my-python-packages = python-packages:
+  #with python-packages; [
+   #trezor_agent
+   #wheel
   /*pywal*/
   /*jedi*/
   /*flake8*/
@@ -54,14 +59,14 @@ let
   /*xdot*/
   /*opencv4*/
   /*numpy*/
-  /*];*/
-  /*python-with-my-packages = python37.withPackages my-python-packages;*/
-  /*in*/
+  #];
+  #python-with-my-packages = python37.withPackages my-python-packages;
   /*[ python-with-my-packages ];*/
   /* user */
   appPack = with pkgs; [
+    idris2
     lshw
-    thunderbird
+    #thunderbird
     teams
     bluejeans-gui
     blender
@@ -80,7 +85,7 @@ let
     keybase
     keybase-gui
     kbfs
-    libreoffice
+    #libreoffice
     obs-studio
     graphviz
     minecraft
@@ -108,7 +113,6 @@ let
     /*nyxt*/
     nextcloud21
     nextcloud-client
-    pulseeffects
     noip
     remmina
     pkgs.unstable.chromium
@@ -138,7 +142,7 @@ let
     scala
     metals
     sbt
-    pkgsCross.avr.buildPackages.gcc
+    #pkgsCross.avr.buildPackages.gcc
   ];
   pentestPack = with pkgs; [
     ghidra-bin
@@ -177,6 +181,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [
+      #python37Pack
       haskellPack
       devPack
       appPack

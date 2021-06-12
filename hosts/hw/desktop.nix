@@ -10,6 +10,9 @@
   boot.extraModulePackages = [ ];
   #boot.kernelPackages = pkgs.latest_kernel;
 
+  environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python38Packages.trezor_agent python38Packages.trezor ];
+  services.trezord.enable = true;
+
   fileSystems."/" =
     {
       device = "/dev/sda1";

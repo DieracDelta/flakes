@@ -23,7 +23,7 @@ in
     ];
 
     # expose u2f
-    services.udev.packages = with pkgs; [ libu2f-host yubikey-personalization ];
+    services.udev.packages = with pkgs; [ libu2f-host yubikey-personalization opensc pcsctools ];
 
     # smartcard daemon
     services.pcscd.enable = true;

@@ -10,7 +10,7 @@
       url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/release-20.09";
+      url = "github:NixOS/nixpkgs/release-21.05";
     };
 
     naersk = {
@@ -31,7 +31,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-20.09";
+      url = "github:nix-community/home-manager/release-21.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -170,7 +170,6 @@
       nixosModules = (hostname: [
         construct.nixosModules.matrix-construct
         mailserver.nixosModule
-        (import "${master}/nixos/modules/hardware/keyboard/zsa.nix")
         (import ./custom_modules)
         sops-nix.nixosModules.sops
         /* for hardware*/
@@ -299,7 +298,7 @@
               host = "oracle_vps_1";
             }
             {
-              ip_addr = "100.87.232.34";
+              ip_addr = "150.136.52.94";
               host = "oracle_vps_2";
             }
           ];

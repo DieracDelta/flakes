@@ -35,12 +35,11 @@
        (evil +everywhere)               ; come to the dark side, we have cookies
        file-templates                   ; auto-snippets for empty files
        fold                             ; (nigh) universal code folding
-       (format +onsave)                 ; automated prettiness
+       ;(format +onsave)                 ; automated prettiness
        lispy
        ;;god               ; run Emacs commands without modifier keys
        ;;multiple-cursors  ; editing in many places at once
        ;;objed             ; text object editing for the innocent
-       parinfer                         ; turn lisp into python, sort of
        ;;rotate-text       ; cycle region at point between text candidates
        snippets                       ; my elves. They type so I don't have to
        word-wrap                      ; soft wrapping with language-aware indent
@@ -78,7 +77,7 @@
 
        :lang
        web
-       cc                        ; C/C++/Obj-C madness
+       ;cc                        ; C/C++/Obj-C madness
        common-lisp               ; if you've seen one lisp, you've seen them all
        data                      ; config/data formats
        coq

@@ -23,6 +23,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    kdeconnect
     trezor-suite
     redshift
     xorg.xwininfo

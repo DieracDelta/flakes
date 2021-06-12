@@ -51,33 +51,33 @@ in
       enable = true;
     };
     # create a oneshot job to authenticate to Tailscale
-    systemd.services.tailscale-autoconnect = {
-      description = "Automatic authentication to Tailscale";
+    /*systemd.services.tailscale-autoconnect = {*/
+      /*description = "Automatic authentication to Tailscale";*/
 
-      # make sure tailscale is running before trying to connect to tailscale
-      after = [ "network-pre.target" "tailscale.service" ];
-      wants = [ "network-pre.target" "tailscale.service" ];
-      wantedBy = [ "multi-user.target" ];
+      /*# make sure tailscale is running before trying to connect to tailscale*/
+      /*after = [ "network-pre.target" "tailscale.service" ];*/
+      /*wants = [ "network-pre.target" "tailscale.service" ];*/
+      /*wantedBy = [ "multi-user.target" ];*/
 
-      # set this service as a oneshot job
-      serviceConfig.Type = "oneshot";
+      /*# set this service as a oneshot job*/
+      /*serviceConfig.Type = "oneshot";*/
 
-      # have the job run this shell script
-      script = with pkgs; ''
-        # wait for tailscaled to settle
-        sleep 2
+      /*# have the job run this shell script*/
+      /*script = with pkgs; ''*/
+        /*# wait for tailscaled to settle*/
+        /*sleep 2*/
 
-        # check if we are already authenticated to tailscale
-        status="$(${tailscale}/bin/tailscale status -json | ${jq}/bin/jq -r .BackendState)"
-        if [[ "$status" == "Running" ]]; then
-          exit 0
-        fi
+        /*# check if we are already authenticated to tailscale*/
+        /*status="$(${tailscale}/bin/tailscale status -json | ${jq}/bin/jq -r .BackendState)"*/
+        /*if [[ "$status" == "Running" ]]; then*/
+          /*exit 0*/
+        /*fi*/
 
-        # otherwise authenticate with tailscale
-        ${tailscale}/bin/tailscale up -authkey "$(cat ${config.sops.secrets.tailscale_key.path})"
-      '';
-      serviceConfig.SupplementaryGroups = [ config.users.groups.keys.name ];
-    };
+        /*# otherwise authenticate with tailscale*/
+        /*${tailscale}/bin/tailscale up -authkey "$(cat ${config.sops.secrets.tailscale_key.path})"*/
+      /*'';*/
+      /*serviceConfig.SupplementaryGroups = [ config.users.groups.keys.name ];*/
+    /*};*/
 
     services.openssh = {
       enable = true;
@@ -92,7 +92,7 @@ in
 
     services.lorri.enable = true;
 
-    services.gnome3.gnome-keyring.enable = true;
+    services.gnome.gnome-keyring.enable = true;
 
     services.locate = {
       enable = true;
@@ -151,7 +151,7 @@ in
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCnVsxxx7yiI1yWh2+wkmH7jMDTfvypsLfVkYuz+WObIi3V+1gZN3cPjHFYwEa1SpUNSs4/c2zdM1CANR5b61YgBmvbxYUVCBFNSeO1B9JTPUDcyM20vhRdeUOFlPS0KJHkKnlzjq4sEnjDM+zXCtAKEekBRcWqcnK2WX/Q9CI6+ocaJ30r06T0Hqa4C7Gx6pNbVNxaTaza3Mzod68aBjyg7WShsKPF5nLSe9QJIjUQ2bjGdRCUlXshgmW+E127KqryZqYLmmodF9fynCK6Ne+MDM2jEruRHMwhv50MfnO0ntOOM0i37oR3JuKE+AzJj/+Ete/YVbbIxipMm0DkNJEEqFsZRO5qkiP2MpI4TCZxHaac/pl+W6HdhwzSKCUrVBUTwEacaz/3WFgGgTjebpW1hfYbcTalG6e9t2W0OSg+INYLklp4uHDWHjFqyl5J+FZMNQdtWgD3yRyZN9rf1ojVf5AgxSW6pXIcrqMf/6Kf+kr/O0FOakrLaEHTDmONVTM= justin.p.restivo@gmail.com
       ''
       ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFBPEG/2ZsIzR8gz3woxPMgguBUA8Q6hkDEmD3Os0W95 openpgp:0xE7A63FC8
+        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEQhr1kZ1lKfrzduXAGCf8YortFgb4/IayETinfYb9j2 openpgp:0x1AA26BEA
       ''
     ];
     users.users.root.openssh.authorizedKeys.keys = [
@@ -159,7 +159,7 @@ in
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCnVsxxx7yiI1yWh2+wkmH7jMDTfvypsLfVkYuz+WObIi3V+1gZN3cPjHFYwEa1SpUNSs4/c2zdM1CANR5b61YgBmvbxYUVCBFNSeO1B9JTPUDcyM20vhRdeUOFlPS0KJHkKnlzjq4sEnjDM+zXCtAKEekBRcWqcnK2WX/Q9CI6+ocaJ30r06T0Hqa4C7Gx6pNbVNxaTaza3Mzod68aBjyg7WShsKPF5nLSe9QJIjUQ2bjGdRCUlXshgmW+E127KqryZqYLmmodF9fynCK6Ne+MDM2jEruRHMwhv50MfnO0ntOOM0i37oR3JuKE+AzJj/+Ete/YVbbIxipMm0DkNJEEqFsZRO5qkiP2MpI4TCZxHaac/pl+W6HdhwzSKCUrVBUTwEacaz/3WFgGgTjebpW1hfYbcTalG6e9t2W0OSg+INYLklp4uHDWHjFqyl5J+FZMNQdtWgD3yRyZN9rf1ojVf5AgxSW6pXIcrqMf/6Kf+kr/O0FOakrLaEHTDmONVTM= justin.p.restivo@gmail.com
       ''
       ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFBPEG/2ZsIzR8gz3woxPMgguBUA8Q6hkDEmD3Os0W95 openpgp:0xE7A63FC8
+        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEQhr1kZ1lKfrzduXAGCf8YortFgb4/IayETinfYb9j2 openpgp:0x1AA26BEA
       ''
 
     ];
@@ -205,7 +205,7 @@ in
     environment.systemPackages = with pkgs; [
       dmidecode
       deploy-rs
-      ytop
+      bottom
       direnv
       git
       tigervnc
