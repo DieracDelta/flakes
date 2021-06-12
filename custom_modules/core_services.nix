@@ -3,10 +3,6 @@
 /*TODO fix naming inconsistency*/
 let
   secrets = [
-    "desktop_public_key"
-    "laptop_public_key"
-    "desktop_private_key"
-    "laptop_private_key"
     "zerotier_key"
     "rust_filehost_secrets"
     "rust_filehost_secret_key"
