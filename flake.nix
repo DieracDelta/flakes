@@ -124,8 +124,6 @@
       flake = false;
     };
 
-    construct.url = "github:matrix-construct/construct";
-
   };
 
   outputs =
@@ -162,7 +160,6 @@
         inputs.nix-doom-emacs.hmModule
         ./home/home.nix
       ];
-      linux_kernel = unstable-pkgs.linuxPackages_5_11.kernel;
 
 
 
@@ -195,27 +192,6 @@
         #(final: prev: {
           #riot-web = prev.element-web;
           #matrix-construct = (prev.callPackage "${inputs.construct}/default.nix" { pkgs = prev; });
-        #})
-        # wait for ATI driver to get fixed
-        #(final: prev: {
-          #linuxPackagesFor = kernel:
-            #(unstable-pkgs.linuxPackagesFor kernel).extend (_: _: { ati_drivers_x11 = null; });
-
-          #latest_kernel = unstable-pkgs.linuxPackages_5_11;
-          #vendor-reset = unstable-pkgs.stdenv.mkDerivation rec {
-            #pname = "vendor-reset";
-            #name = "${pname}-${linux_kernel.version}-${version}";
-            #version = "0.1.1";
-            #src = vendor-reset;
-            #hardeningDisable = [ "pic" ];
-            ##enableParallelBuilding = true;
-            #nativeBuildInputs = linux_kernel.moduleBuildDependencies;
-            #makeFlags = [
-              #"KVER=${linux_kernel.modDirVersion}"
-              #"KDIR=${linux_kernel.dev}/lib/modules/${linux_kernel.modDirVersion}/build/"
-              #"INSTALL_MOD_PATH=$(out)"
-            #];
-          #};
         #})
 
         (final: prev: {

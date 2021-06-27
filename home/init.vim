@@ -152,7 +152,7 @@ vnoremap <LeftRelease> "*ygv
 "i dont actually want visual mode mouse control
 "but i still do want scroll and cursor clicking
 set mouse=nv
-let g:polyglot_disabled = ['latex', 'c/c++', 'c++11', 'nix']
+let g:polyglot_disabled = ['latex', 'c/c++', 'c++11' ]
 let g:UltiSnipsExpandTrigger='<c-h>'
 let g:UltiSnipsJumpForwardTrigger='<c-h>'
 let g:UltiSnipsJumpBackwardTrigger='<c-g>'

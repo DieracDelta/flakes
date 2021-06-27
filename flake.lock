@@ -58,15 +58,13 @@
       "locked": {
         "lastModified": 1613071881,
         "narHash": "sha256-Oebq2SP8K3vwYuYy0i6zGI51SOl5lgrGr/r6cKa4508=",
-        "owner": "matrix-construct",
-        "repo": "construct",
+        "path": "/nix/store/v633l1lnvrl5v4kpx1766abcrw721bqx-source",
         "rev": "daee7001fba34961a8e24579b1e12068435482cc",
-        "type": "github"
+        "type": "path"
       },
       "original": {
-        "owner": "matrix-construct",
-        "repo": "construct",
-        "type": "github"
+        "id": "construct",
+        "type": "indirect"
       }
     },
     "deploy-rs": {

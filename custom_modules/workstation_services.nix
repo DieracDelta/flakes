@@ -5,6 +5,7 @@ let
   virtualizationPack = with pkgs; [
     virt-manager
     looking-glass-client
+    cdrkit
     qemu
     OVMF
     libvirt

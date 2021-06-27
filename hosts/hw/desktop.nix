@@ -1,14 +1,14 @@
 { config, lib, pkgs, ... }:
 
 {
-  #imports = [ ./shared.nix ./gpu_passthrough.nix ];
-  imports = [ ./shared.nix ];
+  imports = [ ./shared.nix ./gpu_passthrough.nix ];
+  #imports = [ ./shared.nix ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
-  #boot.kernelPackages = pkgs.latest_kernel;
+  #boot.kernelPackages = pkgs.linux_kernel;
 
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python38Packages.trezor_agent python38Packages.trezor ];
   services.trezord.enable = true;

@@ -144,6 +144,9 @@ let
     sbt
     #pkgsCross.avr.buildPackages.gcc
   ];
+  financialPack = with pkgs; [
+    beancount
+  ];
   pentestPack = with pkgs; [
     ghidra-bin
     john
@@ -191,6 +194,7 @@ in
       texPack
       languageserverPack
       cPack
+      financialPack
     ];
   };
 

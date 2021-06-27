@@ -2,8 +2,8 @@
 { config, pkgs, lib, ... }:
 {
   environment.pathsToLink = [ "/share/zsh" ];
-  boot.kernelParams = [ "amd_iommu=on" "hugepagesz=1G" "hugepages=64"];
-  boot.kernelPackages = pkgs.latest_kernel;
+  boot.kernelParams = [ "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" "hugepagesz=1G" "hugepages=64"];
+  boot.kernelPackages = pkgs.linuxPackages_5_12;
 
   virtualisation.libvirtd.enable = true;
   users.groups.libvirtd.members = [ "root" "jrestivo" ];
@@ -15,7 +15,7 @@
     #done
     #modprobe -i vfio-pci
   #'';
-  boot.extraModprobeConfig = "options vfio-pci ids=1002:731f,1002:ab38";
+  boot.extraModprobeConfig = "options vfio-pci ids=1002:67ef,1002:aae0";
   # TODO make sure the OVMF/OVMF_VARS are uniquely named files otherwise will conflict when you have multiple VMs
   virtualisation.libvirtd.qemuVerbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
@@ -45,7 +45,7 @@
       '';
     }
   ];
-  boot.extraModulePackages = [ pkgs.vendor-reset ];
+  boot.extraModulePackages = [ pkgs.linuxPackages_5_12.vendor-reset ];
   boot.initrd.availableKernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"  "amdgpu" ];
   boot.initrd.kernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" "amdgpu"  ];
   services.xserver.videoDrivers = [ "amdgpu" ];
@@ -53,4 +53,6 @@
   hardware.opengl.extraPackages = with pkgs; [
     amdvlk
   ];
+  systemd.tmpfiles.rules = [
+    "f /dev/shm/looking-glass 0660 jrestivo qemu-libvirtd -" ];
 }
