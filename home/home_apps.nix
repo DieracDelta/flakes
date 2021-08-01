@@ -21,7 +21,9 @@ let
     github-cli
     #neovitality
     stack
+    nyxt
     nixpkgs-fmt
+    yubikey-personalization
     hls
     opam
     cmake
@@ -118,6 +120,11 @@ let
     pkgs.unstable.chromium
     flameshot
     #firefox
+    # for neomutt
+    urlscan
+    lynx
+    bottom
+    nyxt
     vscode
     dante
     vscode
