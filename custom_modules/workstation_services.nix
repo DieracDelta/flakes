@@ -9,6 +9,7 @@ let
     qemu
     OVMF
     libvirt
+    #firefox
   ];
   /* system */
   gamingPack = with pkgs; [

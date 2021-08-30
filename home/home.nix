@@ -12,11 +12,10 @@
     userName = "Justin Restivo";
     userEmail = "justin@restivo.me";
     extraConfig = {
-      url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
-      url = { "ssh://git@gitlab.com" = { insteadOf = "https://gitlab.com"; }; };
-      url = {
-        "ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
-      };
+      #url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
+      #url = {
+        #"ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
+      #};
       github.user = "DieracDelta";
       tag.gpgSign = true;
     };
@@ -43,7 +42,9 @@
     defaultCacheTtl = 36000;
     maxCacheTtlSsh = 36000;
     maxCacheTtl = 36000;
-    sshKeys = [ "47FE9F64C6AD1CD29A0142BD96CD77C03DBCB1D4" ];
+    sshKeys = [
+      "0FD8067624129B09D68529E2D7AAC887A8247838"
+    ];
     extraConfig = ''
     allow-loopback-pinentry
     '';
@@ -148,6 +149,15 @@
       named-mailboxes `${findAllMailboxes}`
     '';
     settings = {
+      #mailcap_path = "./mailcap"
+#   # text/html; ~/.config/mutt/bin/openfile %s ; nametemplate=%s.html
+#   text/html; lynx -assume_charset=%{charset} -display_charset=utf-8 -dump %s; nametemplate=%s.html; copiousoutput;
+#   text/plain; $EDITOR %s ;
+#   image/*; ~/.config/mutt/bin/openfile %s ; copiousoutput
+#   video/*; setsid mpv --quiet %s &; copiousoutput
+#   application/pgp-encrypted; gpg -d '%s'; copiousoutput;
+#   # application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; sc-im %s;
+#   application/*; ~/.config/mutt/bin/openfile %s ;
       assumed_charset = "iso-8859-1";
       forward_format = "\"Fwd: %s\"";
       edit_headers = "yes";
@@ -163,6 +173,7 @@
       pager_format = "\" %C - %[%H:%M] %.20v, %s%* %?H? [%H] ?\"";
       pager_index_lines = "10";
       pager_stop = "yes";
+      #pager = "lynx";
       reverse_name = "yes";
       send_charset = "utf-8";
       sidebar_sort_method = "path";

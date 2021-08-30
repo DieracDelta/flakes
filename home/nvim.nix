@@ -48,7 +48,11 @@ in
         coc-nvim
         coc-python
         coc-emmet
+        coc-json
+        coc-html
+        coc-tsserver
         /*pkgset.unstable-pkgs.*/
+        coc-tslint
         pkgs.unstable.vimPlugins.coc-diagnostic
       ];
       viAlias = true;

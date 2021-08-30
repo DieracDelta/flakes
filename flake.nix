@@ -3,6 +3,7 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+
     master = {
       url = "github:NixOS/nixpkgs/master";
     };
@@ -16,6 +17,12 @@
     naersk = {
       url = github:nmattia/naersk;
       inputs.nixpkgs.follows = "master";
+    };
+
+    hyperspace = {
+      #url = github:ngi-nix/hyperspace/yarn2nix;
+      url = "path:/home/jrestivo/SoN/malte/hyperspace";
+      inputs.nixpkgs.follows = "unstable";
     };
 
     hls = {
@@ -142,6 +149,7 @@
     , neovitality
     , vendor-reset
     , construct
+    , hyperspace
     , ...
     }:
     let
@@ -165,7 +173,8 @@
 
       unstable-pkgs = (utils.pkgImport master [ stable-pkgs ]);
       nixosModules = (hostname: [
-        construct.nixosModules.matrix-construct
+
+        hyperspace.nixosModules.hyperspace
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
@@ -213,8 +222,31 @@
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev: {
-          inherit (unstable-pkgs) manix nyxt maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11;
+          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus;
           unstable = unstable-pkgs;
+        })
+        (final: prev: {
+          lispPackages = prev.lispPackages // {
+            cl-webkit2 = prev.lispPackages.cl-webkit2.overrideAttrs (oldAttrs:
+            {
+              src = prev.fetchFromGitHub {
+                owner = "joachifm";
+                repo = "cl-webkit";
+                rev = "90b1469713265096768fd865e64a0a70292c733d";
+                sha256 = "sha256:0lxws342nh553xlk4h5lb78q4ibiwbm2hljd7f55w3csk6z7bi06";
+              };
+            });
+            nyxt = prev.lispPackages.nyxt.overrideAttrs (oldAttrs:
+          {
+            version = "2.1.1";
+            src = prev.fetchFromGitHub {
+              owner = "atlas-engineer";
+              repo = "nyxt";
+              rev = "93a2af10f0b305740db0a3232ecb690cd43791f9";
+              sha256 = "sha256-GdTOFu5yIIL9776kfbo+KS1gHH1xNCfZSWF5yHUB9U8=";
+            };
+          });
+        };
         })
       ];
 

@@ -14,7 +14,10 @@ in
       enableZshIntegration = true;
     };
     programs.starship = {
-      settings = { add_newline = false; };
+      settings = {
+        add_newline = false;
+        git_branch.disabled = true;
+      };
       enable = true;
       enableZshIntegration = true;
       enableBashIntegration = true;

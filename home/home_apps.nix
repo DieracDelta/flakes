@@ -15,8 +15,10 @@ let
       hnix
     ];
   devPack = with pkgs; [
+    git-lfs
     yubico-piv-tool
     yubikey-manager-qt
+    #nix-extract-revs-from-cache
     #matrix-construct
     github-cli
     #neovitality
@@ -24,6 +26,8 @@ let
     nyxt
     nixpkgs-fmt
     yubikey-personalization
+    _7zz
+    thunderbird
     hls
     opam
     cmake
@@ -45,25 +49,22 @@ let
   ];
   /* user if at all ... */
   /*really just an example of how creating python package works..*/
-  #python37Pack = with pkgs;
+  #python38Pack = with pkgs;
   #let
   #my-python-packages = python-packages:
   #with python-packages; [
-   #trezor_agent
-   #wheel
-  /*pywal*/
-  /*jedi*/
-  /*flake8*/
-  /*pep8*/
-  /*tesserocr*/
-  /*pillow*/
-  /*autopep8*/
-  /*xdot*/
-  /*opencv4*/
-  /*numpy*/
+    #poetry
+    ##coincurve
+    ##green
+    ##protobuf
+    ##pycryptodome
+    ##ecdsa
+    ##groestlcoin_hash
+    ##eth-keyfile
   #];
-  #python-with-my-packages = python37.withPackages my-python-packages;
-  /*[ python-with-my-packages ];*/
+  #python-with-my-packages = python39.withPackages my-python-packages;
+  #in
+  #[ python-with-my-packages ];
   /* user */
   appPack = with pkgs; [
     idris2
@@ -129,8 +130,11 @@ let
     dante
     vscode
     android-studio
-    gimp
+    hyperspace-cli
+    bottom
+    #gimp
     tdesktop
+    exodus
     mpv
     youtube-dl
     pciutils
@@ -146,7 +150,7 @@ let
     arduino
     arduino-cli
     platformio
-    scala
+    #scala
     metals
     sbt
     #pkgsCross.avr.buildPackages.gcc
@@ -191,7 +195,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [
-      #python37Pack
+      #python38Pack
       haskellPack
       devPack
       appPack
