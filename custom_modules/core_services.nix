@@ -148,10 +148,17 @@ in
       ''
       # MOST RECENT
       ''
+      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM5DtmAk4jcG0i0m1HCnhienAMUgBQ25Srs5P9pRe1eL openpgp:0x1CE431A7
+      ''
+      ''
         ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBpGFCfG6Yq+CaAqNZcU41FhGv5JcLehkUa59eaw35iM openpgp:0x16CE5BD0
       ''
     ];
     users.users.root.openssh.authorizedKeys.keys = [
+      # MOST RECENT
+      ''
+      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM5DtmAk4jcG0i0m1HCnhienAMUgBQ25Srs5P9pRe1eL openpgp:0x1CE431A7
+      ''
       ''
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCnVsxxx7yiI1yWh2+wkmH7jMDTfvypsLfVkYuz+WObIi3V+1gZN3cPjHFYwEa1SpUNSs4/c2zdM1CANR5b61YgBmvbxYUVCBFNSeO1B9JTPUDcyM20vhRdeUOFlPS0KJHkKnlzjq4sEnjDM+zXCtAKEekBRcWqcnK2WX/Q9CI6+ocaJ30r06T0Hqa4C7Gx6pNbVNxaTaza3Mzod68aBjyg7WShsKPF5nLSe9QJIjUQ2bjGdRCUlXshgmW+E127KqryZqYLmmodF9fynCK6Ne+MDM2jEruRHMwhv50MfnO0ntOOM0i37oR3JuKE+AzJj/+Ete/YVbbIxipMm0DkNJEEqFsZRO5qkiP2MpI4TCZxHaac/pl+W6HdhwzSKCUrVBUTwEacaz/3WFgGgTjebpW1hfYbcTalG6e9t2W0OSg+INYLklp4uHDWHjFqyl5J+FZMNQdtWgD3yRyZN9rf1ojVf5AgxSW6pXIcrqMf/6Kf+kr/O0FOakrLaEHTDmONVTM= justin.p.restivo@gmail.com
       ''

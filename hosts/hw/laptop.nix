@@ -41,7 +41,7 @@
       KEYBOARD_KEY_95=x
     '';
 
-    services.xserver.videoDrivers = [ "nvidiaBeta" ];
+    hardware.nvidia.package = [ "nvidiaBeta" ];
     hardware.nvidia.prime = {
       sync.enable = true;
       # Bus ID of the NVIDIA GPU
