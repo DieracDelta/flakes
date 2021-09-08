@@ -3,6 +3,7 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
+    docker-compose
     virt-manager
     looking-glass-client
     cdrkit
@@ -25,6 +26,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    gnome.cheese
     kdeconnect
     trezor-suite
     redshift

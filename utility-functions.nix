@@ -36,6 +36,12 @@ in
               global = {
                 networking.hostName = hostName;
                 nixpkgs = { inherit pkgs; config = pkgs.config; };
+                #nix.sshServe = {
+                  #enable = true;
+                  #write = true;
+                  #keys = [];
+                #};
+
                 nix.package = pkgs.nixUnstable;
 
                 nix.nixPath =

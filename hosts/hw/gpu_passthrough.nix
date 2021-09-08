@@ -3,7 +3,7 @@
 {
   environment.pathsToLink = [ "/share/zsh" ];
   boot.kernelParams = [ "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" "hugepagesz=1G" "hugepages=64"];
-  boot.kernelPackages = pkgs.linuxPackages_5_12;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   virtualisation.libvirtd.enable = true;
   users.groups.libvirtd.members = [ "root" "jrestivo" ];
@@ -45,7 +45,7 @@
       '';
     }
   ];
-  boot.extraModulePackages = [ pkgs.linuxPackages_5_12.vendor-reset ];
+  boot.extraModulePackages = [ pkgs.linuxPackages_latest.vendor-reset ];
   boot.initrd.availableKernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"  "amdgpu" ];
   boot.initrd.kernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" "amdgpu"  ];
   services.xserver.videoDrivers = [ "amdgpu" ];

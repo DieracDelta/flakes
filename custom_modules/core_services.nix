@@ -30,6 +30,13 @@ in
     };
 
   config = lib.mkIf cfg.enable {
+    services.pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
+
     networking.nameservers = [ "100.100.100.100" "1.1.1.1" ];
     /*TODO pass in global root state to create path from*/
     sops.defaultSopsFile = ../secrets/secrets.yaml;
@@ -176,7 +183,6 @@ in
         warn-dirty = false
         experimental-features = nix-command flakes
       '';
-
 
       # cachix stuffs
       binaryCaches = [

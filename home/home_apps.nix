@@ -15,6 +15,22 @@ let
       hnix
     ];
   devPack = with pkgs; [
+    #mining
+    ethminer
+    rocm-device-libs
+    rocm-opencl-icd
+    rocm-opencl-runtime
+    rocm-runtime
+    rocm-smi
+    rocm-thunk
+    rocm-comgr
+    rocm-cmake
+
+
+
+    innernet
+
+
     git-lfs
     yubico-piv-tool
     yubikey-manager-qt
@@ -32,7 +48,7 @@ let
     opam
     cmake
     clang
-    opencl-headers
+    #opencl-headers
     llvm
     cask
     nodejs

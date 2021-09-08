@@ -155,7 +155,9 @@
     let
       inherit (nixpkgs) lib;
       inherit (lib) recursiveUpdate;
-      system = "x86_64-linux";
+      system_x86 = "x86_64-linux";
+      system_arm = "aarch64-linux";
+      system = system_x86;
       stable-pkgs = import ./overlays;
 
       utils = import ./utility-functions.nix {
@@ -178,6 +180,10 @@
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
+        #(builtins.fetchurl {
+          #url = "https://raw.githubusercontent.com/NixOS/nixpkgs/c3850345cfc590763fae6f4aecfdc66f7f2c2478/nixos/modules/services/misc/nix-ssh-serve.nix";
+          #sha256 = "169zq4lzsc9kk7b2h37xxvzan1cy6shckjg91pg5hjhdfpxpdckg";
+        #})
         /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
@@ -221,8 +227,17 @@
             };
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
+        (final: prev:
+        {
+          ethminer = unstable-pkgs.ethminer.overrideAttrs (prevAttrs:
+            {
+              cmakeFlags = prevAttrs.cmakeFlags ++ ["-DUSE_SYS_OPENCL=ON" "-DUSE_SYS_OPENCL=ON"];
+            }
+          );
+        }
+        )
         (final: prev: {
-          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus;
+          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
           unstable = unstable-pkgs;
         })
         (final: prev: {
