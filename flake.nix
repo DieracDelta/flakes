@@ -171,19 +171,34 @@
         ./home/home.nix
       ];
 
-
-
       unstable-pkgs = (utils.pkgImport master [ stable-pkgs ]);
-      nixosModules = (hostname: [
+      nix-ssh-serve =
+        (builtins.fetchurl {
+          url = "https://raw.githubusercontent.com/NixOS/nixpkgs/c3850345cfc590763fae6f4aecfdc66f7f2c2478/nixos/modules/services/misc/nix-ssh-serve.nix";
+          sha256 = "169zq4lzsc9kk7b2h37xxvzan1cy6shckjg91pg5hjhdfpxpdckg";
+        });
 
+      mkDevelopModule = mod: src: {
+        disabledModules = [ mod ];
+        # point directly to the file
+        imports = [ "${src}" ];
+      };
+      nixosModules = (hostname: [
+        (_: {
+          imports = [ (mkDevelopModule "services/misc/nix-ssh-serve.nix" nix-ssh-serve) ];
+          nix.sshServe = {
+              enable = true;
+              write = true;
+              keys = [
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQClm+SMN9Bg1HZ+MjH1VQYEXAnslGWT9564pj/KGO79WMQLUxdp3WWa1hQadf2PleAIEFEul3knrpRSEK3yHcCk3g+sCh3XIJcFZLesswe0V+kCAw+JBSd18ESJ4Qko+iDK95cDzucLFwXB10FMVKQCrX90KR+Fp6s6eJHcZGmpxTPgNulDpAjM2APluM3xBCe6zZzt+iNIzn3J8PRKbpNNbuw/LMRU8+udrGbLavUMcSk7ER9pAyLGhz//9aHWDPu7ZRje+vTWgnGFpzbtEzdjnP+2v45nLKWG7o7WdTAsAR8WSccjtNoBiVgSmpHr07zJ0/gTeL4PUkk3lbtzF/PdtTQGm3Ng4SjOBlhRVaTuKBlF2X/Rwq+W4LCbHVgA79MyhJxL2TDbKBPUSLfckqxP89e8Q7iQ4XjIHqVb50ojNNLGcOQRrHq14Twwx/ZDDQvMXCsLwM6vyoYa8KdSaASEr1clx78qNp9PHGlr+UztW+EsoZI7j1tzcHMmq2BSK90= matthew@t480"
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQD6NXqyw4YtT7ptMZn9sJJLQS+RrBH+vi0bMX0o915f8VGCwfC1qbgRPe40PKPEYPDUdQytzHCLqu5EDJx2ize5K1Wci1iL1UMcw1btZzuBo6ez9yWmJS5okBALJlFxqNqYMm1GCGC3x0vhjw38xL3+7rAfA9XA+BALAEpGHAyrDDfrOzfjtnb/aLpovOzQ8uCPp7YZQvQyafT4qQdt2XFMiexWx6l9mmELeYvzWpN22SLaGm8JlfnJ6Yxs5bdLcpGLNUCfBh6bl/FqZL0LH8cs1wbGy/wGyjdn55vpq4CGiqyLb/cgPdCfY+mNAiaCunGFSvY8p3T9hamGoWHxcJqjPTJ5jDTFbz3kdtLccYfz1zmIJZRqhVjIzMm4PlVuoSbCBWS7Lb5kSDcDDhuLstOe5AIe3KBDRAK9wKyZGCEXIpTwe+hprokHlUmvMhMMTgw8B/Ib3B661claT5kno4pMxViZKpD9H8IYjAXPLB6NleI74Kpqe4KEI0EsW+dDKiv+IoDQEd32RzU1eeEvCwTrPr/kqfAo13tam9QW05v2jPgIMBixuCj7JrvpEWe0fN6itwo4W0rXMRuPwDIAZm6IvO4AcvA+K+Fg9OTGnt71Ncr5j7UCEGQgmyjiRiwEfVfX2IpTrq4nGZDGVheXuLB93QVd9dfLExuPkx58VIy+Hw=="
+              ];
+            };
+        })
         hyperspace.nixosModules.hyperspace
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
-        #(builtins.fetchurl {
-          #url = "https://raw.githubusercontent.com/NixOS/nixpkgs/c3850345cfc590763fae6f4aecfdc66f7f2c2478/nixos/modules/services/misc/nix-ssh-serve.nix";
-          #sha256 = "169zq4lzsc9kk7b2h37xxvzan1cy6shckjg91pg5hjhdfpxpdckg";
-        #})
         /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
@@ -191,7 +206,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.jrestivo = {
-            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
+            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix" ) ];
           };
         })
       ]);

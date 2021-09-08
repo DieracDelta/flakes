@@ -177,6 +177,7 @@ in
     ];
 
     nix = {
+
       /*warn-dirty = true;*/
       extraOptions = ''
         gc-keep-outputs = true

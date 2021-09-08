@@ -36,23 +36,18 @@ in
               global = {
                 networking.hostName = hostName;
                 nixpkgs = { inherit pkgs; config = pkgs.config; };
-                #nix.sshServe = {
-                  #enable = true;
-                  #write = true;
-                  #keys = [];
-                #};
-
-                nix.package = pkgs.nixUnstable;
-
-                nix.nixPath =
-                  let path = toString ./.; in
-                  (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
-                nix.registry =
-                  (lib.mapAttrs'
-                    (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; }))
-                    inputs) // { ${hostName}.flake = self; };
-
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
+
+                nix = {
+                  package = pkgs.nixUnstable;
+                  nixPath =
+                    let path = toString ./.; in
+                    (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
+                  registry =
+                    (lib.mapAttrs'
+                      (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; }))
+                      inputs) // { ${hostName}.flake = self; };
+                };
               };
 
             in
