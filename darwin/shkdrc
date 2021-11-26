@@ -1,7 +1,9 @@
 # yoinked from https://github.com/qaisjp/dotfiles/blob/master/skhdrc
+sudo yabai --load-sa
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 
 # open terminal
-cmd + alt - return :  /Users/jrestivo/Applications/Alacritty.app/Contents/MacOS/alacritty
+cmd - return : /Users/jrestivo/Applications/Alacritty.app/Contents/MacOS/alacritty
 
 # todo: terminal scratchpad
 # - should toggle iTerm
@@ -15,66 +17,49 @@ cmd + alt - return :  /Users/jrestivo/Applications/Alacritty.app/Contents/MacOS/
 # fn + shift - q : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"; skhd --reload
 
 # focus window
-fn - h : yabai -m window --focus west
-fn - j : yabai -m window --focus south
-fn - k : yabai -m window --focus north
-fn - l : yabai -m window --focus east
+cmd - h : yabai -m window --focus west
+cmd - j : yabai -m window --focus south
+cmd - k : yabai -m window --focus north
+cmd - l : yabai -m window --focus east
 
 # swap window
-shift + alt - h : yabai -m window --swap west
-shift + alt - j : yabai -m window --swap south
-shift + alt - k : yabai -m window --swap north
-shift + alt - l : yabai -m window --swap east
+shift + cmd - h : yabai -m window --swap west
+shift + cmd - j : yabai -m window --swap south
+shift + cmd - k : yabai -m window --swap north
+shift + cmd - l : yabai -m window --swap east
 
 # move window
-shift + cmd - h : yabai -m window --warp west
-shift + cmd - j : yabai -m window --warp south
-shift + cmd - k : yabai -m window --warp north
-shift + cmd - l : yabai -m window --warp east
+ctrl - h : yabai -m window --warp west
+ctrl - j : yabai -m window --warp south
+ctrl - k : yabai -m window --warp north
+ctrl - l : yabai -m window --warp east
 
 # balance size of windows
-shift + alt - 0 : yabai -m space --balance
+shift + cmd - 0 : yabai -m space --balance
 
 # make floating window fill screen
-shift + alt - up     : yabai -m window --grid 1:1:0:0:1:1
-
-# make floating window fill left-half of screen
-# qaisjp: disabled to prevent text navigation being clobbered
-# shift + alt - left   : yabai -m window --grid 1:2:0:0:1:1
-
-# make floating window fill right-half of screen
-# qaisjp: disabled to prevent text navigation being clobbered
-# shift + alt - right  : yabai -m window --grid 1:2:1:0:1:1
-
-# create desktop, move window and follow focus - uses jq for parsing json (brew install jq)
-# qaisjp: disabled because clobbers incognito
-# shift + cmd - n : yabai -m space --create && \
-#                   index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
-#                   yabai -m window --space "${index}" && \
-#                   yabai -m space --focus "${index}"
+shift + cmd - up     : yabai -m window --grid 1:1:0:0:1:1
 
 # create desktop and follow focus - uses jq for parsing json (brew install jq)
-cmd + alt - n : yabai -m space --create && \
-                index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
-                yabai -m space --focus "${index}"
+cmd - n : yabai -m space --create && index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && yabai -m space --focus "${index}"
 
 # destroy desktop
 cmd + alt - w : yabai -m space --destroy
 
 # fast focus desktop
-rcmd - tab : yabai -m space --focus recent
-rcmd - q : yabai -m space --focus prev
-rcmd - w : yabai -m space --focus next
-rcmd - 1 : yabai -m space --focus 1
-rcmd - 2 : yabai -m space --focus 2
-rcmd - 3 : yabai -m space --focus 3
-rcmd - 4 : yabai -m space --focus 4
-rcmd - 5 : yabai -m space --focus 5
-rcmd - 6 : yabai -m space --focus 6
-rcmd - 7 : yabai -m space --focus 7
-rcmd - 8 : yabai -m space --focus 8
-rcmd - 9 : yabai -m space --focus 9
-rcmd - 0 : yabai -m space --focus 10
+cmd - tab : yabai -m space --focus recent
+cmd - t : yabai -m space --focus prev
+cmd - r : yabai -m space --focus next
+cmd - 1 : yabai -m space --focus 1
+cmd - 2 : yabai -m space --focus 2
+cmd - 3 : yabai -m space --focus 3
+cmd - 4 : yabai -m space --focus 4
+cmd - 5 : yabai -m space --focus 5
+cmd - 6 : yabai -m space --focus 6
+cmd - 7 : yabai -m space --focus 7
+cmd - 8 : yabai -m space --focus 8
+cmd - 9 : yabai -m space --focus 9
+cmd - 0 : yabai -m space --focus 10
 
 # send window to desktop and follow focus
 #

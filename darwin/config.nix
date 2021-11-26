@@ -1,6 +1,6 @@
-{ pkgs, ... }:
+{ pkgs, home-manager, ... }:
 {
-  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty];
+  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa];
 
 
   services.yabai = {

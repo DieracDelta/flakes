@@ -909,6 +909,22 @@
         "type": "github"
       }
     },
+    "nix-fast-syntax-highlighting": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1636856829,
+        "narHash": "sha256-x+4C2u03RueNo6/ZXsueqmYoPIpDHnKAZXP5IiKsidE=",
+        "owner": "zdharma-continuum",
+        "repo": "fast-syntax-highlighting",
+        "rev": "585c089968caa1c904cbe926ff04a1be9e3d8f42",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zdharma-continuum",
+        "repo": "fast-syntax-highlighting",
+        "type": "github"
+      }
+    },
     "nix-straight": {
       "flake": false,
       "locked": {
@@ -1542,6 +1558,7 @@
         "neovim": "neovim",
         "neovitality": "neovitality",
         "nix-doom-emacs": "nix-doom-emacs",
+        "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
         "nix-zsh-shell-integration": "nix-zsh-shell-integration",
         "nixpkgs": "nixpkgs_2",
         "rnix-lsp": "rnix-lsp",

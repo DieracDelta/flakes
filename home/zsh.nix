@@ -9,10 +9,6 @@ in
     default = true;
   };
   config = lib.mkIf cfg.enable {
-    programs.autojump = {
-      enable = true;
-      enableZshIntegration = true;
-    };
     programs.starship = {
       settings = {
         add_newline = false;

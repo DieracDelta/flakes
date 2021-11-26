@@ -106,11 +106,11 @@
       inputs.nixpkgs.follows = "master";
     };
 
-    #nix-fast-syntax-highlighting = {
-    #  url = "github:zdharma/fast-syntax-highlighting";
-    #  flake = false;
-    #  inputs.nixpkgs.follows = "master";
-    #};
+    nix-fast-syntax-highlighting = {
+      url = "github:zdharma-continuum/fast-syntax-highlighting";
+      flake = false;
+      inputs.nixpkgs.follows = "master";
+    };
 
     nix-zsh-shell-integration = {
       url = "github:chisui/zsh-nix-shell";
@@ -221,12 +221,12 @@
           inherit (deploy-rs.packages.${system}) deploy-rs;
           #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
-          #nix-fast-syntax-highlighting =
-          #  {
-          #    name = "fast-sytax-highlighting";
-          #    file = "fast-syntax-highlighting.plugin.zsh";
-          #    src = "${inputs.nix-fast-syntax-highlighting.outPath}";
-          #  };
+          nix-fast-syntax-highlighting =
+            {
+              name = "fast-sytax-highlighting";
+              file = "fast-syntax-highlighting.plugin.zsh";
+              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+            };
           nix-zsh-shell-integration =
             {
               name = "zsh-shell-integration";
@@ -356,8 +356,29 @@
 
       darwinConfigurations."jrestivo-2" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
-        modules = [ ./darwin/config.nix  {
+        modules = [ 
+            home-manager.darwinModules.home-manager
+		{
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.jrestivo = import ./home/darwin;
+          }
+            ./darwin/config.nix  
+            {
              nixpkgs.overlays = [ (final: prev: {
+          mutt-colors-solarized = inputs.mutt-colors-solarized;
+          nix-fast-syntax-highlighting =
+            {
+              name = "fast-sytax-highlighting";
+              file = "fast-syntax-highlighting.plugin.zsh";
+              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+            };
+          nix-zsh-shell-integration =
+            {
+              name = "zsh-shell-integration";
+              file = "nix-shell.plugin.zsh";
+              src = "${inputs.nix-zsh-shell-integration.outPath}";
+            };
                  yabai = 
                      let   
                          buildSymlinks = prev.runCommand "build-symlinks" {} ''
