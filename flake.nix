@@ -4,25 +4,25 @@
 
   inputs = {
 
+
     master = {
       url = "github:NixOS/nixpkgs/master";
     };
+    alacritty = {
+        url = "github:zachcoyle/alacritty-nightly";
+    };
+    darwin.url = "github:lnl7/nix-darwin/master";
+    darwin.inputs.nixpkgs.follows = "nixpkgs";
     unstable = {
       url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/release-21.05";
+      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
 
     naersk = {
       url = github:nmattia/naersk;
       inputs.nixpkgs.follows = "master";
-    };
-
-    hyperspace = {
-      #url = github:ngi-nix/hyperspace/yarn2nix;
-      url = "path:/home/jrestivo/SoN/malte/hyperspace";
-      inputs.nixpkgs.follows = "unstable";
     };
 
     hls = {
@@ -106,11 +106,11 @@
       inputs.nixpkgs.follows = "master";
     };
 
-    nix-fast-syntax-highlighting = {
-      url = "github:zdharma/fast-syntax-highlighting";
-      flake = false;
-      inputs.nixpkgs.follows = "master";
-    };
+    #nix-fast-syntax-highlighting = {
+    #  url = "github:zdharma/fast-syntax-highlighting";
+    #  flake = false;
+    #  inputs.nixpkgs.follows = "master";
+    #};
 
     nix-zsh-shell-integration = {
       url = "github:chisui/zsh-nix-shell";
@@ -148,8 +148,8 @@
     , mutt-colors-solarized
     , neovitality
     , vendor-reset
-    , construct
-    , hyperspace
+    , darwin
+    , alacritty
     , ...
     }:
     let
@@ -195,7 +195,6 @@
               ];
             };
         })
-        hyperspace.nixosModules.hyperspace
         mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
@@ -213,27 +212,21 @@
       overlays = [
         stable-pkgs
         emacs-overlay.overlay
-        construct.overlay
         (final: prev: {
           hls = inputs.hls.defaultPackage.${system};
         })
 
-        # stolen from git@github.com:bqv/nixrc.git 
-        #(final: prev: {
-          #riot-web = prev.element-web;
-          #matrix-construct = (prev.callPackage "${inputs.construct}/default.nix" { pkgs = prev; });
-        #})
 
         (final: prev: {
           inherit (deploy-rs.packages.${system}) deploy-rs;
           #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
-          nix-fast-syntax-highlighting =
-            {
-              name = "fast-sytax-highlighting";
-              file = "fast-syntax-highlighting.plugin.zsh";
-              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
-            };
+          #nix-fast-syntax-highlighting =
+          #  {
+          #    name = "fast-sytax-highlighting";
+          #    file = "fast-syntax-highlighting.plugin.zsh";
+          #    src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+          #  };
           nix-zsh-shell-integration =
             {
               name = "zsh-shell-integration";
@@ -360,6 +353,31 @@
         builtins.foldl' pkgs.lib.mergeAttrs { } (results);
 
       checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+
+      darwinConfigurations."jrestivo-2" = darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        modules = [ ./darwin/config.nix  {
+             nixpkgs.overlays = [ (final: prev: {
+                 yabai = 
+                     let   
+                         buildSymlinks = prev.runCommand "build-symlinks" {} ''
+                            mkdir -p $out/bin
+                            ln -s /usr/bin/xcrun /usr/bin/xcodebuild /usr/bin/tiffutil /usr/bin/qlmanage $out/bin
+                         ''; in
+                     prev.yabai.overrideAttrs (old: {
+                        src = prev.fetchFromGitHub {
+                           owner = "koekeishiya";
+                           repo = "yabai";
+                           rev = "5317b16d06e916f0e3844d3fe33d190e86c96ba9";
+                           sha256 = "sha256-yl5a6ESA8X4dTapXGd0D0db1rhwhuOWrjFAT1NDuygo=";
+                         };
+                        buildInputs = with prev.darwin.apple_sdk.frameworks; [ Carbon Cocoa ScriptingBridge prev.xxd SkyLight ];
+                        nativeBuildInputs = [ buildSymlinks ];
+                     });
+             })
+          ];
+	} ];
+      };
 
       packages."${system}" = (stable-pkgs null pkgs);
     };
