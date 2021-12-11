@@ -83,7 +83,7 @@ in
         # Keep these two aliases in this specific order, otherwise highlighting gets fucked!!!!
         nixman = "manix '' | grep '^# ' | sed 's/^# (.*) (.*/1/;s/ (.*//;s/^# //' | sed 's/</\\\\</g' | sed 's/>/\\\\>/g'| fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
         opt = "manix '' | grep '^# ' | sed 's/^# \(.*\) (.*/\1/;s/ (.*//;s/^# //' | fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
-	nvim = "nix run \"github:DieracDelta/vimconf_talk?rev=5fb5f78fcc722b6865a82f4862dd0038fa1ac016\"";
+	nvim = "nix run \"github:DieracDelta/vimconf_talk?rev=5fb5f78fcc722b6865a82f4862dd0038fa1ac016\" --no-write-lock-file";
 
       };
       # keys.sh contains a bunch of my keys

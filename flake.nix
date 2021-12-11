@@ -9,7 +9,7 @@
       url = "github:NixOS/nixpkgs/master";
     };
     nix = {
-      url = "github:NixOS/nix?rev=663f0a1a2108b5abb0b55e05f6729e01eb446491";
+      url = "github:NixOS/nix";
     };
     alacritty = {
         url = "github:zachcoyle/alacritty-nightly";
@@ -20,7 +20,7 @@
       url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+      url = "github:NixOS/nixpkgs/master";
     };
 
     naersk = {
@@ -41,7 +41,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-21.05";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -369,7 +369,10 @@
             ./darwin/config.nix  
             {
              nixpkgs.overlays = [ inputs.rust-overlay.overlay (final: prev: {
-          nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {});
+          #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
+          nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
+            preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
+          });
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {

@@ -11,7 +11,7 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
 
   environment.variables = { EDITOR = "nvim"; };
 
-  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr rust_build neofetch bottom htop ];
+  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr rust_build neofetch bottom htop nix coreutils fd nix-du nix-top];
 
 
   services.yabai = {
@@ -37,5 +37,5 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
   };
 
   services.nix-daemon.enable = true;
-  nix.package = pkgs.nixUnstable;
+  nix.package = pkgs.nix;
 }
