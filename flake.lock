@@ -22,7 +22,7 @@
         "alacritty-src": "alacritty-src",
         "flake-utils": "flake-utils",
         "naersk": "naersk",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
         "lastModified": 1636245968,
@@ -633,6 +633,22 @@
         "type": "github"
       }
     },
+    "lowdown-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1633514407,
+        "narHash": "sha256-Dw32tiMjdK9t3ETl5fzGrutQTzh2rufgZV4A/BbxuD4=",
+        "owner": "kristapsdz",
+        "repo": "lowdown",
+        "rev": "d2c2b44ff6c27b936ec27358a2653caaef8f73b8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kristapsdz",
+        "repo": "lowdown",
+        "type": "github"
+      }
+    },
     "lsp_signature-nvim": {
       "flake": false,
       "locked": {
@@ -724,10 +740,7 @@
     },
     "naersk": {
       "inputs": {
-        "nixpkgs": [
-          "alacritty",
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
         "lastModified": 1636103400,
@@ -867,6 +880,26 @@
         "type": "github"
       }
     },
+    "nix": {
+      "inputs": {
+        "lowdown-src": "lowdown-src",
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1633629179,
+        "narHash": "sha256-KOb8etMm5LksvT2l+CkvqzMO1bgmo9tJmyaNh0LvaR8=",
+        "owner": "NixOS",
+        "repo": "nix",
+        "rev": "663f0a1a2108b5abb0b55e05f6729e01eb446491",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nix",
+        "rev": "663f0a1a2108b5abb0b55e05f6729e01eb446491",
+        "type": "github"
+      }
+    },
     "nix-doom-emacs": {
       "inputs": {
         "doom-emacs": "doom-emacs",
@@ -960,18 +993,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1635934775,
-        "narHash": "sha256-DUkBfZjgeefgqyvFxnkZiOOWXgHP5Y1oKp/Zm+LT05Y=",
-        "owner": "nixos",
+        "lastModified": 1638284781,
+        "narHash": "sha256-3q5ZNIXL7926zsWMGVNa3Hjs0Df165iKXmly79LfpA8=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "4789953e5c1ef6d10e3ff437e5b7ab8eed526942",
+        "rev": "dad4fddd52923d90c5ad981d5e29963e829de3c1",
         "type": "github"
       },
       "original": {
-        "owner": "nixos",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
+        "id": "nixpkgs",
+        "type": "indirect"
       }
     },
     "nixpkgs-21_05": {
@@ -1006,6 +1037,51 @@
       }
     },
     "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1635934775,
+        "narHash": "sha256-DUkBfZjgeefgqyvFxnkZiOOWXgHP5Y1oKp/Zm+LT05Y=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "4789953e5c1ef6d10e3ff437e5b7ab8eed526942",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1638284781,
+        "narHash": "sha256-3q5ZNIXL7926zsWMGVNa3Hjs0Df165iKXmly79LfpA8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "dad4fddd52923d90c5ad981d5e29963e829de3c1",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
+        "lastModified": 1632864508,
+        "narHash": "sha256-d127FIvGR41XbVRDPVvozUPQ/uRHbHwvfyKHwEt5xFM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "82891b5e2c2359d7e58d08849e4c89511ab94234",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixos-21.05-small",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_5": {
       "locked": {
         "lastModified": 1637186689,
         "narHash": "sha256-NU7BhgnwA/3ibmCeSzFK6xGi+Bari9mPfn+4cBmyEjw=",
@@ -1557,10 +1633,11 @@
         "naersk": "naersk_2",
         "neovim": "neovim",
         "neovitality": "neovitality",
+        "nix": "nix",
         "nix-doom-emacs": "nix-doom-emacs",
         "nix-fast-syntax-highlighting": "nix-fast-syntax-highlighting",
         "nix-zsh-shell-integration": "nix-zsh-shell-integration",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_5",
         "rnix-lsp": "rnix-lsp",
         "rust-filehost": "rust-filehost",
         "rust-overlay": "rust-overlay",
@@ -2145,10 +2222,7 @@
         "neogit": "neogit",
         "neon": "neon",
         "neorg": "neorg",
-        "nixpkgs": [
-          "neovitality",
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_3",
         "nvcode-color-schemes-vim": "nvcode-color-schemes-vim",
         "nvim-blame-line": "nvim-blame-line",
         "nvim-bufferline-lua": "nvim-bufferline-lua",

@@ -8,6 +8,9 @@
     master = {
       url = "github:NixOS/nixpkgs/master";
     };
+    nix = {
+      url = "github:NixOS/nix?rev=663f0a1a2108b5abb0b55e05f6729e01eb446491";
+    };
     alacritty = {
         url = "github:zachcoyle/alacritty-nightly";
     };
@@ -365,7 +368,8 @@
           }
             ./darwin/config.nix  
             {
-             nixpkgs.overlays = [ (final: prev: {
+             nixpkgs.overlays = [ inputs.rust-overlay.overlay (final: prev: {
+          nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {});
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {

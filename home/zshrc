@@ -170,5 +170,6 @@ compdef _nix nix
 function ns() {
   nix search --json $1 $2 | nix-search-pretty | bat
 }
+export EDITOR="nvim"
 
 eval "$(starship init zsh)"

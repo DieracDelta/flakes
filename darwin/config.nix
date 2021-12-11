@@ -1,6 +1,17 @@
 { pkgs, home-manager, ... }:
+let 
+rust_build = pkgs.rust-bin.nightly."2021-10-10".default.override {
+extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
+}; in
 {
-  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa];
+  fonts = {
+    enableFontDir = true;
+    fonts = with pkgs;[ nerdfonts hack-font];
+  };
+
+  environment.variables = { EDITOR = "nvim"; };
+
+  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr rust_build neofetch bottom htop ];
 
 
   services.yabai = {

@@ -3,7 +3,8 @@
 {
   programs.home-manager.enable = true;
 
-  home.sessionVariables = { EDITOR = "nvim"; };
+  #environment.variables = { EDITOR = "nvim"; };
+
 
   programs.git = {
     enable = true;
@@ -39,6 +40,9 @@
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
+  };
+  xdg.configFile = with builtins; {
+    "alacritty/alacritty.yml".text = builtins.readFile ../alacritty.yml;
   };
 
 
