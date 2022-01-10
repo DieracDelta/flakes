@@ -68,7 +68,7 @@ in
         ll = "ls -l";
         ls = "exa -h --git --color=auto --group-directories-first -s extension";
         lstree = "ls --tree";
-        nd = "nix develop -c zsh";
+        nd = "nix develop -c zsh ";
         nix-repl = "source /etc/set-environment && nix repl $(echo $NIX_PATH | perl -pe 's|.*(/nix/store/.*-source/repl.nix).*|\\1|')";
         nu = "sudo nixos-rebuild switch --flake $HOME/.config/nixkpkgs/configuration.nix";
         query = "nix-store --query --requisites /run/current-system | cut -d- -f2- | sort -u";
@@ -83,7 +83,6 @@ in
         # Keep these two aliases in this specific order, otherwise highlighting gets fucked!!!!
         nixman = "manix '' | grep '^# ' | sed 's/^# (.*) (.*/1/;s/ (.*//;s/^# //' | sed 's/</\\\\</g' | sed 's/>/\\\\>/g'| fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
         opt = "manix '' | grep '^# ' | sed 's/^# \(.*\) (.*/\1/;s/ (.*//;s/^# //' | fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
-	nvim = "nix run \"github:DieracDelta/vimconf_talk?rev=5fb5f78fcc722b6865a82f4862dd0038fa1ac016\" --no-write-lock-file";
 
       };
       # keys.sh contains a bunch of my keys

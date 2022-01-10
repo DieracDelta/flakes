@@ -1,4 +1,4 @@
-if test -n "$IN_NIX_SHELL"; then return; fi
+# if test -n "$IN_NIX_SHELL"; then return; fi
 
 #if [ -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE" ]; then
   #. /nix/store/nwbz1bg76b0gmblw0n1y1s3r53kpsslh-set-environment

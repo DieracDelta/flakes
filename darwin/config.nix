@@ -6,12 +6,12 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
 {
   fonts = {
     enableFontDir = true;
-    fonts = with pkgs;[ nerdfonts hack-font];
+    fonts = with pkgs;[ (nerdfonts.override { fonts = [ "FiraCode" ]; }) hack-font ];
   };
 
   environment.variables = { EDITOR = "nvim"; };
 
-  environment.systemPackages = with pkgs; [ vim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr rust_build neofetch bottom htop nix coreutils fd nix-du nix-top];
+  environment.systemPackages = with pkgs; [ nvim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr neofetch bottom htop nix coreutils fd nix-du nix-top nixfmt entr zsh syncthing];
 
 
   services.yabai = {
@@ -35,6 +35,7 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
     enable = true;
     skhdConfig = builtins.readFile ./shkdrc;
   };
+
 
   services.nix-daemon.enable = true;
   nix.package = pkgs.nix;

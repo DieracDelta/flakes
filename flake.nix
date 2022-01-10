@@ -12,7 +12,7 @@
       url = "github:NixOS/nix";
     };
     alacritty = {
-        url = "github:zachcoyle/alacritty-nightly";
+      url = "github:zachcoyle/alacritty-nightly";
     };
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
@@ -64,6 +64,11 @@
       inputs.flake-utils.follows = "flake-utils";
     };
 
+    my-nvim = {
+      url = "github:DieracDelta/vimconf_talk/aarch64-darwin_5_ci";
+      inputs.nixpkgs.follows = "master";
+    };
+
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
       inputs.nixpkgs.follows = "master";
@@ -72,23 +77,6 @@
     flake-utils = {
       url = github:numtide/flake-utils;
       inputs.nixpkgs.follows = "master";
-    };
-
-    neovim = {
-      url = "github:neovim/neovim/d67dcaba02d76fe92ba818dde7b672fe6956a100?dir=contrib";
-      inputs.nixpkgs.follows = "unstable";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-
-    neovitality = {
-      url = "github:vi-tality/neovitality";
-      inputs.nixpkgs.follows = "master";
-      inputs.flake-utils.follows = "flake-utils";
-      inputs.naersk.follows = "naersk";
-      inputs.rnix-lsp.follows = "rnix-lsp";
-      inputs.clojure-lsp-flake.inputs.nixpkgs.follows = "master";
-      inputs.clojure-lsp-flake.inputs.flake-utils.follows = "flake-utils";
-      inputs.neovim.follows = "neovim";
     };
 
     nix-doom-emacs = {
@@ -144,15 +132,15 @@
     , home-manager
     , emacs-overlay
     , nix-doom-emacs
-    , sops-nix
     , deploy-rs
+    , sops-nix
     , rust-filehost
     , mailserver
     , mutt-colors-solarized
-    , neovitality
     , vendor-reset
     , darwin
     , alacritty
+    , my-nvim
     , ...
     }:
     let
@@ -190,13 +178,13 @@
         (_: {
           imports = [ (mkDevelopModule "services/misc/nix-ssh-serve.nix" nix-ssh-serve) ];
           nix.sshServe = {
-              enable = true;
-              write = true;
-              keys = [
-                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQClm+SMN9Bg1HZ+MjH1VQYEXAnslGWT9564pj/KGO79WMQLUxdp3WWa1hQadf2PleAIEFEul3knrpRSEK3yHcCk3g+sCh3XIJcFZLesswe0V+kCAw+JBSd18ESJ4Qko+iDK95cDzucLFwXB10FMVKQCrX90KR+Fp6s6eJHcZGmpxTPgNulDpAjM2APluM3xBCe6zZzt+iNIzn3J8PRKbpNNbuw/LMRU8+udrGbLavUMcSk7ER9pAyLGhz//9aHWDPu7ZRje+vTWgnGFpzbtEzdjnP+2v45nLKWG7o7WdTAsAR8WSccjtNoBiVgSmpHr07zJ0/gTeL4PUkk3lbtzF/PdtTQGm3Ng4SjOBlhRVaTuKBlF2X/Rwq+W4LCbHVgA79MyhJxL2TDbKBPUSLfckqxP89e8Q7iQ4XjIHqVb50ojNNLGcOQRrHq14Twwx/ZDDQvMXCsLwM6vyoYa8KdSaASEr1clx78qNp9PHGlr+UztW+EsoZI7j1tzcHMmq2BSK90= matthew@t480"
-                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQD6NXqyw4YtT7ptMZn9sJJLQS+RrBH+vi0bMX0o915f8VGCwfC1qbgRPe40PKPEYPDUdQytzHCLqu5EDJx2ize5K1Wci1iL1UMcw1btZzuBo6ez9yWmJS5okBALJlFxqNqYMm1GCGC3x0vhjw38xL3+7rAfA9XA+BALAEpGHAyrDDfrOzfjtnb/aLpovOzQ8uCPp7YZQvQyafT4qQdt2XFMiexWx6l9mmELeYvzWpN22SLaGm8JlfnJ6Yxs5bdLcpGLNUCfBh6bl/FqZL0LH8cs1wbGy/wGyjdn55vpq4CGiqyLb/cgPdCfY+mNAiaCunGFSvY8p3T9hamGoWHxcJqjPTJ5jDTFbz3kdtLccYfz1zmIJZRqhVjIzMm4PlVuoSbCBWS7Lb5kSDcDDhuLstOe5AIe3KBDRAK9wKyZGCEXIpTwe+hprokHlUmvMhMMTgw8B/Ib3B661claT5kno4pMxViZKpD9H8IYjAXPLB6NleI74Kpqe4KEI0EsW+dDKiv+IoDQEd32RzU1eeEvCwTrPr/kqfAo13tam9QW05v2jPgIMBixuCj7JrvpEWe0fN6itwo4W0rXMRuPwDIAZm6IvO4AcvA+K+Fg9OTGnt71Ncr5j7UCEGQgmyjiRiwEfVfX2IpTrq4nGZDGVheXuLB93QVd9dfLExuPkx58VIy+Hw=="
-              ];
-            };
+            enable = true;
+            write = true;
+            keys = [
+              "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQClm+SMN9Bg1HZ+MjH1VQYEXAnslGWT9564pj/KGO79WMQLUxdp3WWa1hQadf2PleAIEFEul3knrpRSEK3yHcCk3g+sCh3XIJcFZLesswe0V+kCAw+JBSd18ESJ4Qko+iDK95cDzucLFwXB10FMVKQCrX90KR+Fp6s6eJHcZGmpxTPgNulDpAjM2APluM3xBCe6zZzt+iNIzn3J8PRKbpNNbuw/LMRU8+udrGbLavUMcSk7ER9pAyLGhz//9aHWDPu7ZRje+vTWgnGFpzbtEzdjnP+2v45nLKWG7o7WdTAsAR8WSccjtNoBiVgSmpHr07zJ0/gTeL4PUkk3lbtzF/PdtTQGm3Ng4SjOBlhRVaTuKBlF2X/Rwq+W4LCbHVgA79MyhJxL2TDbKBPUSLfckqxP89e8Q7iQ4XjIHqVb50ojNNLGcOQRrHq14Twwx/ZDDQvMXCsLwM6vyoYa8KdSaASEr1clx78qNp9PHGlr+UztW+EsoZI7j1tzcHMmq2BSK90= matthew@t480"
+              "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQD6NXqyw4YtT7ptMZn9sJJLQS+RrBH+vi0bMX0o915f8VGCwfC1qbgRPe40PKPEYPDUdQytzHCLqu5EDJx2ize5K1Wci1iL1UMcw1btZzuBo6ez9yWmJS5okBALJlFxqNqYMm1GCGC3x0vhjw38xL3+7rAfA9XA+BALAEpGHAyrDDfrOzfjtnb/aLpovOzQ8uCPp7YZQvQyafT4qQdt2XFMiexWx6l9mmELeYvzWpN22SLaGm8JlfnJ6Yxs5bdLcpGLNUCfBh6bl/FqZL0LH8cs1wbGy/wGyjdn55vpq4CGiqyLb/cgPdCfY+mNAiaCunGFSvY8p3T9hamGoWHxcJqjPTJ5jDTFbz3kdtLccYfz1zmIJZRqhVjIzMm4PlVuoSbCBWS7Lb5kSDcDDhuLstOe5AIe3KBDRAK9wKyZGCEXIpTwe+hprokHlUmvMhMMTgw8B/Ib3B661claT5kno4pMxViZKpD9H8IYjAXPLB6NleI74Kpqe4KEI0EsW+dDKiv+IoDQEd32RzU1eeEvCwTrPr/kqfAo13tam9QW05v2jPgIMBixuCj7JrvpEWe0fN6itwo4W0rXMRuPwDIAZm6IvO4AcvA+K+Fg9OTGnt71Ncr5j7UCEGQgmyjiRiwEfVfX2IpTrq4nGZDGVheXuLB93QVd9dfLExuPkx58VIy+Hw=="
+            ];
+          };
         })
         mailserver.nixosModule
         (import ./custom_modules)
@@ -208,7 +196,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.jrestivo = {
-            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix" ) ];
+            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
           };
         })
       ]);
@@ -222,6 +210,7 @@
 
         (final: prev: {
           inherit (deploy-rs.packages.${system}) deploy-rs;
+          nvim = my-nvim.defaultPackage.x86_64-linux;
           #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
@@ -239,13 +228,13 @@
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
         })
         (final: prev:
-        {
-          ethminer = unstable-pkgs.ethminer.overrideAttrs (prevAttrs:
-            {
-              cmakeFlags = prevAttrs.cmakeFlags ++ ["-DUSE_SYS_OPENCL=ON" "-DUSE_SYS_OPENCL=ON"];
-            }
-          );
-        }
+          {
+            ethminer = unstable-pkgs.ethminer.overrideAttrs (prevAttrs:
+              {
+                cmakeFlags = prevAttrs.cmakeFlags ++ [ "-DUSE_SYS_OPENCL=ON" "-DUSE_SYS_OPENCL=ON" ];
+              }
+            );
+          }
         )
         (final: prev: {
           inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
@@ -254,25 +243,25 @@
         (final: prev: {
           lispPackages = prev.lispPackages // {
             cl-webkit2 = prev.lispPackages.cl-webkit2.overrideAttrs (oldAttrs:
-            {
-              src = prev.fetchFromGitHub {
-                owner = "joachifm";
-                repo = "cl-webkit";
-                rev = "90b1469713265096768fd865e64a0a70292c733d";
-                sha256 = "sha256:0lxws342nh553xlk4h5lb78q4ibiwbm2hljd7f55w3csk6z7bi06";
-              };
-            });
+              {
+                src = prev.fetchFromGitHub {
+                  owner = "joachifm";
+                  repo = "cl-webkit";
+                  rev = "90b1469713265096768fd865e64a0a70292c733d";
+                  sha256 = "sha256:0lxws342nh553xlk4h5lb78q4ibiwbm2hljd7f55w3csk6z7bi06";
+                };
+              });
             nyxt = prev.lispPackages.nyxt.overrideAttrs (oldAttrs:
-          {
-            version = "2.1.1";
-            src = prev.fetchFromGitHub {
-              owner = "atlas-engineer";
-              repo = "nyxt";
-              rev = "93a2af10f0b305740db0a3232ecb690cd43791f9";
-              sha256 = "sha256-GdTOFu5yIIL9776kfbo+KS1gHH1xNCfZSWF5yHUB9U8=";
-            };
-          });
-        };
+              {
+                version = "2.1.1";
+                src = prev.fetchFromGitHub {
+                  owner = "atlas-engineer";
+                  repo = "nyxt";
+                  rev = "93a2af10f0b305740db0a3232ecb690cd43791f9";
+                  sha256 = "sha256-GdTOFu5yIIL9776kfbo+KS1gHH1xNCfZSWF5yHUB9U8=";
+                };
+              });
+          };
         })
       ];
 
@@ -359,54 +348,60 @@
 
       darwinConfigurations."jrestivo-2" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
-        modules = [ 
-            home-manager.darwinModules.home-manager
-		{
+        modules = [
+          home-manager.darwinModules.home-manager
+          {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.users.jrestivo = import ./home/darwin;
           }
-            ./darwin/config.nix  
-            {
-             nixpkgs.overlays = [ inputs.rust-overlay.overlay (final: prev: {
-          #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
-          nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
-            preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
-          });
-          mutt-colors-solarized = inputs.mutt-colors-solarized;
-          nix-fast-syntax-highlighting =
-            {
-              name = "fast-sytax-highlighting";
-              file = "fast-syntax-highlighting.plugin.zsh";
-              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
-            };
-          nix-zsh-shell-integration =
-            {
-              name = "zsh-shell-integration";
-              file = "nix-shell.plugin.zsh";
-              src = "${inputs.nix-zsh-shell-integration.outPath}";
-            };
-                 yabai = 
-                     let   
-                         buildSymlinks = prev.runCommand "build-symlinks" {} ''
-                            mkdir -p $out/bin
-                            ln -s /usr/bin/xcrun /usr/bin/xcodebuild /usr/bin/tiffutil /usr/bin/qlmanage $out/bin
-                         ''; in
-                     prev.yabai.overrideAttrs (old: {
-                        src = prev.fetchFromGitHub {
-                           owner = "koekeishiya";
-                           repo = "yabai";
-                           rev = "5317b16d06e916f0e3844d3fe33d190e86c96ba9";
-                           sha256 = "sha256-yl5a6ESA8X4dTapXGd0D0db1rhwhuOWrjFAT1NDuygo=";
-                         };
-                        buildInputs = with prev.darwin.apple_sdk.frameworks; [ Carbon Cocoa ScriptingBridge prev.xxd SkyLight ];
-                        nativeBuildInputs = [ buildSymlinks ];
-                     });
-             })
-          ];
-	} ];
+          ./darwin/config.nix
+          {
+            nixpkgs.config.allowUnfree = true;
+            nixpkgs.overlays = [
+              inputs.rust-overlay.overlay
+              (final: prev: {
+                nvim = my-nvim.defaultPackage.aarch64-darwin;
+                #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
+                nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
+                  preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
+                });
+                mutt-colors-solarized = inputs.mutt-colors-solarized;
+                nix-fast-syntax-highlighting =
+                  {
+                    name = "fast-sytax-highlighting";
+                    file = "fast-syntax-highlighting.plugin.zsh";
+                    src = "${inputs.nix-fast-syntax-highlighting.outPath}";
+                  };
+                nix-zsh-shell-integration =
+                  {
+                    name = "zsh-shell-integration";
+                    file = "nix-shell.plugin.zsh";
+                    src = "${inputs.nix-zsh-shell-integration.outPath}";
+                  };
+                yabai =
+                  let
+                    buildSymlinks = prev.runCommand "build-symlinks" { } ''
+                      mkdir -p $out/bin
+                      ln -s /usr/bin/xcrun /usr/bin/xcodebuild /usr/bin/tiffutil /usr/bin/qlmanage $out/bin
+                    ''; in
+                  prev.yabai.overrideAttrs (old: {
+                    src = prev.fetchFromGitHub {
+                      owner = "koekeishiya";
+                      repo = "yabai";
+                      rev = "5317b16d06e916f0e3844d3fe33d190e86c96ba9";
+                      sha256 = "sha256-yl5a6ESA8X4dTapXGd0D0db1rhwhuOWrjFAT1NDuygo=";
+                    };
+                    buildInputs = with prev.darwin.apple_sdk.frameworks; [ Carbon Cocoa ScriptingBridge prev.xxd SkyLight ];
+                    nativeBuildInputs = [ buildSymlinks ];
+                  });
+              })
+            ];
+          }
+        ];
       };
 
+      # THIS IS WHERE NIXPKGS COMES FROM
       packages."${system}" = (stable-pkgs null pkgs);
     };
 

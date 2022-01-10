@@ -18,6 +18,7 @@ in
     config = {
       allowUnfree = true;
       permittedInsecurePackages = [ ];
+      allowUnsupportedSystem = true;
     };
   };
 
