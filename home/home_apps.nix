@@ -40,7 +40,6 @@ let
     github-cli
     #neovitality
     stack
-    nyxt
     nixpkgs-fmt
     yubikey-personalization
     _7zz
@@ -117,7 +116,6 @@ let
     urlscan
     lynx
     bottom
-    nyxt
     vscode
     dante
     vscode
