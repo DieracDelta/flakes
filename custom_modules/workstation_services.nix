@@ -44,6 +44,7 @@ let
     libGL
     libGLU
     glxinfo
+    obsidian
   ];
   yubikeyPack = with pkgs; [
     gnupg pinentry-curses pinentry-qt paperkey wget rng-tools
@@ -93,6 +94,7 @@ in
     /*TODO add in configuration option for this (like embedded dev enable)*/
     programs.adb.enable = true;
     programs.java.enable = true;
+    programs.noisetorch.enable = true;
     environment.systemPackages =
       builtins.concatLists [
         yubikeyPack
@@ -112,6 +114,8 @@ in
         fira-mono
       ];
     services.picom.enable = true;
+    services.syncthing.enable = true;
+    networking.firewall.allowedTCPPorts = [ 22000 8384 ];
 
     #services.atd.enable = true;
 

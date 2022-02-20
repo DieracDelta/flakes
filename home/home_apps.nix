@@ -15,16 +15,17 @@ let
       hnix
     ];
   devPack = with pkgs; [
+    brave
     #mining
-    ethminer
-    rocm-device-libs
-    rocm-opencl-icd
-    rocm-opencl-runtime
-    rocm-runtime
-    rocm-smi
-    rocm-thunk
-    rocm-comgr
-    rocm-cmake
+    # ethminer
+    # rocm-device-libs
+    # rocm-opencl-icd
+    # rocm-opencl-runtime
+    # rocm-runtime
+    # rocm-smi
+    # rocm-thunk
+    # rocm-comgr
+    # rocm-cmake
 
 
 
@@ -62,30 +63,14 @@ let
     gnumake
     openssl
     pkgconfig
+    dog
+    hwinfo
+    lean
   ];
-  /* user if at all ... */
-  /*really just an example of how creating python package works..*/
-  #python38Pack = with pkgs;
-  #let
-  #my-python-packages = python-packages:
-  #with python-packages; [
-    #poetry
-    ##coincurve
-    ##green
-    ##protobuf
-    ##pycryptodome
-    ##ecdsa
-    ##groestlcoin_hash
-    ##eth-keyfile
-  #];
-  #python-with-my-packages = python39.withPackages my-python-packages;
-  #in
-  #[ python-with-my-packages ];
   /* user */
   appPack = with pkgs; [
     idris2
     lshw
-    #thunderbird
     teams
     bluejeans-gui
     blender
@@ -104,15 +89,12 @@ let
     keybase
     keybase-gui
     kbfs
-    #libreoffice
     obs-studio
     graphviz
     minecraft
     signal-desktop
     /*from gytis*/
     alacritty
-    #lightcord
-    #nyxt
     vscode
     rust-analyzer
     wally-cli
@@ -128,16 +110,10 @@ let
     pavucontrol
     pywal
     pithos
-    /*pkgset.inputs.nyxt-pkg.packages.${system}.nyxt*/
-    /*nyxt*/
-    nextcloud21
-    nextcloud-client
     noip
     remmina
     pkgs.unstable.chromium
     flameshot
-    #firefox
-    # for neomutt
     urlscan
     lynx
     bottom
@@ -146,7 +122,6 @@ let
     dante
     vscode
     android-studio
-    hyperspace-cli
     bottom
     #gimp
     tdesktop

@@ -5,9 +5,8 @@
   nix.allowedUsers = [ "jrestivo" ];
   imports = [ ./hw/desktop.nix ];
 
-  services.hyperspace.enable = true;
   custom_modules.jellyfin.enable = true;
-  custom_modules.nextcloud.enable = true;
+  custom_modules.nextcloud.enable = false;
   custom_modules.core_services.enable = true;
   custom_modules.workstation_services.enable = true;
   custom_modules.rust-filehost.enable = false;

@@ -17,7 +17,7 @@ in
     inherit system overlays;
     config = {
       allowUnfree = true;
-      permittedInsecurePackages = [ ];
+      permittedInsecurePackages = [ "electron-13.6.9" ];
       allowUnsupportedSystem = true;
     };
   };

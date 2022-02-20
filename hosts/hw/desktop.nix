@@ -5,13 +5,13 @@
   #imports = [ ./shared.nix ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-amd" ];
+  boot.initrd.kernelModules = [ "amdgpu" ];
+  boot.kernelModules = [ "kvm-amd" "amdgpu" ];
   boot.extraModulePackages = [ ];
-  #boot.kernelPackages = pkgs.linux_kernel;
-
+  services.xserver.videoDrivers = [ "amdgpu" ];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python38Packages.trezor_agent python38Packages.trezor ];
   services.trezord.enable = true;
+  hardware.opengl.extraPackages = with pkgs; [ amdvlk ];
 
   fileSystems."/" =
     {
