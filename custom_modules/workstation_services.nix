@@ -38,7 +38,7 @@ let
     arandr
     playerctl
     gtk3
-    shared_mime_info
+    shared-mime-info
     maim
     xclip
     xmobar

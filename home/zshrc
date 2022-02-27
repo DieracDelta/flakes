@@ -172,5 +172,6 @@ function ns() {
   nix search --json $1 $2 | nix-search-pretty | bat
 }
 export EDITOR="nvim"
+export SHELL="zsh"
 
 eval "$(starship init zsh)"

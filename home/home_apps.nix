@@ -56,7 +56,6 @@ let
     universal-ctags
     nasm
     lua
-    idea.idea-community
     gdb
     # binutils
     /*gcc*/
