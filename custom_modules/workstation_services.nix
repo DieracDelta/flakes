@@ -26,6 +26,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    syncthing
     gnome.cheese
     kdeconnect
     trezor-suite

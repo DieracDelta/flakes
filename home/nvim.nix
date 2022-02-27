@@ -11,7 +11,7 @@ in
     };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.nixpkgs-fmt pkgs.hls pkgs.stack pkgs.bear ]; #pkgs.neovitality ];
+    home.packages = with pkgs; [ nixpkgs-fmt hls stack bear nvim ]; #pkgs.neovitality ];
     # xdg.configFile."nvim/coc-settings.json".source = ./coc-settings.json;
     # programs.neovim = {
     #   enable = true;

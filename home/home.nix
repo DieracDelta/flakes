@@ -7,6 +7,10 @@
 
   home.stateVersion = "20.09";
 
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;
+  };
   programs.git = {
     enable = true;
     userName = "Justin Restivo";

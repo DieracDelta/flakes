@@ -6,6 +6,15 @@
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [ "amdgpu" ];
+
+
+  # enable ip forwarding
+  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
+  boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
+
+
+
+
   boot.kernelModules = [ "kvm-amd" "amdgpu" ];
   boot.extraModulePackages = [ ];
   services.xserver.videoDrivers = [ "amdgpu" ];
@@ -28,7 +37,6 @@
   swapDevices = [ ];
 
   nix.maxJobs = lib.mkDefault 12;
-  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
   # end hw file stuff
 

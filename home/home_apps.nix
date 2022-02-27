@@ -47,7 +47,7 @@ let
     hls
     opam
     cmake
-    clang
+    # clang
     #opencl-headers
     llvm
     cask
@@ -57,7 +57,7 @@ let
     lua
     idea.idea-community
     gdb
-    binutils
+    # binutils
     /*gcc*/
     gnumake
     openssl
