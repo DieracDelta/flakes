@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 {
-  nix.allowedUsers = [ "jrestivo" ];
+  nix.settings.allowed-users = [ "jrestivo" ];
   imports = [ ./hw/oracle_vps.nix ];
 
   custom_modules.jellyfin.enable = false;

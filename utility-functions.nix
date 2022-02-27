@@ -58,7 +58,7 @@ in
               global
             ] ++ (nixosModules hostName);
 
-          extraArgs = {
+          specialArgs = {
             inherit system inputs builtins;
           };
         };

@@ -17,7 +17,7 @@
   #'';
   boot.extraModprobeConfig = "options vfio-pci ids=1002:67ef,1002:aae0";
   # TODO make sure the OVMF/OVMF_VARS are uniquely named files otherwise will conflict when you have multiple VMs
-  virtualisation.libvirtd.qemuVerbatimConfig = ''
+  virtualisation.libvirtd.qemu.verbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
     user = "jrestivo"
     group = "kvm"

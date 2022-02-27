@@ -16,6 +16,7 @@ let
     ];
   devPack = with pkgs; [
     brave
+    zellij
     #mining
     # ethminer
     # rocm-device-libs
