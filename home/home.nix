@@ -5,7 +5,7 @@
 
   home.sessionVariables = { EDITOR = "nvim"; };
 
-  home.stateVersion = "20.09";
+  home.stateVersion = "21.11";
 
   programs.git = {
     enable = true;

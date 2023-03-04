@@ -1,5 +1,5 @@
 { pkgs, home-manager, ... }:
-let 
+let
 rust_build = pkgs.rust-bin.nightly."2021-10-10".default.override {
 extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
 }; in
@@ -11,30 +11,9 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
 
   environment.variables = { EDITOR = "nvim"; };
 
-  environment.systemPackages = with pkgs; [ nvim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr neofetch bottom htop nix coreutils fd nix-du nix-top nixfmt entr zsh syncthing];
-
-
-  services.yabai = {
-    enable = true;
-    package = pkgs.yabai;
-    config = {
-      focus_follows_mouse = "on";
-      mouse_follows_focus = "off";
-      window_placement = "second_child";
-      window_opacity = "off";
-      top_padding = 3;
-      bottom_padding = 3;
-      left_padding = 3;
-      right_padding = 3;
-      window_gap = 3;
-      layout = "bsp";
-    };
-  };
-
-  services.skhd = {
-    enable = true;
-    skhdConfig = builtins.readFile ./shkdrc;
-  };
+  environment.systemPackages = with pkgs; [ nvim ghc ripgrep tree zathura jq zoxide starship direnv fzf exa  bat tldr neofetch bottom htop nix coreutils fd nix-du nix-top nixfmt entr zsh syncthing /* colmena */ tmux /* colima */ zellij jless git-filter-repo lima bash zathura emacs /* agda */  docker  awscli emacs
+  ( rWrapper.override{ packages = with rPackages; [ ggplot2 dplyr xts languageserver ]; })
+  ];
 
 
   services.nix-daemon.enable = true;

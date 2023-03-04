@@ -3,7 +3,7 @@
 #if [ -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE" ]; then
   #. /nix/store/nwbz1bg76b0gmblw0n1y1s3r53kpsslh-set-environment
 #fi
-export PATH=/run/current-system/sw/bin:$PATH
+export PATH=$PATH:/run/current-system/sw/bin
 
 # control-v no longer makes weird character
 # and instant paste

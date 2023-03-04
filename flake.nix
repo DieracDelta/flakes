@@ -3,8 +3,6 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
-
-
     master = {
       url = "github:NixOS/nixpkgs/master";
     };
@@ -16,9 +14,6 @@
     };
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
-    unstable = {
-      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    };
     nixpkgs = {
       url = "github:NixOS/nixpkgs/master";
     };
@@ -31,13 +26,6 @@
     hls = {
       url = "github:jkachmar/easy-hls-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    rnix-lsp = {
-      url = "github:nix-community/rnix-lsp";
-      inputs.naersk.follows = "naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.utils.follows = "flake-utils";
     };
 
     home-manager = {
@@ -65,8 +53,8 @@
     };
 
     my-nvim = {
-      url = "github:DieracDelta/vimconf_talk/aarch64-darwin_5_ci";
-      inputs.nixpkgs.follows = "master";
+      url = "github:DieracDelta/vimconfig";
+      # inputs.nixpkgs.follows = "master";
     };
 
     emacs-overlay = {
@@ -86,9 +74,8 @@
       inputs.emacs-overlay.follows = "emacs-overlay";
     };
 
-    deploy-rs = {
-      inputs.naersk.follows = "naersk";
-      url = "github:serokell/deploy-rs";
+    colmena = {
+      url = "github:zhaofengli/colmena";
       inputs.nixpkgs.follows = "master";
     };
 
@@ -132,7 +119,7 @@
     , home-manager
     , emacs-overlay
     , nix-doom-emacs
-    , deploy-rs
+    , colmena
     , sops-nix
     , rust-filehost
     , mailserver
@@ -207,11 +194,11 @@
           hls = inputs.hls.defaultPackage.${system};
         })
 
+        colmena.overlay
+
 
         (final: prev: {
-          inherit (deploy-rs.packages.${system}) deploy-rs;
           nvim = my-nvim.defaultPackage.x86_64-linux;
-          #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           nix-fast-syntax-highlighting =
             {
@@ -335,7 +322,8 @@
                     system = {
                       sshUser = "root";
                       user = "root";
-                      path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.${host};
+                      # path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.${host};
+                      path = [];
                     };
                   };
                 };
@@ -344,7 +332,7 @@
         in
         builtins.foldl' pkgs.lib.mergeAttrs { } (results);
 
-      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+      # checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 
       darwinConfigurations."jrestivo-2" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
@@ -353,19 +341,23 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.jrestivo = import ./home/darwin;
+            home-manager.users.jrestivo = {
+              imports = [ inputs.nix-doom-emacs.hmModule ./home/darwin];
+            };
           }
           ./darwin/config.nix
           {
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
               inputs.rust-overlay.overlay
+              colmena.overlay
               (final: prev: {
+                # starship = master.legacyPackages.aarch64-darwin.starship;
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
                 #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
-                nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
-                  preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
-                });
+                # nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
+                #   preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
+                # });
                 mutt-colors-solarized = inputs.mutt-colors-solarized;
                 nix-fast-syntax-highlighting =
                   {

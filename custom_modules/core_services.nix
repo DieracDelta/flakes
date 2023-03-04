@@ -142,7 +142,7 @@ in
     time.timeZone = "America/New_York";
     location.provider = "geoclue2";
 
-    system.stateVersion = "20.09";
+    system.stateVersion = "21.11";
 
     environment.variables = {
       BROWSER = "chromium";
@@ -216,7 +216,7 @@ in
     /*ONLY cli stuff*/
     environment.systemPackages = with pkgs; [
       dmidecode
-      deploy-rs
+      colmena
       bottom
       direnv
       git

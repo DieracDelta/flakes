@@ -1,19 +1,19 @@
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.profiles.dev;
-  haskellPack = with pkgs.haskellPackages;
-    let
-      ps = p: with p;  [ async base containers lens mtl random stm text transformers unliftio ];
-      ghc = ghcWithHoogle ps;
-    in
-    [
-      threadscope
-      ghc
-      cabal-install
-      hlint
-      ghcide
-      hnix
-    ];
+  # haskellPack = with pkgs.haskellPackages;
+  #   let
+  #     ps = p: with p;  [ async base containers lens mtl random stm text transformers unliftio ];
+  #     ghc = ghcWithHoogle ps;
+  #   in
+  #   [
+  #     threadscope
+  #     ghc
+  #     cabal-install
+  #     hlint
+  #     ghcide
+  #     hnix
+  #   ];
   devPack = with pkgs; [
     #mining
     ethminer
@@ -180,21 +180,6 @@ let
     nmap
     aircrack-ng
   ];
-  texPack = with pkgs;
-    [
-      pdftk
-      (
-        texlive.combine {
-          inherit (texlive) scheme-medium lipsum fmtcount datetime;
-        }
-      )
-    ];
-  languageserverPack = with pkgs; [
-    shellcheck
-    rnix-lsp
-    nixfmt
-    clang-tools
-  ];
   cPack = with pkgs; [
     clang
     valgrind
@@ -212,13 +197,12 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [
       #python38Pack
-      haskellPack
+      # haskellPack
       devPack
       appPack
       workstationPack
       embeddedPack
       pentestPack
-      texPack
       languageserverPack
       cPack
       financialPack

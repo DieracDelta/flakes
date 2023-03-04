@@ -11,15 +11,15 @@ in
       default = true;
     };
 
-  #config = lib.mkIf config.profiles.emacs.enable {
-  #  programs.doom-emacs = {
-  #    enable = true;
-  #    doomPrivateDir = ./doom.d;
-  #    #emacsPackage = pkgs.emacsPgtkGcc;
-  #  };
+  config = lib.mkIf config.profiles.emacs.enable {
+    programs.doom-emacs = {
+      enable = true;
+      doomPrivateDir = ./doom.d;
+      #emacsPackage = pkgs.emacsPgtkGcc;
+    };
 
-  #  services.emacs = {
-  #    enable = true;
-  #  };
-  #};
+    services.emacs = {
+      enable = true;
+    };
+  };
 }
