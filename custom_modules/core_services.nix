@@ -164,6 +164,10 @@ in
       ''
         ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBpGFCfG6Yq+CaAqNZcU41FhGv5JcLehkUa59eaw35iM openpgp:0x16CE5BD0
       ''
+      # jared
+      ''
+      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID26MAsR89ZknXksgR5S4x2c9HZy1db/ioFqiXllaGpU jarednathanielrestivo@Laptop-2.local
+      ''
     ];
     users.users.root.openssh.authorizedKeys.keys = [
       #laptop
@@ -185,12 +189,20 @@ in
     ];
 
     nix = {
+binaryCaches = [
+      "https://jrestivo.cachix.org"
+    ];
+    binaryCachePublicKeys = [
+      "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
+    ];
 
       /*warn-dirty = true;*/
       extraOptions = ''
         gc-keep-outputs = true
         warn-dirty = false
         experimental-features = nix-command flakes
+        extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux riscv64-linux
+        sandbox-dev-shm-size = 5%
       '';
 
       # cachix stuffs
@@ -232,7 +244,8 @@ in
       evemu
       xdg_utils
       dnsutils
-      hwloc
+      # NOTE: brocken apparently
+      # hwloc
       ngrok
       gnupg
       ssh-to-pgp

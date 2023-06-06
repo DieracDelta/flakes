@@ -2,7 +2,8 @@
 { config, pkgs, lib, ... }:
 {
   environment.pathsToLink = [ "/share/zsh" ];
-  boot.kernelParams = [ "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" "hugepagesz=1G" "hugepages=64"];
+  # TODO find out if you need hugepages on
+  boot.kernelParams = [ "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" /* "hugepagesz=1G" "hugepages=64" */];
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   virtualisation.libvirtd.enable = true;
@@ -15,7 +16,7 @@
     #done
     #modprobe -i vfio-pci
   #'';
-  boot.extraModprobeConfig = "options vfio-pci ids=1002:67ef,1002:aae0";
+  # boot.extraModprobeConfig = "options vfio-pci ids=1002:67ef,1002:aae0";
   # TODO make sure the OVMF/OVMF_VARS are uniquely named files otherwise will conflict when you have multiple VMs
   virtualisation.libvirtd.qemu.verbatimConfig = ''
     nvram = [ "${pkgs.OVMF}/FV/OVMF.fd:${pkgs.OVMF}/FV/OVMF_VARS.fd" ]
@@ -31,28 +32,34 @@
     "/dev/rtc","/dev/hpet", "/dev/sev"
     ]
   '';
-  boot.kernelPatches = [
-    {
-      name = "vendor-reset";
-      patch = null;
-      extraConfig = ''
-        FTRACE y
-        KPROBES y
-        PCI_QUIRKS y
-        KALLSYMS y
-        KALLSYMS_ALL y
-        FUNCTION_TRACER y
-      '';
-    }
-  ];
+  # boot.kernelPatches = [
+  #   {
+  #     name = "vendor-reset";
+  #     patch = null;
+  #     extraConfig = ''
+  #       FTRACE y
+  #       KPROBES y
+  #       PCI_QUIRKS y
+  #       KALLSYMS y
+  #       KALLSYMS_ALL y
+  #       FUNCTION_TRACER y
+  #     '';
+  #   }
+  # ];
   boot.extraModulePackages = [ pkgs.linuxPackages_latest.vendor-reset ];
   boot.initrd.availableKernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"  "amdgpu" ];
   boot.initrd.kernelModules = [ "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" "amdgpu"  ];
+  boot.runSize = "10G";
+  boot.devShmSize = "10G";
+  security.wrapperDirSize = "10G";
+  # boot.tmpOnTmpfsSize = "512m";
+  boot.tmpOnTmpfs = false;
   services.xserver.videoDrivers = [ "amdgpu" ];
   hardware.opengl.driSupport = true;
   hardware.opengl.extraPackages = with pkgs; [
     amdvlk
   ];
-  systemd.tmpfiles.rules = [
-    "f /dev/shm/looking-glass 0660 jrestivo qemu-libvirtd -" ];
+
+  # systemd.tmpfiles.rules = [
+  #   "f /dev/shm/looking-glass 0660 jrestivo qemu-libvirtd -" ];
 }

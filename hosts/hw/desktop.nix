@@ -13,10 +13,13 @@
   boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
 
 
+  boot.binfmt.emulatedSystems = [
+      "aarch64-linux" "armv7l-linux" "riscv64-linux"
+  ];
 
 
   boot.kernelModules = [ "kvm-amd" "amdgpu" ];
-  boot.extraModulePackages = [ ];
+  boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
   services.xserver.videoDrivers = [ "amdgpu" ];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python38Packages.trezor_agent python38Packages.trezor ];
   services.trezord.enable = true;

@@ -3,7 +3,7 @@
 --import           System.Exit                    ( exitSuccess )
 import           XMonad
 import           XMonad.Hooks.EwmhDesktops      ( ewmh
-                                                , fullscreenEventHook
+                                                -- , fullscreenEventHook
                                                 )
 import           XMonad.Actions.CopyWindow
 import           XMonad.Actions.CycleWS         ( prevWS
@@ -63,7 +63,7 @@ myConfig = def { terminal           = myTerminal
                , normalBorderColor  = "#DCC53A"
                , modMask            = mod1Mask
                , borderWidth        = 2
-               , handleEventHook = fullscreenEventHook <+> handleEventHook def
+               -- , handleEventHook = fullscreenEventHook <+> handleEventHook def
                , layoutHook         = myLayoutHook
                , manageHook         = myManageHook
                , startupHook        = myStartupHook

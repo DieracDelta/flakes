@@ -3,6 +3,7 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
+    lutris
     docker-compose
     virt-manager
     looking-glass-client
@@ -10,6 +11,9 @@ let
     qemu
     OVMF
     libvirt
+    ghc
+    cabal-install
+    # stack
     #firefox
   ];
   /* system */
@@ -76,12 +80,12 @@ in
 
     };
     services.xrdp.enable = true;
-    virtualisation.docker = {
-      enable = true;
-      autoPrune.enable = true;
-      #enableNvidia = true;
-      enableOnBoot = true;
-    };
+    # virtualisation.docker = {
+    #   enable = true;
+    #   autoPrune.enable = true;
+    #   #enableNvidia = true;
+    #   enableOnBoot = true;
+    # };
 
     boot.plymouth = {
       /*TODO add in custom boot icons*/
@@ -95,7 +99,6 @@ in
     /*TODO add in configuration option for this (like embedded dev enable)*/
     programs.adb.enable = true;
     programs.java.enable = true;
-    programs.noisetorch.enable = true;
     environment.systemPackages =
       builtins.concatLists [
         yubikeyPack
@@ -117,6 +120,7 @@ in
     services.picom.enable = true;
     services.syncthing.enable = true;
     networking.firewall.allowedTCPPorts = [ 22000 8384 ];
+    programs.dconf.enable = true;
 
     #services.atd.enable = true;
 

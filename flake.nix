@@ -3,9 +3,6 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
-    master = {
-      url = "github:NixOS/nixpkgs/master";
-    };
     nix = {
       url = "github:NixOS/nix";
     };
@@ -18,12 +15,12 @@
       url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/master";
+      url = "path:/home/jrestivo/nixpkgs";
     };
 
     naersk = {
       url = github:nmattia/naersk;
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     hls = {
@@ -46,7 +43,7 @@
     mailserver =
       {
         url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
-        inputs.nixpkgs.follows = "master";
+        inputs.nixpkgs.follows = "nixpkgs";
         inputs.utils.follows = "flake-utils";
       };
 
@@ -58,23 +55,22 @@
 
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
 
     my-nvim = {
-      url = "github:DieracDelta/vimconf_talk/aarch64-darwin_5_ci";
-      inputs.nixpkgs.follows = "master";
+      url = "github:DieracDelta/vimconfig";
     };
 
     emacs-overlay = {
       url = "github:nix-community/emacs-overlay";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     flake-utils = {
       url = github:numtide/flake-utils;
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-doom-emacs = {
@@ -87,34 +83,34 @@
     deploy-rs = {
       inputs.naersk.follows = "naersk";
       url = "github:serokell/deploy-rs";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     deepfry = {
       url = "github:DieracDelta/deepfry";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-fast-syntax-highlighting = {
       url = "github:zdharma-continuum/fast-syntax-highlighting";
       flake = false;
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-zsh-shell-integration = {
       url = "github:chisui/zsh-nix-shell";
       flake = false;
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
-      inputs.nixpkgs.follows = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
       inputs.naersk.follows = "naersk";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.utils.follows = "flake-utils";
@@ -124,7 +120,6 @@
 
   outputs =
     inputs@{ self
-    , master
     , nixpkgs
     , rust-overlay
     , home-manager
@@ -160,7 +155,7 @@
         ./home/home.nix
       ];
 
-      unstable-pkgs = (utils.pkgImport master [ stable-pkgs ]);
+      unstable-pkgs = (utils.pkgImport nixpkgs [ stable-pkgs ]);
 
       mkDevelopModule = mod: src: {
         disabledModules = [ mod ];
@@ -253,7 +248,7 @@
           nativeBuildInputs = [
             (pkgs.callPackage sops-nix { }).sops-pgp-hook
           ];
-          buildInputs = [ pkgs.sops (pkgs.haskellPackages.ghcWithHoogle xmonadPkgs) ];
+          buildInputs = [ pkgs.sops /* (pkgs.haskellPackages.ghcWithHoogle xmonadPkgs) */ ];
           shellhook = "zsh";
         };
 

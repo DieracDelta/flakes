@@ -15,17 +15,17 @@
     enable = true;
     userName = "Justin Restivo";
     userEmail = "justin@restivo.me";
-    extraConfig = {
+    # extraConfig = {
       #url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
       #url = {
         #"ssh://git@bitbucket.org" = { insteadOf = "https://bitbucket.org"; };
       #};
-      github.user = "DieracDelta";
-      tag.gpgSign = true;
-    };
+      # github.user = "DieracDelta";
+      # tag.gpgSign = true;
+    # };
     # TODO turn this on
-    signing.signByDefault = true;
-    signing.key = "E68281EB2ABCE9B8";
+    # signing.signByDefault = true;
+    # signing.key = "E68281EB2ABCE9B8";
   };
 
   programs.zellij = {
@@ -529,34 +529,34 @@
 
 
 
-  programs.gpg = {
-    enable = true;
-    settings = {
-      #pinentry-program = "${pkgs.pinentry}/bin/pinentry";
-      #pinentryFlavor = "qt";
-    };
-  };
-  services.gpg-agent = {
-    /*enableScDaemon = true;*/
-    enable = true;
-    pinentryFlavor = "qt";
-    enableSshSupport = true;
-    defaultCacheTtlSsh = 36000;
-    defaultCacheTtl = 36000;
-    maxCacheTtlSsh = 36000;
-    maxCacheTtl = 36000;
-    sshKeys = [
-      "0FD8067624129B09D68529E2D7AAC887A8247838"
-    ];
-    extraConfig = ''
-    allow-loopback-pinentry
-    '';
-  };
+  # programs.gpg = {
+  #   enable = true;
+  #   settings = {
+  #     #pinentry-program = "${pkgs.pinentry}/bin/pinentry";
+  #     #pinentryFlavor = "qt";
+  #   };
+  # };
+  # services.gpg-agent = {
+  #   /*enableScDaemon = true;*/
+  #   enable = true;
+  #   pinentryFlavor = "qt";
+  #   enableSshSupport = true;
+  #   defaultCacheTtlSsh = 36000;
+  #   defaultCacheTtl = 36000;
+  #   maxCacheTtlSsh = 36000;
+  #   maxCacheTtl = 36000;
+  #   sshKeys = [
+  #     "0FD8067624129B09D68529E2D7AAC887A8247838"
+  #   ];
+  #   extraConfig = ''
+  #   allow-loopback-pinentry
+  #   '';
+  # };
 
-  home.file.".gnupg/sshgrips" = {
-    recursive = true;
-    source = ./sshgrips;
-  };
+  # home.file.".gnupg/sshgrips" = {
+  #   recursive = true;
+  #   source = ./sshgrips;
+  # };
 
   # gpg-agent
   #programs.gnupg.agent = {

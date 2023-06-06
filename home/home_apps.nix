@@ -7,16 +7,17 @@ let
       ghc = ghcWithHoogle ps;
     in
     [
-      threadscope
-      ghc
-      cabal-install
-      hlint
-      ghcide
-      hnix
+      # threadscope
+      # ghc
+      # cabal-install
+      # hlint
+      # ghcide
+      # hnix
     ];
   devPack = with pkgs; [
     brave
     zellij
+    v4l-utils
     #mining
     # ethminer
     # rocm-device-libs
@@ -45,7 +46,7 @@ let
     yubikey-personalization
     _7zz
     thunderbird
-    hls
+    # hls
     opam
     cmake
     # clang
@@ -185,7 +186,7 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [
       #python38Pack
-      haskellPack
+      # haskellPack
       devPack
       appPack
       workstationPack

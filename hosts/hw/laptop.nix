@@ -8,7 +8,9 @@
     boot.initrd.kernelModules = [ ];
     boot.kernelModules = [ "kvm-intel" ];
     boot.extraModulePackages = [ ];
-    boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+    boot.binfmt.emulatedSystems = [ 
+            "aarch64-linux" "armv7l-linux" "riscv64-linux"
+    ];
 
     fileSystems."/" = {
       device = "/dev/disk/by-uuid/70fec89c-be42-4b93-803a-fe0c8fb0ba88";
