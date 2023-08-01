@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  imports = [ ./shared.nix ./gpu_passthrough.nix ];
+  imports = [ ./shared.nix /* ./gpu_passthrough.nix */ ];
   #imports = [ ./shared.nix ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
@@ -16,12 +16,14 @@
   boot.binfmt.emulatedSystems = [
       "aarch64-linux" "armv7l-linux" "riscv64-linux"
   ];
+  # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_5_15;
 
 
   boot.kernelModules = [ "kvm-amd" "amdgpu" ];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
   services.xserver.videoDrivers = [ "amdgpu" ];
-  environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python38Packages.trezor_agent python38Packages.trezor ];
+  environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
   hardware.opengl.extraPackages = with pkgs; [ amdvlk ];
 

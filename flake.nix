@@ -3,6 +3,9 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    nyxt_nixpkgs = {
+      url = "github:dariof4/nixpkgs/nyxt-31";
+    };
     nix = {
       url = "github:NixOS/nix";
     };
@@ -15,7 +18,8 @@
       url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     };
     nixpkgs = {
-      url = "path:/home/jrestivo/nixpkgs";
+      # url = "path:/home/jrestivo/nixpkgs";
+      url = "github:NixOS/nixpkgs";
     };
 
     naersk = {
@@ -121,6 +125,7 @@
   outputs =
     inputs@{ self
     , nixpkgs
+    , nyxt_nixpkgs
     , rust-overlay
     , home-manager
     , emacs-overlay
@@ -208,6 +213,7 @@
         })
         (final: prev:
           {
+            nyxt = nyxt_nixpkgs.legacyPackages.${system}.nyxt;
             ethminer = unstable-pkgs.ethminer.overrideAttrs (prevAttrs:
               {
                 cmakeFlags = prevAttrs.cmakeFlags ++ [ "-DUSE_SYS_OPENCL=ON" "-DUSE_SYS_OPENCL=ON" ];

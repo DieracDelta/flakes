@@ -30,6 +30,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    noisetorch
     syncthing
     gnome.cheese
     kdeconnect
@@ -80,12 +81,12 @@ in
 
     };
     services.xrdp.enable = true;
-    # virtualisation.docker = {
-    #   enable = true;
-    #   autoPrune.enable = true;
+    virtualisation.docker = {
+      enable = true;
+      autoPrune.enable = true;
     #   #enableNvidia = true;
-    #   enableOnBoot = true;
-    # };
+      enableOnBoot = true;
+    };
 
     boot.plymouth = {
       /*TODO add in custom boot icons*/

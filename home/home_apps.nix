@@ -106,12 +106,15 @@ let
   ];
   /* user */
   workstationPack = with pkgs; [
+    nyxt
+    zulip
     termite
     pavucontrol
     pywal
     pithos
     noip
     remmina
+    firefox
     pkgs.unstable.chromium
     flameshot
     urlscan
