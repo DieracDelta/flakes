@@ -84,6 +84,13 @@ in
         nixman = "manix '' | grep '^# ' | sed 's/^# (.*) (.*/1/;s/ (.*//;s/^# //' | sed 's/</\\\\</g' | sed 's/>/\\\\>/g'| fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
         opt = "manix '' | grep '^# ' | sed 's/^# \(.*\) (.*/\1/;s/ (.*//;s/^# //' | fzf --ansi --preview=\"manix '{}' | sed 's/type: /> type: /g' | bat -l Markdown --color=always --plain\"";
 
+        nv = ''
+          nix build /Users/jrestivo/dev/vimconfig && export OPENAI_API_KEY="$(cat $HOME/OPENAISECRETKEY)" && neovide --neovim-bin=/Users/jrestivo/dev/vimconfig/result/bin/nvim & disown
+          '';
+        # jj = ''
+        #   ${pkgs.jujutsu}/bin/jj
+        # '';
+
       };
       # keys.sh contains a bunch of my keys
       initExtra = builtins.readFile ./zshrc;

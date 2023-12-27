@@ -1,8 +1,4 @@
 { pkgs, home-manager, ... }:
-let
-rust_build = pkgs.rust-bin.nightly."2021-10-10".default.override {
-extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
-}; in
 {
   fonts = {
     enableFontDir = true;
@@ -11,11 +7,24 @@ extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
 
   environment.variables = { EDITOR = "nvim"; };
 
-  environment.systemPackages = with pkgs; [ nvim ghc ripgrep tree zathura jq zoxide starship direnv fzf exa  bat tldr neofetch bottom htop nix coreutils fd nix-du nix-top nixfmt entr zsh syncthing /* colmena */ tmux /* colima */ zellij jless git-filter-repo lima bash zathura emacs /* agda */  docker  awscli emacs
+  users.users.jrestivo.home = "/Users/jrestivo";
+
+  environment.systemPackages = with pkgs; [ ghc ripgrep tree zathura jq zoxide starship direnv fzf eza  bat tldr neofetch bottom htop coreutils fd
+  # nix-du
+  nix-top nixfmt entr zsh syncthing /* colmena */ tmux /* colima */ zellij jless git-filter-repo lima zathura emacs /* agda */  docker  awscli emacs /* neovide */ /* nyxt-3 */
   ( rWrapper.override{ packages = with rPackages; [ ggplot2 dplyr xts languageserver ]; })
+  amethyst
+  /* jujutsu */ #vcs
+  # gitoxide
+  coqPackages.coq-lsp
+  coq
+  hyperfine
+  anki-bin
+  nixVeryUnstable
+
   ];
 
 
   services.nix-daemon.enable = true;
-  nix.package = pkgs.nix;
+  nix.package = pkgs.nixVeryUnstable;
 }

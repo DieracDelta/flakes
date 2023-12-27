@@ -40,7 +40,7 @@ in
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
 
                 nix = {
-                  package = pkgs.nixUnstable;
+                  package = pkgs.nixVeryUnstable;
                   nixPath =
                     let path = toString ./.; in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];

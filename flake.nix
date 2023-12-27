@@ -3,7 +3,16 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    nyxt-src = {
+      url = "github:atlas-engineer/nyxt";
+      flake = false;
+    };
+    jj = {
+      url = "github:martinvonz/jj";
+      flake = true;
+    };
     master = {
+      # url = "github:NixOS/nixpkgs?rev=317dde2ba4c7d998ae94289b3fc0118814eb9697";
       url = "github:NixOS/nixpkgs/master";
     };
     nix = {
@@ -17,9 +26,25 @@
     nixpkgs = {
       url = "github:NixOS/nixpkgs/master";
     };
+    ospm-src = {
+      url = "github:atlas-engineer/ospm";
+      flake = false;
+    };
+    ndebug-src = {
+      url = "github:atlas-engineer/ndebug";
+      flake = false;
+    };
+    nsymbols-src = {
+      url = "github:atlas-engineer/nsymbols";
+      flake = false;
+    };
+    lisp-unit2-src = {
+      url = "github:AccelerationNet/lisp-unit2";
+      flake = false;
+    };
 
     naersk = {
-      url = github:nmattia/naersk;
+      url = "github:nmattia/naersk";
       inputs.nixpkgs.follows = "master";
     };
 
@@ -113,6 +138,11 @@
 
   outputs =
     inputs@{ self
+    , nyxt-src
+    , ospm-src
+    , ndebug-src
+    , nsymbols-src
+    , lisp-unit2-src
     , master
     , nixpkgs
     , rust-overlay
@@ -128,13 +158,12 @@
     , darwin
     , alacritty
     , my-nvim
+    , jj
     , ...
     }:
     let
       inherit (nixpkgs) lib;
-      inherit (lib) recursiveUpdate;
       system_x86 = "x86_64-linux";
-      system_arm = "aarch64-linux";
       system = system_x86;
       stable-pkgs = import ./overlays;
 
@@ -226,29 +255,6 @@
         (final: prev: {
           inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
           unstable = unstable-pkgs;
-        })
-        (final: prev: {
-          lispPackages = prev.lispPackages // {
-            cl-webkit2 = prev.lispPackages.cl-webkit2.overrideAttrs (oldAttrs:
-              {
-                src = prev.fetchFromGitHub {
-                  owner = "joachifm";
-                  repo = "cl-webkit";
-                  rev = "90b1469713265096768fd865e64a0a70292c733d";
-                  sha256 = "sha256:0lxws342nh553xlk4h5lb78q4ibiwbm2hljd7f55w3csk6z7bi06";
-                };
-              });
-            nyxt = prev.lispPackages.nyxt.overrideAttrs (oldAttrs:
-              {
-                version = "2.1.1";
-                src = prev.fetchFromGitHub {
-                  owner = "atlas-engineer";
-                  repo = "nyxt";
-                  rev = "93a2af10f0b305740db0a3232ecb690cd43791f9";
-                  sha256 = "sha256-GdTOFu5yIIL9776kfbo+KS1gHH1xNCfZSWF5yHUB9U8=";
-                };
-              });
-          };
         })
       ];
 
@@ -349,12 +355,338 @@
           {
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
-              inputs.rust-overlay.overlay
+              jj.overlays.default
               colmena.overlay
               (final: prev: {
+                webkitgtk = prev.stdenv.mkDerivation rec {
+                  pname = "webkitgtk";
+                  version = "2.32.1";
+
+                  src = prev.fetchurl {
+                    url =
+                      "https://webkitgtk.org/releases/${pname}-${version}.tar.xz";
+                    sha256 =
+                      "05v9hgpkc6mi2klrd8nqql1n8xzq8rgdz3hvyy369xkhgwqifq8k";
+                  };
+                  patches = [
+                    (prev.fetchpatch {
+                      url =
+                        "https://github.com/WebKit/WebKit/commit/94cdcd289b993ed4d39c17d4b8b90db7c81a9b10.diff";
+                      sha256 =
+                        "sha256-ywrTEjf3ATqI0Vvs60TeAZ+m58kCibum4DamRWrQfaA=";
+                      excludes = [ "Source/WebKit/ChangeLog" ];
+                    })
+                    (prev.fetchpatch {
+                      url =
+                        "https://bug-225856-attachments.webkit.org/attachment.cgi?id=428797";
+                      sha256 =
+                        "sha256-ffo5p2EyyjXe3DxdrvAcDKqxwnoqHtYBtWod+1fOjMU=";
+                      excludes = [ "Source/WebCore/ChangeLog" ];
+                    })
+                    ./patches/428774.patch # https://bug-225850-attachments.webkit.org/attachment.cgi?id=428774
+                    (prev.fetchpatch {
+                      url =
+                        "https://bug-225850-attachments.webkit.org/attachment.cgi?id=428776";
+                      sha256 =
+                        "sha256-ryNRYMsk72SL0lNdh6eaAdDV3OT8KEqVq1H0j581jmQ=";
+                      excludes = [ "Source/WTF/ChangeLog" ];
+                    })
+                    (prev.fetchpatch {
+                      url =
+                        "https://bug-225850-attachments.webkit.org/attachment.cgi?id=428778";
+                      sha256 =
+                        "sha256-78iP+T2vaIufO8TmIPO/tNDgmBgzlDzalklrOPrtUeo=";
+                      excludes = [ "Source/WebKit/ChangeLog" ];
+                    })
+                    (prev.fetchpatch {
+                      url =
+                        "https://bug-227360-attachments.webkit.org/attachment.cgi?id=432180";
+                      sha256 =
+                        "sha256-1JLJKu0G1hRTzqcHsZgbXIp9ZekwbYFWg/MtwB4jTjc=";
+                      excludes = [ "Source/WebKit/ChangeLog" ];
+                    })
+                  ];
+
+                  outputs = [ "out" "dev" ];
+
+                  preConfigure = lib.optionalString
+                    (prev.stdenv.hostPlatform != prev.stdenv.buildPlatform) ''
+                      # Ignore gettext in cmake_prefix_path so that find_program doesn't
+                      # pick up the wrong gettext. TODO: Find a better solution for
+                      # this, maybe make cmake not look up executables in
+                      # CMAKE_PREFIX_PATH.
+                      cmakeFlags+=" -DCMAKE_IGNORE_PATH=${
+                        lib.getBin prev.gettext
+                      }/bin"
+                    '';
+
+                  nativeBuildInputs = with prev; [
+                    bison
+                    cmake
+                    gettext
+                    gobject-introspection
+                    gperf
+                    ninja
+                    perl
+                    perl.pkgs.FileCopyRecursive # used by copy-user-interface-resources.pl
+                    pkg-config
+                    python3
+                    ruby
+                    glib # for gdbus-codegen
+                    wrapGAppsHook # for MiniBrowser
+                  ];
+
+                  buildInputs = with prev; [
+                    at-spi2-core
+                    enchant2
+                    libepoxy
+                    gnutls
+                    gst_all_1.gst-plugins-bad
+                    gst_all_1.gst-plugins-base
+                    (harfbuzz.override { withIcu = true; })
+                    libGL
+                    libGLU
+                    mesa # for libEGL headers
+                    libgcrypt
+                    libgpg-error
+                    libidn
+                    libintl
+                    lcms2
+                    libtasn1
+                    libwebp
+                    libxkbcommon
+                    libxml2
+                    libxslt
+                    libnotify
+                    nettle
+                    openjpeg
+                    p11-kit
+                    pcre
+                    sqlite
+                    woff2
+                    libedit
+                    readline
+                    glib-networking # for MiniBrowser
+                    geoclue2
+                    libsecret
+                  ];
+
+                  propagatedBuildInputs = with prev; [ gtk3 libsoup ];
+
+                  cmakeFlags = [
+                    "-DENABLE_INTROSPECTION=ON"
+                    "-DPORT=GTK"
+                    "-DUSE_SYSTEMD=OFF"
+                    "-DUSE_LIBHYPHEN=OFF"
+                    "-DENABLE_MINIBROWSER=ON"
+                    "-DLIBEXEC_INSTALL_DIR=${
+                      placeholder "out"
+                    }/libexec/webkit2gtk"
+                    # "-DUSE_SOUP2"
+                    "-DUSE_LIBSECRET=ON"
+                    "-DENABLE_GAMEPAD=OFF"
+                    "-DENABLE_JOURNALD_LOG=OFF"
+                    "-DENABLE_QUARTZ_TARGET=ON"
+                    "-DENABLE_X11_TARGET=OFF"
+                    "-DUSE_APPLE_ICU=OFF"
+                    "-DUSE_OPENGL_OR_ES=OFF"
+                    "-DENABLE_GTKDOC=OFF"
+                    "-DENABLE_VIDEO=ON"
+                  ];
+
+                  postPatch = ''
+                    patchShebangs .
+                    # It needs malloc_good_size.
+                    sed 22i'#include <malloc/malloc.h>' -i Source/WTF/wtf/FastMalloc.h
+                    # <CommonCrypto/CommonRandom.h> needs CCCryptorStatus.
+                    sed 43i'#include <CommonCrypto/CommonCryptor.h>' -i Source/WTF/wtf/RandomDevice.cpp
+                  '';
+
+                  postFixup = ''
+                    # needed for TLS and multimedia functionality
+                    wrapGApp $out/libexec/webkit2gtk/MiniBrowser --argv0 MiniBrowser
+                  '';
+
+                  # we only want to wrap the MiniBrowser
+                  dontWrapGApps = true;
+                  requiredSystemFeatures = [ "big-parallel" ];
+                };
+                nyxt-asdf = final.lispPackages_new.build-asdf-system {
+                  pname = "nyxt-asdf";
+                  version = inputs.nyxt-src.rev;
+                  src = inputs.nyxt-src;
+                  systems = [ "nyxt-asdf" ];
+                  lisp = final.lispPackages_new.sbcl;
+                };
+                ndebug = final.lispPackages_new.build-asdf-system {
+                  pname = "ndebug";
+                  version = inputs.ndebug-src.rev;
+                  src = inputs.ndebug-src;
+                  lisp = final.lispPackages_new.sbcl;
+                  lispLibs = with final.lispPackages_new.sbclPackages; [
+                    dissect
+                    trivial-custom-debugger
+                    trivial-gray-streams
+                    bordeaux-threads
+                  ];
+                };
+                nsymbols = final.lispPackages_new.build-asdf-system {
+                  pname = "nsymbols";
+                  version = inputs.nsymbols-src.rev;
+                  src = inputs.nsymbols-src;
+                  lisp = final.lispPackages_new.sbcl;
+                  lispLibs = with final.lispPackages_new.sbclPackages; [
+                    closer-mop
+                  ];
+                };
+                lisp-unit2 =
+                  prev.lispPackages_new.sbclPackages.lisp-unit2.overrideLispAttrs
+                  (_: {
+                    version = inputs.lisp-unit2-src.rev;
+                    src = inputs.lisp-unit2-src;
+                  });
+                  amethyst =
+                    prev.stdenv.mkDerivation (finalAttrs: {
+                      pname = "Amethyst-bin";
+                      version = "0.19.0";
+
+                      src = prev.fetchurl {
+                        url = "https://github.com/ianyh/Amethyst/releases/download/v0.19.0/Amethyst.zip";
+                        sha256 = "sha256-LdMfySoPpY4fPcDyGFP5xv5/s4a1XoleA7kHKhykZpA=";
+                      };
+
+                      nativeBuildInputs = [ prev.unzip ];
+
+                      phases = [ "buildPhase" "installPhase"];
+
+                      buildPhase = ''
+                        cp $src ./Amethyst.zip
+                        unzip Amethyst.zip
+                      '';
+
+                      installPhase = ''
+                        mkdir -p $out/Applications
+                        mv * $out/Applications/
+                      '';
+
+                      # preferLocalBuild = true;
+
+                      meta = with lib; {
+                        description = "Automatic tiling window manager for macOS à la xmonad";
+                        homepage = "https://ianyh.com/amethyst/";
+                        license = licenses.mit;
+                      };
+                    });
+                hu_dot_dwim_dot_defclass-star =
+                  prev.lispPackages_new.sbclPackages.hu_dot_dwim_dot_defclass-star.overrideLispAttrs (_: {
+                    src = final.fetchFromGitHub {
+                      owner = "hu-dwim";
+                      repo = "hu.dwim.defclass-star";
+                      rev = "2698bd93073f9ba27583351221a3a087fb595626";
+                      sha256 =
+                        "0v6bj3xbcpz98bkv3a2skz2dh0p50mqaflgkfbrzx1dzbkl1630y";
+                    };
+                  });
+                ospm = final.lispPackages_new.build-asdf-system {
+                  version = inputs.ospm-src.rev;
+                  src = inputs.ospm-src;
+                  pname = "ospm";
+                  lisp = final.lispPackages_new.sbcl;
+                  lispLibs = with final.lispPackages_new.sbclPackages;
+                    [
+                      alexandria
+                      calispel
+                      local-time
+                      moptilities
+                      named-readtables
+                      osicat
+                      serapeum
+                      trivia
+                    ] ++ [ final.hu_dot_dwim_dot_defclass-star ];
+                };
+               nyxt-3 = final.lispPackages_new.build-asdf-system {
+                  pname = "nyxt";
+                  version = inputs.nyxt-src.rev;
+                  src = inputs.nyxt-src;
+                  lisp = final.lispPackages_new.sbcl;
+                  systems = [
+                    "nyxt"
+                    "nyxt/history-tree"
+                    "nyxt/class-star"
+                    "nyxt/prompter"
+                    "nyxt/tests"
+                    "nyxt/history-tree/tests"
+                    "nyxt/class-star/tests"
+                    "nyxt/prompter/tests"
+                  ];
+                  lispLibs = with final.lispPackages_new.sbclPackages;
+                    [
+                      alexandria
+                      bordeaux-threads
+                      calispel
+                      cl-base64
+                      cl-containers
+                      cl-css
+                      cl-custom-hash-table
+                      enchant
+                      cl-gopher
+                      cl-html-diff
+                      cl-json
+                      cl-ppcre
+                      cl-ppcre-unicode
+                      cl-prevalence
+                      cl-qrencode
+                      str
+                      cl-tld
+                      closer-mop
+                      clss
+                      cluffer
+                      dexador
+                      flexi-streams
+                      iolib
+                      lass
+                      local-time
+                      log4cl
+                      lparallel
+                      montezuma
+                      moptilities
+                      named-readtables
+                      nfiles
+                      nhooks
+                      nkeymaps
+                      parenscript
+                      phos
+                      plump
+                      quri
+                      serapeum
+                      swank
+                      spinneret
+                      trivia
+                      trivial-clipboard
+                      trivial-features
+                      trivial-garbage
+                      trivial-package-local-nicknames
+                      trivial-types
+                      uiop
+                      unix-opts
+                      cl-cffi-gtk
+                      cl-webkit2
+                      mk-string-metrics
+                      dissect
+                      py-configparser
+                      slynk
+                    ] ++ (with final; [
+                      hu_dot_dwim_dot_defclass-star
+                      nyxt-asdf
+                      ndebug
+                      ospm
+                      lisp-unit2
+                      nsymbols
+                    ]);
+                };
                 # starship = master.legacyPackages.aarch64-darwin.starship;
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
-                #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
+                nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;
                 # nix = inputs.nix.packages.aarch64-darwin.nix.overrideAttrs (old: {
                 #   preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
                 # });
@@ -371,22 +703,6 @@
                     file = "nix-shell.plugin.zsh";
                     src = "${inputs.nix-zsh-shell-integration.outPath}";
                   };
-                yabai =
-                  let
-                    buildSymlinks = prev.runCommand "build-symlinks" { } ''
-                      mkdir -p $out/bin
-                      ln -s /usr/bin/xcrun /usr/bin/xcodebuild /usr/bin/tiffutil /usr/bin/qlmanage $out/bin
-                    ''; in
-                  prev.yabai.overrideAttrs (old: {
-                    src = prev.fetchFromGitHub {
-                      owner = "koekeishiya";
-                      repo = "yabai";
-                      rev = "5317b16d06e916f0e3844d3fe33d190e86c96ba9";
-                      sha256 = "sha256-yl5a6ESA8X4dTapXGd0D0db1rhwhuOWrjFAT1NDuygo=";
-                    };
-                    buildInputs = with prev.darwin.apple_sdk.frameworks; [ Carbon Cocoa ScriptingBridge prev.xxd SkyLight ];
-                    nativeBuildInputs = [ buildSymlinks ];
-                  });
               })
             ];
           }
