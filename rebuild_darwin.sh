@@ -1,3 +1,3 @@
-sudo nix build  .#darwinConfigurations.jrestivo-2.system -L # --show-trace
+sudo nix build  .#darwinConfigurations.jrestivo-2.system -L || exit 1 # --show-trace
 # sudo ./result/sw/bin/darwin-rebuild switch --flake $PWD
-sudo ./result/activate
+sudo ./result/activate || exit 1
