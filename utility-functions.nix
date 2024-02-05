@@ -40,14 +40,14 @@ in
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
 
                 nix = {
-                  package = pkgs.nixVeryUnstable;
+                  package = pkgs.nix;
                   nixPath =
                     let path = toString ./.; in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
-                  registry =
-                    (lib.mapAttrs'
-                      (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; }))
-                      inputs) // { ${hostName}.flake = self; };
+                  # registry =
+                  #   (lib.mapAttrs'
+                  #     (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; }))
+                  #     inputs) // { ${hostName}.flake = self; };
                 };
               };
 

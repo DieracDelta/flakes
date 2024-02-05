@@ -547,9 +547,14 @@ plugins:
     '';
   };
 
+  programs.atuin.enable = true;
+  programs.atuin.enableFishIntegration = true;
+  programs.atuin.enableZshIntegration = true;
+
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
+    enableFishIntegration = true;
   };
   xdg.configFile = with builtins; {
     "alacritty/alacritty.yml".text = builtins.readFile ../alacritty.yml;
@@ -557,4 +562,5 @@ plugins:
 
 
   manual.html.enable = true;
+
 }
