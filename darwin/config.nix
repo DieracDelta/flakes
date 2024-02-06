@@ -15,7 +15,7 @@
     # (lib.mesonEnable "tests" false)]; }))
     jq zoxide starship direnv fzf eza  bat tldr neofetch bottom htop coreutils fd
   # nix-du
-  nix-top nixfmt entr fish syncthing /* colmena */ tmux /* colima */ zellij jless git-filter-repo lima zathura emacs /* agda */  docker  awscli emacs /* neovide */ /* nyxt-3 */
+  nix-top nixfmt entr fish syncthing /* colmena */ zellij /* colima */ zellij jless git-filter-repo lima zathura emacs /* agda */  docker  awscli emacs /* neovide */ /* nyxt-3 */
   atuin
   ( rWrapper.override{ packages = with rPackages; [ ggplot2 dplyr xts languageserver ]; })
   # amethyst
@@ -27,6 +27,7 @@
   anki-bin
   nix
   ripgrep-all
+  fishPlugins.fzf-fish
 
   corepack_latest
   nodejs_latest

@@ -50,506 +50,315 @@
 
   programs.zellij = {
     enable = true;
-    settings = pkgs.lib.literalExpression ''
-    keybinds:
-    unbind: true
-    normal:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g',]
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's',]
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [NewPane: ]
-          key: [ Alt: 'n',]
-        - action: [MoveFocusOrTab: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocusOrTab: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    locked:
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'g',]
-    resize:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'n', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [Quit]
-          key: [Ctrl: 'q']
-        - action: [Resize: Left,]
-          key: [Char: 'h', Left,]
-        - action: [Resize: Down,]
-          key: [Char: 'j', Down,]
-        - action: [Resize: Up,]
-          key: [Char: 'k', Up, ]
-        - action: [Resize: Right,]
-          key: [Char: 'l', Right,]
-        - action: [Resize: Increase,]
-          key: [Char: '=']
-        - action: [Resize: Increase,]
-          key: [ Char: '+']
-        - action: [Resize: Decrease,]
-          key: [Char: '-']
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    pane:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'p', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [MoveFocus: Left,]
-          key: [ Char: 'h', Left,]
-        - action: [MoveFocus: Right,]
-          key: [ Char: 'l', Right,]
-        - action: [MoveFocus: Down,]
-          key: [ Char: 'j', Down,]
-        - action: [MoveFocus: Up,]
-          key: [ Char: 'k', Up,]
-        - action: [SwitchFocus,]
-          key: [Char: 'p']
-        - action: [NewPane: , SwitchToMode: Normal,]
-          key: [Char: 'n',]
-        - action: [NewPane: Down, SwitchToMode: Normal,]
-          key: [Char: 'd',]
-        - action: [NewPane: Right, SwitchToMode: Normal,]
-          key: [Char: 'r',]
-        - action: [CloseFocus, SwitchToMode: Normal,]
-          key: [Char: 'x',]
-        - action: [ToggleFocusFullscreen, SwitchToMode: Normal,]
-          key: [Char: 'f',]
-        - action: [TogglePaneFrames, SwitchToMode: Normal,]
-          key: [Char: 'z',]
-        - action: [ToggleFloatingPanes, SwitchToMode: Normal,]
-          key: [Char: 'w']
-        - action: [TogglePaneEmbedOrFloating, SwitchToMode: Normal,]
-          key: [Char: 'e']
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-        - action: [SwitchToMode: RenamePane, PaneNameInput: [0],]
-          key: [Char: 'c']
-    move:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'h', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [Quit]
-          key: [Ctrl: 'q']
-        - action: [MovePane: ,]
-          key: [Char: 'n', Char: "\t",]
-        - action: [MovePane: Left,]
-          key: [Char: 'h', Left,]
-        - action: [MovePane: Down,]
-          key: [Char: 'j', Down,]
-        - action: [MovePane: Up,]
-          key: [Char: 'k', Up, ]
-        - action: [MovePane: Right,]
-          key: [Char: 'l', Right,]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    tab:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 't', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [SwitchToMode: RenameTab, TabNameInput: [0],]
-          key: [Char: 'r']
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [GoToPreviousTab,]
-          key: [ Char: 'h', Left, Up, Char: 'k',]
-        - action: [GoToNextTab,]
-          key: [ Char: 'l', Right,Down, Char: 'j']
-        - action: [NewTab: , SwitchToMode: Normal,]
-          key: [ Char: 'n',]
-        - action: [CloseTab, SwitchToMode: Normal,]
-          key: [ Char: 'x',]
-        - action: [ToggleActiveSyncTab, SwitchToMode: Normal,]
-          key: [Char: 's']
-        - action: [GoToTab: 1, SwitchToMode: Normal,]
-          key: [ Char: '1',]
-        - action: [GoToTab: 2, SwitchToMode: Normal,]
-          key: [ Char: '2',]
-        - action: [GoToTab: 3, SwitchToMode: Normal,]
-          key: [ Char: '3',]
-        - action: [GoToTab: 4, SwitchToMode: Normal,]
-          key: [ Char: '4',]
-        - action: [GoToTab: 5, SwitchToMode: Normal,]
-          key: [ Char: '5',]
-        - action: [GoToTab: 6, SwitchToMode: Normal,]
-          key: [ Char: '6',]
-        - action: [GoToTab: 7, SwitchToMode: Normal,]
-          key: [ Char: '7',]
-        - action: [GoToTab: 8, SwitchToMode: Normal,]
-          key: [ Char: '8',]
-        - action: [GoToTab: 9, SwitchToMode: Normal,]
-          key: [ Char: '9',]
-        - action: [ToggleTab]
-          key: [ Char: "\t" ]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    scroll:
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 's', Char: ' ', Char: "\n", Esc]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g',]
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [SwitchToMode: Session,]
-          key: [Ctrl: 'o',]
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [ScrollToBottom, SwitchToMode: Normal,]
-          key: [Ctrl: 'c',]
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [ScrollDown,]
-          key: [Char: 'j', Down,]
-        - action: [ScrollUp,]
-          key: [Char: 'k', Up,]
-        - action: [PageScrollDown,]
-          key: [Ctrl: 'f', PageDown, Right, Char: 'l',]
-        - action: [PageScrollUp,]
-          key: [Ctrl: 'b', PageUp, Left, Char: 'h',]
-        - action: [HalfPageScrollDown,]
-          key: [Char: 'd',]
-        - action: [HalfPageScrollUp,]
-          key: [Char: 'u',]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    renametab:
-        - action: [SwitchToMode: Normal,]
-          key: [Char: "\n", Ctrl: 'c', Esc]
-        - action: [TabNameInput: [27] , SwitchToMode: Tab,]
-          key: [Esc,]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    renamepane:
-        - action: [SwitchToMode: Normal,]
-          key: [Char: "\n", Ctrl: 'c', Esc]
-        - action: [PaneNameInput: [27] , SwitchToMode: Pane,]
-          key: [Esc,]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    session:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tmux,]
-          key: [Ctrl: 'b',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'o', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [Detach,]
-          key: [Char: 'd',]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-    tmux:
-        - action: [SwitchToMode: Locked,]
-          key: [Ctrl: 'g']
-        - action: [SwitchToMode: Resize,]
-          key: [Ctrl: 'n',]
-        - action: [SwitchToMode: Pane,]
-          key: [Ctrl: 'p',]
-        - action: [SwitchToMode: Move,]
-          key: [Ctrl: 'h',]
-        - action: [SwitchToMode: Tab,]
-          key: [Ctrl: 't',]
-        - action: [SwitchToMode: Normal,]
-          key: [Ctrl: 'o', Char: "\n", Char: ' ', Esc]
-        - action: [SwitchToMode: Scroll,]
-          key: [Ctrl: 's']
-        - action: [Quit,]
-          key: [Ctrl: 'q',]
-        - action: [NewPane: Down, SwitchToMode: Normal,]
-          key: [Char: "\"",]
-        - action: [NewPane: Right, SwitchToMode: Normal,]
-          key: [Char: '%',]
-        - action: [ToggleFocusFullscreen, SwitchToMode: Normal,]
-          key: [Char: 'z',]
-        - action: [NewTab: , SwitchToMode: Normal,]
-          key: [ Char: 'c',]
-        - action: [SwitchToMode: RenameTab, TabNameInput: [0],]
-          key: [Char: ',']
-        - action: [GoToPreviousTab, SwitchToMode: Normal,]
-          key: [ Char: 'p']
-        - action: [GoToNextTab, SwitchToMode: Normal,]
-          key: [ Char: 'n']
-        - action: [MoveFocus: Left, SwitchToMode: Normal,]
-          key: [ Left,]
-        - action: [MoveFocus: Right, SwitchToMode: Normal,]
-          key: [ Right,]
-        - action: [MoveFocus: Down, SwitchToMode: Normal,]
-          key: [ Down,]
-        - action: [MoveFocus: Up, SwitchToMode: Normal,]
-          key: [ Up,]
-        - action: [NewPane: ,]
-          key: [ Alt: 'n',]
-        - action: [MoveFocus: Left,]
-          key: [ Alt: 'h',]
-        - action: [MoveFocus: Right,]
-          key: [ Alt: 'l',]
-        - action: [MoveFocus: Down,]
-          key: [ Alt: 'j',]
-        - action: [MoveFocus: Up,]
-          key: [ Alt: 'k',]
-        - action: [FocusPreviousPane,]
-          key: [ Alt: '[',]
-        - action: [FocusNextPane,]
-          key: [ Alt: ']',]
-        - action: [Resize: Increase,]
-          key: [ Alt: '=']
-        - action: [Resize: Increase,]
-          key: [ Alt: '+']
-        - action: [Resize: Decrease,]
-          key: [ Alt: '-']
-plugins:
-    - path: tab-bar
-      tag: tab-bar
-    - path: status-bar
-      tag: status-bar
-    - path: strider
-      tag: strider
-
-    '';
+    enableFishIntegration = true;
   };
-
   programs.atuin.enable = true;
   programs.atuin.enableFishIntegration = true;
   programs.atuin.enableZshIntegration = true;
+
+  home.file.zellij = {
+    target = ".config/zellij/config.kdl";
+    text = ''
+// If you'd like to override the default keybindings completely, be sure to change "keybinds" to "keybinds clear-defaults=true"
+keybinds {
+    normal {
+        unbind "Ctrl n"
+        unbind "Ctrl p"
+        unbind "Ctrl o"
+        // uncomment this and adjust key if using copy_on_select=false
+        // bind "Alt c" { Copy; }
+    }
+    locked {
+        bind "Ctrl g" { SwitchToMode "Normal"; }
+    }
+    resize {
+        bind "h" "Left" { Resize "Increase Left"; }
+        bind "j" "Down" { Resize "Increase Down"; }
+        bind "k" "Up" { Resize "Increase Up"; }
+        bind "l" "Right" { Resize "Increase Right"; }
+        bind "H" { Resize "Decrease Left"; }
+        bind "J" { Resize "Decrease Down"; }
+        bind "K" { Resize "Decrease Up"; }
+        bind "L" { Resize "Decrease Right"; }
+        bind "=" "+" { Resize "Increase"; }
+        bind "-" { Resize "Decrease"; }
+    }
+    pane {
+        bind "h" "Left" { MoveFocus "Left"; }
+        bind "l" "Right" { MoveFocus "Right"; }
+        bind "j" "Down" { MoveFocus "Down"; }
+        bind "k" "Up" { MoveFocus "Up"; }
+        bind "p" { SwitchFocus; }
+        bind "n" { NewPane; SwitchToMode "Normal"; }
+        bind "d" { NewPane "Down"; SwitchToMode "Normal"; }
+        bind "r" { NewPane "Right"; SwitchToMode "Normal"; }
+        bind "x" { CloseFocus; SwitchToMode "Normal"; }
+        bind "f" { ToggleFocusFullscreen; SwitchToMode "Normal"; }
+        bind "z" { TogglePaneFrames; SwitchToMode "Normal"; }
+        bind "w" { ToggleFloatingPanes; SwitchToMode "Normal"; }
+        bind "e" { TogglePaneEmbedOrFloating; SwitchToMode "Normal"; }
+        bind "c" { SwitchToMode "RenamePane"; PaneNameInput 0;}
+    }
+    move {
+        bind "Ctrl h" { SwitchToMode "Normal"; }
+        bind "n" "Tab" { MovePane; }
+        bind "p" { MovePaneBackwards; }
+        bind "h" "Left" { MovePane "Left"; }
+        bind "j" "Down" { MovePane "Down"; }
+        bind "k" "Up" { MovePane "Up"; }
+        bind "l" "Right" { MovePane "Right"; }
+    }
+    tab {
+        bind "Ctrl t" { SwitchToMode "Normal"; }
+        bind "r" { SwitchToMode "RenameTab"; TabNameInput 0; }
+        bind "h" "Left" "Up" "k" { GoToPreviousTab; }
+        bind "l" "Right" "Down" "j" { GoToNextTab; }
+        bind "n" { NewTab; SwitchToMode "Normal"; }
+        bind "x" { CloseTab; SwitchToMode "Normal"; }
+        bind "s" { ToggleActiveSyncTab; SwitchToMode "Normal"; }
+        bind "b" { BreakPane; SwitchToMode "Normal"; }
+        bind "]" { BreakPaneRight; SwitchToMode "Normal"; }
+        bind "[" { BreakPaneLeft; SwitchToMode "Normal"; }
+        bind "1" { GoToTab 1; SwitchToMode "Normal"; }
+        bind "2" { GoToTab 2; SwitchToMode "Normal"; }
+        bind "3" { GoToTab 3; SwitchToMode "Normal"; }
+        bind "4" { GoToTab 4; SwitchToMode "Normal"; }
+        bind "5" { GoToTab 5; SwitchToMode "Normal"; }
+        bind "6" { GoToTab 6; SwitchToMode "Normal"; }
+        bind "7" { GoToTab 7; SwitchToMode "Normal"; }
+        bind "8" { GoToTab 8; SwitchToMode "Normal"; }
+        bind "9" { GoToTab 9; SwitchToMode "Normal"; }
+        bind "Tab" { ToggleTab; }
+    }
+    scroll {
+        bind "q" { SwitchToMode "Normal"; }
+        bind "/" {EditScrollback; SwitchToMode "Normal"; }
+        bind "s" { SwitchToMode "EnterSearch"; SearchInput 0; }
+        bind "j" "Down" { ScrollDown; }
+        bind "k" "Down" { ScrollUp; }
+        bind "G" { ScrollToBottom; SwitchToMode "Normal"; }
+        bind "g" { ScrollToTop; SwitchToMode "Normal"; }
+        bind "Ctrl d" { HalfPageScrollDown; }
+        bind "Ctrl u" { HalfPageScrollUp; }
+    }
+    search {
+        bind "j" "Down" { ScrollDown; }
+        bind "k" "Up" { ScrollUp; }
+        bind "d" { HalfPageScrollDown; }
+        bind "u" { HalfPageScrollUp; }
+        bind "q" { SwitchToMode "Normal"; }
+
+        bind "G" { ScrollToBottom; SwitchToMode "Normal"; }
+        bind "n" { Search "down"; }
+        bind "p" { Search "up"; }
+        bind "c" { SearchToggleOption "CaseSensitivity"; }
+    }
+    entersearch {
+    }
+    renametab {
+    }
+    renamepane {
+    }
+    session {
+        bind "d" { Detach; }
+        bind "w" {
+            LaunchOrFocusPlugin "zellij:session-manager" {
+                floating true
+                move_to_focused_tab true
+            };
+            SwitchToMode "Normal"
+        }
+    }
+    tmux {
+        bind "[" { SwitchToMode "Scroll"; }
+        bind "Ctrl b" { Write 2; SwitchToMode "Normal"; }
+        bind "\"" { NewPane "Down"; SwitchToMode "Normal"; }
+        bind "%" { NewPane "Right"; SwitchToMode "Normal"; }
+        bind "z" { ToggleFocusFullscreen; SwitchToMode "Normal"; }
+        bind "c" { NewTab; SwitchToMode "Normal"; }
+        bind "," { SwitchToMode "RenameTab"; }
+        bind "p" { GoToPreviousTab; SwitchToMode "Normal"; }
+        bind "n" { GoToNextTab; SwitchToMode "Normal"; }
+        bind "Left" { MoveFocus "Left"; SwitchToMode "Normal"; }
+        bind "Right" { MoveFocus "Right"; SwitchToMode "Normal"; }
+        bind "Down" { MoveFocus "Down"; SwitchToMode "Normal"; }
+        bind "Up" { MoveFocus "Up"; SwitchToMode "Normal"; }
+        bind "h" { MoveFocus "Left"; SwitchToMode "Normal"; }
+        bind "l" { MoveFocus "Right"; SwitchToMode "Normal"; }
+        bind "j" { MoveFocus "Down"; SwitchToMode "Normal"; }
+        bind "k" { MoveFocus "Up"; SwitchToMode "Normal"; }
+        bind "o" { FocusNextPane; }
+        bind "d" { Detach; }
+        bind "Space" { NextSwapLayout; }
+        bind "x" { CloseFocus; SwitchToMode "Normal"; }
+    }
+    shared_except "locked" {
+        bind "Ctrl g" { SwitchToMode "Locked"; }
+        bind "Ctrl q" { Quit; }
+        bind "Alt n" { NewPane; }
+        bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+        bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+        bind "Alt =" "Alt +" { Resize "Increase"; }
+        bind "Alt -" { Resize "Decrease"; }
+        bind "Alt [" { PreviousSwapLayout; }
+        bind "Alt ]" { NextSwapLayout; }
+    }
+    shared_except "normal" "locked" {
+        bind "Enter" "Esc" { SwitchToMode "Normal"; }
+    }
+    shared_except "pane" "locked" {
+    }
+    shared_except "resize" "locked" {
+    }
+    shared_except "scroll" "locked" {
+        bind "Ctrl s" { SwitchToMode "Scroll"; }
+    }
+    shared_except "session" "locked" {
+        bind "Ctrl o" { SwitchToMode "Session"; }
+    }
+    shared_except "tab" "locked" {
+        bind "Ctrl t" { SwitchToMode "Tab"; }
+    }
+    shared_except "move" "locked" {
+        bind "Ctrl h" { SwitchToMode "Move"; }
+    }
+    shared_except "tmux" "locked" {
+        bind "Ctrl b" { SwitchToMode "Tmux"; }
+    }
+}
+
+plugins {
+    tab-bar { path "tab-bar"; }
+    status-bar { path "status-bar"; }
+    strider { path "strider"; }
+    compact-bar { path "compact-bar"; }
+    session-manager { path "session-manager"; }
+}
+
+// Choose what to do when zellij receives SIGTERM, SIGINT, SIGQUIT or SIGHUP
+// eg. when terminal window with an active zellij session is closed
+// Options:
+//   - detach (Default)
+//   - quit
+//
+// on_force_close "quit"
+
+//  Send a request for a simplified ui (without arrow fonts) to plugins
+//  Options:
+//    - true
+//    - false (Default)
+//
+// simplified_ui true
+
+// Choose the path to the default shell that zellij will use for opening new panes
+// Default: $SHELL
+//
+// default_shell "fish"
+
+// Choose the path to override cwd that zellij will use for opening new panes
+//
+// default_cwd ""
+
+// Toggle between having pane frames around the panes
+// Options:
+//   - true (default)
+//   - false
+//
+// pane_frames true
+
+// Toggle between having Zellij lay out panes according to a predefined set of layouts whenever possible
+// Options:
+//   - true (default)
+//   - false
+//
+// auto_layout true
+
+// Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
+// Options:
+//   - true (default)
+//   - false
+//
+// session_serialization false
+
+// Whether pane viewports are serialized along with the session, default is false
+// Options:
+//   - true
+//   - false (default)
+// serialize_pane_viewport true
+
+// Scrollback lines to serialize along with the pane viewport when serializing sessions, 0
+// defaults to the scrollback size. If this number is higher than the scrollback size, it will
+// also default to the scrollback size. This does nothing if `serialize_pane_viewport` is not true.
+//
+// scrollback_lines_to_serialize 10000
+
+mouse_mode true
+
+scroll_buffer_size 1000000
+
+// Provide a command to execute when copying text. The text will be piped to
+// the stdin of the program to perform the copy. This can be used with
+// terminal emulators which do not support the OSC 52 ANSI control sequence
+// that will be used by default if this option is not set.
+// Examples:
+//
+// copy_command "xclip -selection clipboard" // x11
+// copy_command "wl-copy"                    // wayland
+// copy_command "pbcopy"                     // osx
+
+// Choose the destination for copied text
+// Allows using the primary selection buffer (on x11/wayland) instead of the system clipboard.
+// Does not apply when using copy_command.
+// Options:
+//   - system (default)
+//   - primary
+//
+copy_clipboard "primary"
+
+// Enable or disable automatic copy (and clear) of selection when releasing mouse
+// Default: true
+//
+// copy_on_select false
+
+// Path to the default editor to use to edit pane scrollbuffer
+// Default: $EDITOR or $VISUAL
+//
+scrollback_editor "/Users/jrestivo/dev/vimconfig/result/bin/nvim"
+
+// When attaching to an existing session with other users,
+// should the session be mirrored (true)
+// or should each user have their own cursor (false)
+// Default: false
+//
+// mirror_session true
+
+// The folder in which Zellij will look for layouts
+//
+// layout_dir "/path/to/my/layout_dir"
+
+        themes {
+          // gruvbox
+          gruvbox-dark {
+            fg "#D5C4A1"
+            bg "#282828"
+            black "#3C3836"
+            red "#CC241D"
+            green "#98971A"
+            yellow "#D79921"
+            blue "#3C8588"
+            magenta "#B16286"
+            cyan "#689D6A"
+            white "#FBF1C7"
+            orange "#D65D0E"
+          }
+        }
+        theme "gruvbox-dark"
+        simplified_ui true
+        default_layout "compact"
+    '';
+  };
 
   programs.zoxide = {
     enable = true;

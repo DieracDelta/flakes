@@ -37,9 +37,11 @@ in
 
       #programs.zsh.defaultKeymap = "vicmd";
 
-      plugins = [];
+      plugins = [ ];
+
 
       # aliases
+
       shellAliases = {
         ga = "git add";
         gc = "git commit";
