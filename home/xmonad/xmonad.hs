@@ -131,7 +131,6 @@ myKeys conf@XConfig { XMonad.modMask = modm } =
        , ((modm, xK_d), spawn "rofi -show combi -combi-modi window,drun")
        , ((modm .|. shiftMask, xK_d), spawn "rofi -show run -sidebar-mode")
        , ((modm .|. shiftMask, xK_x)     , kill1)
-       , ((modm, xK_x)                   , kill)
        , ((modm, xK_space)               , sendMessage NextLayout)
        , ((modm .|. shiftMask, xK_space) , setLayout $ XMonad.layoutHook conf)
        , ((modm, xK_n)                   , refresh)

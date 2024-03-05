@@ -66,7 +66,7 @@ in
         la = "l -a";
         list_gens = "nix-env -p /nix/var/nix/profiles/system --list-generations";
         ll = "ls -l";
-        ls = "exa -h --git --color=auto --group-directories-first -s extension";
+        ls = "eza -h --git --color=auto --group-directories-first -s extension";
         lstree = "ls --tree";
         nd = "nix develop -c zsh ";
         nix-repl = "source /etc/set-environment && nix repl $(echo $NIX_PATH | perl -pe 's|.*(/nix/store/.*-source/repl.nix).*|\\1|')";

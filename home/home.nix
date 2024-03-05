@@ -595,149 +595,149 @@
   programs.notmuch = {
     enable = true;
   };
-  programs.neomutt = {
-    enable = true;
-    sidebar = {
-      enable = true;
-      shortPath = false;
-      format = "%D%?F? [%F]?%* %?N?%N/?%S";
-      width = 56;
-    };
-    extraConfig =
-    let
-      colorFile =
-        "${pkgs.mutt-colors-solarized}/mutt-colors-solarized-dark-16.muttrc";
-      findAllMailboxes =
-        let
-          # A script to take the paths to mail directories and turn them into
-          # mailbox-name mailbox-path pairs for mutt.
-          mkMailboxDescription = pkgs.writeScript "mailbox-description.pl" ''
-            #!${pkgs.perl}/bin/perl
-            BEGIN {
-              $basepath = q{${config.accounts.email.maildirBasePath}/}
-            }
-            while (<>) {
-              chomp;
-              $boxname = s/\Q$basepath\E//r;
-              print "\"$boxname\" ";
-              print "\"$_\" ";
-            }
-          '';
-          in
-        pkgs.writeScript "find-mailboxes.sh" ''
-          #!${pkgs.stdenv.shell}
-          ${pkgs.findutils}/bin/find \
-                "${config.accounts.email.maildirBasePath}" \
-                -type d \
-                \( -name cur -o -name new \) \
-                \( \! -empty \) \
-                -printf '%h\n' \
-            | ${pkgs.coreutils}/bin/sort \
-            | ${pkgs.coreutils}/bin/uniq \
-            | ${mkMailboxDescription}
-        '';
-        in
-    ''
-      # Mark anything marked by SpamAssassin as probably spam.
-      spam "X-Spam-Score: ([0-9\\.]+).*" "SA: %1"
-      # Only show the basic mail headers.
-      ignore *
-      unignore From To Cc Bcc Date Subject
-      # Show headers in the following order.
-      unhdr_order *
-      hdr_order From: To: Cc: Bcc: Date: Subject:
-      # Load solarized colors.
-      source "${colorFile}"
-      # Find all mailboxes dynamically.
-      named-mailboxes `${findAllMailboxes}`
-    '';
-    settings = {
-      #mailcap_path = "./mailcap"
-#   # text/html; ~/.config/mutt/bin/openfile %s ; nametemplate=%s.html
-#   text/html; lynx -assume_charset=%{charset} -display_charset=utf-8 -dump %s; nametemplate=%s.html; copiousoutput;
-#   text/plain; $EDITOR %s ;
-#   image/*; ~/.config/mutt/bin/openfile %s ; copiousoutput
-#   video/*; setsid mpv --quiet %s &; copiousoutput
-#   application/pgp-encrypted; gpg -d '%s'; copiousoutput;
-#   # application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; sc-im %s;
-#   application/*; ~/.config/mutt/bin/openfile %s ;
-      assumed_charset = "iso-8859-1";
-      forward_format = "\"Fwd: %s\"";
-      edit_headers = "yes";
-      history = "10000";
-      history_file = "${config.xdg.configHome}/neomutt/history";
-      imap_check_subscribed = "yes";
-      imap_keepalive = "300";
-      imap_pipeline_depth = "5";
-      mail_check = "60";
-      mbox_type = "Maildir";
-      menu_scroll = "yes";
-      pager_context = "5";
-      pager_format = "\" %C - %[%H:%M] %.20v, %s%* %?H? [%H] ?\"";
-      pager_index_lines = "10";
-      pager_stop = "yes";
-      #pager = "lynx";
-      reverse_name = "yes";
-      send_charset = "utf-8";
-      sidebar_sort_method = "path";
-      sort_aux = "last-date-received";
-      spam_separator = ", ";
-      strict_threads = "yes";
-      tilde = "yes";
-      # https://chipsenkbeil.com/posts/applying-gpg-and-yubikey-part-4-signing/
-      # Use GPGME backend instead of classic code
-      crypt_use_gpgme = "yes";
-      # Attempt to cryptographically sign outgoing messages
-      crypt_autosign = "yes";
-      # Always attempt to veryify email signatures
-      # NOTE: Set by d"efault
-      crypt_autopgp = "yes";
-      crypt_verify_sig = "yes";
-      # Automatically sign replies to signed emails
-      crypt_replysign = "yes";
-      # Automatically encrypt replies to encrypted emails
-      # NOTE: Set by default
-      crypt_replyencrypt = "yes";
-      # Automatically sign replies to encrypted emails, gets
-      # around issues with pure replysign
-      crypt_replysignencrypted = "yes";
-      # Only encrypt if all recipients are found in public key
-      crypt_opportunistic_encrypt = "yes";
-      # Use a gpg-agent for private key password prompts
-      # NOTE: Set by default because GnuPG 2.1+ requires it
-      pgp_use_gpg_agent = "yes";
-      # Check status of gpg commands using file descriptor output from
-      # decrypt and decode commands
-      # NOTE: Set by default
-      pgp_check_gpg_decrypt_status_fd = "yes";
-      # When encrypting email, always include own key to be able to read sent mail
-      pgp_self_encrypt = "yes";
-      # Set the key to use for encryption/decryption of email
-      pgp_default_key = "\"65AF3C834FD4070F\"";
-      # Set the key to use for signing email
-      pgp_sign_as = "\"747652E87F063539\"";
-    };
-    sort = "threads";
-    binds =
-      let
-        mkBind = m: k: a: { action = a; key = k; map = m; };
-        repBind = ms: k: a: map (m: mkBind m k a) ms;
-      in
-       # Ctrl-Shift-P - Previous Mailbox*/
-      (repBind [ "index" "pager" ] "\\CP" "sidebar-prev") ++
-      # Ctrl-Shift-N - Next Mailbox*/
-      (repBind [ "index" "pager" ] "\\CN" "sidebar-next") ++
-       # Ctrl-Shift-O - Open Highlighted Mailbox*/
-      (repBind [ "index" "pager" ] "\\CO" "sidebar-open")
-      ;
-
-    macros = let
-      mkMacro = m: k: a: { action = a; key = k; map = m; };
-      repMacro = ms: k: a: map (m: mkMacro m k a) ms; in
-      [(mkMacro "index" "I" "!mbsync -a^M")];
-
-    vimKeys = true;
-  };
+#   programs.neomutt = {
+#     enable = true;
+#     sidebar = {
+#       enable = true;
+#       shortPath = false;
+#       format = "%D%?F? [%F]?%* %?N?%N/?%S";
+#       width = 56;
+#     };
+#     extraConfig =
+#     let
+#       colorFile =
+#         "${pkgs.mutt-colors-solarized}/mutt-colors-solarized-dark-16.muttrc";
+#       findAllMailboxes =
+#         let
+#           # A script to take the paths to mail directories and turn them into
+#           # mailbox-name mailbox-path pairs for mutt.
+#           mkMailboxDescription = pkgs.writeScript "mailbox-description.pl" ''
+#             #!${pkgs.perl}/bin/perl
+#             BEGIN {
+#               $basepath = q{${config.accounts.email.maildirBasePath}/}
+#             }
+#             while (<>) {
+#               chomp;
+#               $boxname = s/\Q$basepath\E//r;
+#               print "\"$boxname\" ";
+#               print "\"$_\" ";
+#             }
+#           '';
+#           in
+#         pkgs.writeScript "find-mailboxes.sh" ''
+#           #!${pkgs.stdenv.shell}
+#           ${pkgs.findutils}/bin/find \
+#                 "${config.accounts.email.maildirBasePath}" \
+#                 -type d \
+#                 \( -name cur -o -name new \) \
+#                 \( \! -empty \) \
+#                 -printf '%h\n' \
+#             | ${pkgs.coreutils}/bin/sort \
+#             | ${pkgs.coreutils}/bin/uniq \
+#             | ${mkMailboxDescription}
+#         '';
+#         in
+#     ''
+#       # Mark anything marked by SpamAssassin as probably spam.
+#       spam "X-Spam-Score: ([0-9\\.]+).*" "SA: %1"
+#       # Only show the basic mail headers.
+#       ignore *
+#       unignore From To Cc Bcc Date Subject
+#       # Show headers in the following order.
+#       unhdr_order *
+#       hdr_order From: To: Cc: Bcc: Date: Subject:
+#       # Load solarized colors.
+#       source "${colorFile}"
+#       # Find all mailboxes dynamically.
+#       named-mailboxes `${findAllMailboxes}`
+#     '';
+#     settings = {
+#       #mailcap_path = "./mailcap"
+# #   # text/html; ~/.config/mutt/bin/openfile %s ; nametemplate=%s.html
+# #   text/html; lynx -assume_charset=%{charset} -display_charset=utf-8 -dump %s; nametemplate=%s.html; copiousoutput;
+# #   text/plain; $EDITOR %s ;
+# #   image/*; ~/.config/mutt/bin/openfile %s ; copiousoutput
+# #   video/*; setsid mpv --quiet %s &; copiousoutput
+# #   application/pgp-encrypted; gpg -d '%s'; copiousoutput;
+# #   # application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; sc-im %s;
+# #   application/*; ~/.config/mutt/bin/openfile %s ;
+#       assumed_charset = "iso-8859-1";
+#       forward_format = "\"Fwd: %s\"";
+#       edit_headers = "yes";
+#       history = "10000";
+#       history_file = "${config.xdg.configHome}/neomutt/history";
+#       imap_check_subscribed = "yes";
+#       imap_keepalive = "300";
+#       imap_pipeline_depth = "5";
+#       mail_check = "60";
+#       mbox_type = "Maildir";
+#       menu_scroll = "yes";
+#       pager_context = "5";
+#       pager_format = "\" %C - %[%H:%M] %.20v, %s%* %?H? [%H] ?\"";
+#       pager_index_lines = "10";
+#       pager_stop = "yes";
+#       #pager = "lynx";
+#       reverse_name = "yes";
+#       send_charset = "utf-8";
+#       sidebar_sort_method = "path";
+#       sort_aux = "last-date-received";
+#       spam_separator = ", ";
+#       strict_threads = "yes";
+#       tilde = "yes";
+#       # https://chipsenkbeil.com/posts/applying-gpg-and-yubikey-part-4-signing/
+#       # Use GPGME backend instead of classic code
+#       crypt_use_gpgme = "yes";
+#       # Attempt to cryptographically sign outgoing messages
+#       crypt_autosign = "yes";
+#       # Always attempt to veryify email signatures
+#       # NOTE: Set by d"efault
+#       crypt_autopgp = "yes";
+#       crypt_verify_sig = "yes";
+#       # Automatically sign replies to signed emails
+#       crypt_replysign = "yes";
+#       # Automatically encrypt replies to encrypted emails
+#       # NOTE: Set by default
+#       crypt_replyencrypt = "yes";
+#       # Automatically sign replies to encrypted emails, gets
+#       # around issues with pure replysign
+#       crypt_replysignencrypted = "yes";
+#       # Only encrypt if all recipients are found in public key
+#       crypt_opportunistic_encrypt = "yes";
+#       # Use a gpg-agent for private key password prompts
+#       # NOTE: Set by default because GnuPG 2.1+ requires it
+#       pgp_use_gpg_agent = "yes";
+#       # Check status of gpg commands using file descriptor output from
+#       # decrypt and decode commands
+#       # NOTE: Set by default
+#       pgp_check_gpg_decrypt_status_fd = "yes";
+#       # When encrypting email, always include own key to be able to read sent mail
+#       pgp_self_encrypt = "yes";
+#       # Set the key to use for encryption/decryption of email
+#       pgp_default_key = "\"65AF3C834FD4070F\"";
+#       # Set the key to use for signing email
+#       pgp_sign_as = "\"747652E87F063539\"";
+#     };
+#     sort = "threads";
+#     binds =
+#       let
+#         mkBind = m: k: a: { action = a; key = k; map = m; };
+#         repBind = ms: k: a: map (m: mkBind m k a) ms;
+#       in
+#        # Ctrl-Shift-P - Previous Mailbox*/
+#       (repBind [ "index" "pager" ] "\\CP" "sidebar-prev") ++
+#       # Ctrl-Shift-N - Next Mailbox*/
+#       (repBind [ "index" "pager" ] "\\CN" "sidebar-next") ++
+#        # Ctrl-Shift-O - Open Highlighted Mailbox*/
+#       (repBind [ "index" "pager" ] "\\CO" "sidebar-open")
+#       ;
+#
+#     macros = let
+#       mkMacro = m: k: a: { action = a; key = k; map = m; };
+#       repMacro = ms: k: a: map (m: mkMacro m k a) ms; in
+#       [(mkMacro "index" "I" "!mbsync -a^M")];
+#
+#     vimKeys = true;
+#   };
   programs.msmtp.enable = true;
   accounts.email.accounts.jrestivo = {
     imapnotify = {

@@ -50,10 +50,10 @@ let
     libGL
     libGLU
     glxinfo
-    obsidian
+    # obsidian
   ];
   yubikeyPack = with pkgs; [
-    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools
+    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools vulkan-loader vulkan-volk vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vulkan-cts vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
   ];
 in
 {

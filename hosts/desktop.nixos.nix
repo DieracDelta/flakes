@@ -2,7 +2,8 @@
 
 {
 
-  nix.settings.allowed-users = [ "jrestivo" ];
+  nix.settings.allowed-users = [ "jrestivo" "siraben"];
+  nix.settings.trusted-users = [ "jrestivo" ];
   imports = [ ./hw/desktop.nix ];
 
   custom_modules.jellyfin.enable = true;

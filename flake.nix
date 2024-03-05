@@ -3,9 +3,9 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
-    nyxt_nixpkgs = {
-      url = "github:dariof4/nixpkgs/nyxt-31";
-    };
+    # nyxt_nixpkgs = {
+    #   url = "github:dariof4/nixpkgs/nyxt-31";
+    # };
     nix = {
       url = "github:NixOS/nix";
     };
@@ -19,11 +19,11 @@
     };
     nixpkgs = {
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs";
+      url = "github:NixOS/nixpkgs/master";
     };
 
     naersk = {
-      url = github:nmattia/naersk;
+      url = "github:nmattia/naersk";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -73,8 +73,7 @@
     };
 
     flake-utils = {
-      url = github:numtide/flake-utils;
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:numtide/flake-utils";
     };
 
     nix-doom-emacs = {
@@ -85,7 +84,6 @@
     };
 
     deploy-rs = {
-      inputs.naersk.follows = "naersk";
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -103,13 +101,11 @@
     nix-fast-syntax-highlighting = {
       url = "github:zdharma-continuum/fast-syntax-highlighting";
       flake = false;
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-zsh-shell-integration = {
       url = "github:chisui/zsh-nix-shell";
       flake = false;
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     rust-filehost = {
@@ -125,7 +121,7 @@
   outputs =
     inputs@{ self
     , nixpkgs
-    , nyxt_nixpkgs
+    # , nyxt_nixpkgs
     , rust-overlay
     , home-manager
     , emacs-overlay
@@ -213,7 +209,7 @@
         })
         (final: prev:
           {
-            nyxt = nyxt_nixpkgs.legacyPackages.${system}.nyxt;
+            # nyxt = nyxt_nixpkgs.legacyPackages.${system}.nyxt;
             ethminer = unstable-pkgs.ethminer.overrideAttrs (prevAttrs:
               {
                 cmakeFlags = prevAttrs.cmakeFlags ++ [ "-DUSE_SYS_OPENCL=ON" "-DUSE_SYS_OPENCL=ON" ];

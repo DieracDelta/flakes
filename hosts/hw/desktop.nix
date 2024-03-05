@@ -17,7 +17,7 @@
       "aarch64-linux" "armv7l-linux" "riscv64-linux"
   ];
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
-  boot.kernelPackages = pkgs.linuxPackages_5_15;
+  # boot.kernelPackages = pkgs.linuxPackages_5_15;
 
 
   boot.kernelModules = [ "kvm-amd" "amdgpu" ];
@@ -46,5 +46,6 @@
   # end hw file stuff
 
   hardware.cpu.amd.updateMicrocode = true;
+  systemd.services.NetworkManager-wait-online.enable = lib.mkForce false;
 
 }

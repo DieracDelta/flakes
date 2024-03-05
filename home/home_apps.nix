@@ -15,6 +15,7 @@ let
       # hnix
     ];
   devPack = with pkgs; [
+    emacs
     brave
     zellij
     v4l-utils
@@ -62,10 +63,10 @@ let
     /*gcc*/
     gnumake
     openssl
-    pkgconfig
+    pkg-config
     dog
     hwinfo
-    lean
+    # lean
   ];
   /* user */
   appPack = with pkgs; [
@@ -73,8 +74,8 @@ let
     lshw
     teams
     bluejeans-gui
-    blender
-    element-desktop
+    # blender
+    # element-desktop
     discord
     zathura
     mumble
@@ -89,7 +90,7 @@ let
     keybase
     keybase-gui
     kbfs
-    obs-studio
+    # obs-studio
     graphviz
     minecraft
     signal-desktop
@@ -106,7 +107,7 @@ let
   ];
   /* user */
   workstationPack = with pkgs; [
-    nyxt
+    # nyxt
     zulip
     termite
     pavucontrol
@@ -115,7 +116,7 @@ let
     noip
     remmina
     firefox
-    pkgs.unstable.chromium
+    # pkgs.unstable.chromium
     flameshot
     urlscan
     lynx
@@ -126,7 +127,7 @@ let
     android-studio
     bottom
     #gimp
-    tdesktop
+    # tdesktop
     exodus
     mpv
     youtube-dl
@@ -159,12 +160,12 @@ let
   ];
   texPack = with pkgs;
     [
-      pdftk
-      (
-        texlive.combine {
-          inherit (texlive) scheme-medium lipsum fmtcount datetime;
-        }
-      )
+      # pdftk
+      # (
+      #   texlive.combine {
+      #     inherit (texlive) scheme-medium lipsum fmtcount datetime;
+      #   }
+      # )
     ];
   languageserverPack = with pkgs; [
     shellcheck

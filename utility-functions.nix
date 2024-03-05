@@ -17,7 +17,8 @@ in
     inherit system overlays;
     config = {
       allowUnfree = true;
-      permittedInsecurePackages = [ "electron-13.6.9" ];
+      # permittedInsecurePackages = [ "electron-13.6.9" ];
+
       allowUnsupportedSystem = true;
     };
   };
@@ -36,7 +37,7 @@ in
             let
               global = {
                 networking.hostName = hostName;
-                nixpkgs = { inherit pkgs; config = pkgs.config; };
+                nixpkgs = { inherit pkgs; };
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
 
                 nix = {
