@@ -46,18 +46,18 @@ let
     nixpkgs-fmt
     yubikey-personalization
     _7zz
-    thunderbird
+    # thunderbird
     # hls
     opam
     cmake
     # clang
     #opencl-headers
     llvm
-    cask
-    nodejs
-    universal-ctags
-    nasm
-    lua
+    # cask
+    # nodejs
+    # universal-ctags
+    # nasm
+    # lua
     gdb
     # binutils
     /*gcc*/
@@ -72,27 +72,27 @@ let
   appPack = with pkgs; [
     idris2
     lshw
-    teams
-    bluejeans-gui
+    # teams
+    # bluejeans-gui
     # blender
     # element-desktop
-    discord
+    # discord
     zathura
-    mumble
+    # mumble
     feh
     mplayer
-    slack
-    weechat
+    # slack
+    # weechat
     gmp.static.dev
-    skypeforlinux
-    spotify
+    # skypeforlinux
+    # spotify
     browsh
     keybase
     keybase-gui
     kbfs
     # obs-studio
     graphviz
-    minecraft
+    # minecraft
     signal-desktop
     /*from gytis*/
     alacritty
@@ -103,28 +103,27 @@ let
     yubikey-manager
     keepass
     mimic
-    zoom-us
+    # zoom-us
   ];
   /* user */
   workstationPack = with pkgs; [
     # nyxt
-    zulip
+    # zulip
     termite
     pavucontrol
-    pywal
-    pithos
+    # pywal
+    # pithos
     noip
     remmina
-    firefox
+    # firefox
     # pkgs.unstable.chromium
     flameshot
     urlscan
     lynx
     bottom
-    vscode
+    # vscode
     dante
-    vscode
-    android-studio
+    # android-studio
     bottom
     #gimp
     # tdesktop
@@ -140,10 +139,10 @@ let
   embeddedPack = with pkgs; [
     dtc
     patchelf
-    avrdude
-    arduino
-    arduino-cli
-    platformio
+    # avrdude
+    # arduino
+    # arduino-cli
+    # platformio
     #scala
     metals
     sbt
@@ -168,10 +167,10 @@ let
       # )
     ];
   languageserverPack = with pkgs; [
-    shellcheck
-    rnix-lsp
-    nixfmt
-    clang-tools
+    # shellcheck
+    # rnix-lsp
+    # nixfmt
+    # clang-tools
   ];
   cPack = with pkgs; [
     clang

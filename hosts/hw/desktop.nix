@@ -11,6 +11,7 @@
   # enable ip forwarding
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
+  boot.kernelParams = [ "amdgpu.dc=1" ];
 
 
   boot.binfmt.emulatedSystems = [
@@ -19,13 +20,20 @@
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
   # boot.kernelPackages = pkgs.linuxPackages_5_15;
 
+  # services.xserver.deviceSection = ''
+  #        Option "DRI" "3"
+  #    '';
 
-  boot.kernelModules = [ "kvm-amd" "amdgpu" ];
+  boot.kernelModules = [ "kvm-amd" /* "amdgpu"  */];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
   services.xserver.videoDrivers = [ "amdgpu" ];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
-  hardware.opengl.extraPackages = with pkgs; [ amdvlk ];
+  hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ rocmPackages.clr.icd ];
+
+  environment.variables = {
+    ROC_ENABLE_PRE_VEGA = "1";
+  };
 
   fileSystems."/" =
     {
@@ -47,5 +55,6 @@
 
   hardware.cpu.amd.updateMicrocode = true;
   systemd.services.NetworkManager-wait-online.enable = lib.mkForce false;
+  hardware.opengl.driSupport = true;
 
 }

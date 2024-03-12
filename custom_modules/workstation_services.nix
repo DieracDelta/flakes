@@ -3,36 +3,36 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
-    lutris
+    # lutris
     docker-compose
-    virt-manager
-    looking-glass-client
+    # virt-manager
+    # looking-glass-client
     cdrkit
     qemu
     OVMF
-    libvirt
-    ghc
-    cabal-install
+    # libvirt
+    # ghc
+    # cabal-install
     # stack
     #firefox
   ];
   /* system */
   gamingPack = with pkgs; [
-    wine
+    # wine
+    # winetricks
+    # protontricks
     cowsay
     steam
     mesa
     gnuchess
     angband
-    winetricks
-    protontricks
     cabextract
     m4
   ];
   xPack = with pkgs; [
     noisetorch
     syncthing
-    gnome.cheese
+    # gnome.cheese
     kdeconnect
     trezor-suite
     redshift
@@ -53,7 +53,7 @@ let
     # obsidian
   ];
   yubikeyPack = with pkgs; [
-    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools vulkan-loader vulkan-volk vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vulkan-cts vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
+    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools clinfo vulkan-loader /* vulkan-volk */ vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vulkan-cts vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
   ];
 in
 {
@@ -111,7 +111,7 @@ in
     fonts.fonts = with pkgs;
       [
         d2coding
-        iosevka
+        # iosevka
         aileron
         nerdfonts
         fira-code

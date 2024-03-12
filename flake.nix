@@ -19,7 +19,7 @@
     };
     nixpkgs = {
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs/master";
+      url = "github:NixOS/nixpkgs/nixos-23.11";
     };
 
     naersk = {

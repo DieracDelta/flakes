@@ -45,9 +45,9 @@ in
 
 
     # OP ssh between all the devices
-    services.zerotierone.enable = true;
+    # services.zerotierone.enable = true;
     # TODO move this to a secret
-    services.zerotierone.joinNetworks = [ "af415e486feddf70" ];
+    # services.zerotierone.joinNetworks = [ "af415e486feddf70" ];
 
     # even more OP ssh between all the devices
     services.tailscale = {
@@ -255,7 +255,7 @@ in
       nix-du
       nixpkgs-fmt
       #zsh-forgit
-      procs
+      # procs
       eza
       nixos-generators
       evtest
@@ -263,7 +263,7 @@ in
       nix-tree
       nixFlakes
       fzf
-      cachix
+      # cachix
       bat
       manix
       zsh

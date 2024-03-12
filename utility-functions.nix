@@ -17,7 +17,7 @@ in
     inherit system overlays;
     config = {
       allowUnfree = true;
-      # permittedInsecurePackages = [ "electron-13.6.9" ];
+      permittedInsecurePackages = [ "nix-2.15.3" ];
 
       allowUnsupportedSystem = true;
     };
@@ -41,7 +41,7 @@ in
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
 
                 nix = {
-                  package = pkgs.nixUnstable;
+                  # package = pkgs.nixUnstable;
                   nixPath =
                     let path = toString ./.; in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
