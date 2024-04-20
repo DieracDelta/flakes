@@ -21,5 +21,8 @@
 
   boot.loader.systemd-boot.enable = true;
 
+  # TODO enable when around in person
+  # boot.initrd.systemd.enable = true;
+
   powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
 }

@@ -7,6 +7,8 @@
 
   home.stateVersion = "20.09";
 
+  programs.fish.enable = true;
+
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;

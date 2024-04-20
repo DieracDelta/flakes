@@ -15,6 +15,7 @@ let
       # hnix
     ];
   devPack = with pkgs; [
+    # openssl curl xxd age
     emacs
     brave
     zellij

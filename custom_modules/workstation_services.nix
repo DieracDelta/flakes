@@ -3,13 +3,16 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
-    # lutris
+    lutris
+    wine
+    heroic
     docker-compose
     # virt-manager
     # looking-glass-client
     cdrkit
     qemu
     OVMF
+    chromium
     # libvirt
     # ghc
     # cabal-install
@@ -18,6 +21,8 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
+    cudaPackages.cudatoolkit
+    cudaPackages.cudnn_8_9
     # wine
     # winetricks
     # protontricks

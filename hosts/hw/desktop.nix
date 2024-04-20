@@ -5,17 +5,19 @@
   #imports = [ ./shared.nix ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-  boot.initrd.kernelModules = [ "amdgpu" ];
+  boot.initrd.kernelModules = [ "amdgpu" "nvidia" ];
+
+  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
 
 
   # enable ip forwarding
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
-  boot.kernelParams = [ "amdgpu.dc=1" ];
+  boot.kernelParams = [/*  "amdgpu.dc=1"  */];
 
 
   boot.binfmt.emulatedSystems = [
-      "aarch64-linux" "armv7l-linux" "riscv64-linux"
+      "aarch64-linux" "armv7l-linux" /* "riscv64-linux" */
   ];
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
   # boot.kernelPackages = pkgs.linuxPackages_5_15;
@@ -26,10 +28,11 @@
 
   boot.kernelModules = [ "kvm-amd" /* "amdgpu"  */];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
-  services.xserver.videoDrivers = [ "amdgpu" ];
+  services.xserver.videoDrivers = [ "amdgpu" "nvidia" ];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
-  hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ rocmPackages.clr.icd ];
+  # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";
+  hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];
 
   environment.variables = {
     ROC_ENABLE_PRE_VEGA = "1";

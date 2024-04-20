@@ -123,14 +123,22 @@ in
       ];
     };
 
+    programs.fish.enable = true;
     users.users = {
+      siraben = {
+        isNormalUser = true;
+        home = "/home/siraben";
+        shell = pkgs.zsh;
+      };
+
+
       jrestivo = {
         isNormalUser = true;
         home = "/home/jrestivo";
         shell = pkgs.zsh;
         description = "Justin --the owner-- Restivo";
         extraGroups =
-          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" ];
+          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
         initialPassword = "bruh";
       };
     };
@@ -201,13 +209,15 @@ in
         gc-keep-outputs = true
         warn-dirty = false
         experimental-features = nix-command flakes
-        extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux riscv64-linux
+        extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
         '';
+# riscv64-linux
 
 # cachix stuffs
       settings.substituters = [
         "https://cache.nixos.org"
+        "https://cuda-maintainers.cachix.org"
           "https://cachix.cachix.org"
           "https://gytix.cachix.org/"
           "https://jrestivo.cachix.org"
@@ -215,6 +225,7 @@ in
       ];
       settings.trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
           "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
           "gytix.cachix.org-1:JXNZBxYslCV/hAkfNvJgyxlWb8jRQRKc+M0h7AaFg7Y="
           "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
@@ -257,6 +268,7 @@ in
       #zsh-forgit
       # procs
       eza
+      # nix-output-monitor
       nixos-generators
       evtest
       unzip

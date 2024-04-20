@@ -15,7 +15,7 @@
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
     unstable = {
-      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+      url = "github:NixOS/nixpkgs/nixos-23.11";
     };
     nixpkgs = {
       # url = "path:/home/jrestivo/nixpkgs";
@@ -40,16 +40,16 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/master";
+      url = "github:nix-community/home-manager/release-23.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    mailserver =
-      {
-        url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
-        inputs.nixpkgs.follows = "nixpkgs";
-        inputs.utils.follows = "flake-utils";
-      };
+    # mailserver =
+    #   {
+    #     url = "gitlab:simple-nixos-mailserver/nixos-mailserver";
+    #     inputs.nixpkgs.follows = "nixpkgs";
+    #     inputs.utils.follows = "flake-utils";
+    #   };
 
     # Solarized mutt colorschemes.
     mutt-colors-solarized = {
@@ -129,7 +129,7 @@
     , deploy-rs
     , sops-nix
     , rust-filehost
-    , mailserver
+    # , mailserver
     , mutt-colors-solarized
     , darwin
     , alacritty
@@ -164,7 +164,7 @@
         imports = [ "${src}" ];
       };
       nixosModules = (hostname: [
-        mailserver.nixosModule
+        # mailserver.nixosModule
         (import ./custom_modules)
         sops-nix.nixosModules.sops
         /* for hardware*/

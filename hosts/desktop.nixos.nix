@@ -3,7 +3,7 @@
 {
 
   nix.settings.allowed-users = [ "jrestivo" "siraben"];
-  nix.settings.trusted-users = [ "jrestivo" ];
+  nix.settings.trusted-users = [ "jrestivo" "siraben" ];
   imports = [ ./hw/desktop.nix ];
 
   custom_modules.jellyfin.enable = false;
@@ -13,7 +13,7 @@
   custom_modules.rust-filehost.enable = false;
   custom_modules.hydra.enable = false;
   custom_modules.yubikey.enable = true;
-  custom_modules.container_configs.enable = true;
+  custom_modules.container_configs.enable = false;
   programs.zsh.enable = true;
   programs.noisetorch.enable = false;
 
