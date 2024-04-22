@@ -5,15 +5,25 @@
   #imports = [ ./shared.nix ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
-  boot.initrd.kernelModules = [ "amdgpu" "nvidia" ];
+  boot.initrd.kernelModules = [
+  # TODO uncomment
+  # "nvidia"
+  ];
 
-  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
+  # TODO uncomment
+  # hardware.nvidia = {
+  #   package = config.boot.kernelPackages.nvidiaPackages.stable;
+  #   # wakes this shit up
+  #   nvidiaPersistenced = true;
+  #   modesetting.enable = true;
+  #   open = false;
+  # };
 
 
   # enable ip forwarding
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
-  boot.kernelParams = [/*  "amdgpu.dc=1"  */];
+  boot.kernelParams = [ "amdgpu.dc=1" ];
 
 
   boot.binfmt.emulatedSystems = [
@@ -26,33 +36,57 @@
   #        Option "DRI" "3"
   #    '';
 
-  boot.kernelModules = [ "kvm-amd" /* "amdgpu"  */];
+  boot.kernelModules = [ "kvm-amd" /* TODO comment */ ];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
-  services.xserver.videoDrivers = [ "amdgpu" "nvidia" ];
+  services.xserver.videoDrivers = [ /* TODO COMMENT  */ "amdgpu" /* "nvidia"  */];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";
   hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];
 
-  environment.variables = {
-    ROC_ENABLE_PRE_VEGA = "1";
-  };
-
-  fileSystems."/" =
-    {
-      device = "/dev/sda1";
-      fsType = "btrfs";
-    };
-
-  fileSystems."/boot" =
-    {
-      device = "/dev/disk/by-uuid/5D53-4A61";
-      fsType = "vfat";
-    };
+  environment.variables = { };
 
   swapDevices = [ ];
 
-  nix.settings.max-jobs = lib.mkDefault 12;
+  boot.loader.grub = {
+    enable = true;
+    zfsSupport = true;
+    efiSupport = true;
+    efiInstallAsRemovable = true;
+    mirroredBoots = [
+      { devices = [ "nodev"]; path = "/boot"; }
+    ];
+  };
+  services.zfs.autoScrub.enable = true;
+  networking.hostId = "84500694";
+
+  fileSystems."/" =
+    { device = "zroot/root";
+      fsType = "zfs";
+    };
+
+  fileSystems."/nix" =
+    { device = "zroot/nix";
+      fsType = "zfs";
+    };
+
+  fileSystems."/var" =
+    { device = "zroot/var";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home" =
+    { device = "zroot/home";
+      fsType = "zfs";
+    };
+
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/54BA-5520";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
+
+  nix.settings.max-jobs = lib.mkDefault 13;
 
   # end hw file stuff
 

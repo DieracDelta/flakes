@@ -15,11 +15,11 @@
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
     unstable = {
-      url = "github:NixOS/nixpkgs/nixos-23.11";
+      url = "github:NixOS/nixpkgs/master";
     };
     nixpkgs = {
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs/nixos-23.11";
+      url = "github:NixOS/nixpkgs/master";
     };
 
     naersk = {
@@ -40,7 +40,8 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-23.11";
+      # url = "github:nix-community/home-manager/release-23.11";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

@@ -3,9 +3,9 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
-    lutris
-    wine
-    heroic
+    # lutris
+    # wine
+    # heroic
     docker-compose
     # virt-manager
     # looking-glass-client
@@ -28,6 +28,8 @@ let
     # protontricks
     cowsay
     steam
+    steamcmd
+    # steam-run
     mesa
     gnuchess
     angband
@@ -82,8 +84,12 @@ in
         package = pkgs.i3-gaps;
         extraPackages = with pkgs; [ rofi ];
       };
+      # displayManager.sddm.enable = true;
+      # desktopManager.plasma5.enable = true;
       libinput.enable = true;
-
+      # desktopManager.gnome.enable = true;
+      # displayManager.gdm.enable = true;
+      # windowManager.bspwm.enable = true;
     };
     services.xrdp.enable = true;
     virtualisation.docker = {
@@ -105,6 +111,10 @@ in
     /*TODO add in configuration option for this (like embedded dev enable)*/
     programs.adb.enable = true;
     programs.java.enable = true;
+    programs.steam.enable = true;
+    programs.steam.remotePlay.openFirewall = true;
+    programs.steam.dedicatedServer.openFirewall = true;
+
     environment.systemPackages =
       builtins.concatLists [
         yubikeyPack

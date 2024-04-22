@@ -6,7 +6,7 @@
 
   # steam shit
   hardware.opengl.enable = true;
-  # hardware.opengl.driSupport32Bit = true;
+  hardware.opengl.driSupport32Bit = true;
   hardware.pulseaudio.support32Bit = true;
   # zramSwap.enable = true;
 
@@ -18,8 +18,6 @@
 
   hardware.bluetooth.enable = true;
   hardware.keyboard.zsa.enable = true;
-
-  boot.loader.systemd-boot.enable = true;
 
   # TODO enable when around in person
   # boot.initrd.systemd.enable = true;

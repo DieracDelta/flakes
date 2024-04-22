@@ -30,12 +30,12 @@ in
     };
 
   config = lib.mkIf cfg.enable {
-    services.pipewire = {
-      enable = true;
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-    };
+    # services.pipewire = {
+    #   enable = true;
+    #   alsa.enable = true;
+    #   alsa.support32Bit = true;
+    #   pulse.enable = true;
+    # };
 
     networking.nameservers = [ "100.100.100.100" "1.1.1.1" ];
     /*TODO pass in global root state to create path from*/
@@ -128,14 +128,14 @@ in
       siraben = {
         isNormalUser = true;
         home = "/home/siraben";
-        shell = pkgs.zsh;
+        shell = pkgs.bash;
       };
 
 
       jrestivo = {
         isNormalUser = true;
         home = "/home/jrestivo";
-        shell = pkgs.zsh;
+        shell = pkgs.bash;
         description = "Justin --the owner-- Restivo";
         extraGroups =
           [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
@@ -150,7 +150,7 @@ in
     time.timeZone = "America/New_York";
     location.provider = "geoclue2";
 
-    system.stateVersion = "20.09";
+    system.stateVersion = "23.11";
 
     environment.variables = {
       BROWSER = "chromium";
@@ -247,7 +247,7 @@ in
     /*ONLY cli stuff*/
     environment.systemPackages = with pkgs; [
       dmidecode
-      deploy-rs
+      # deploy-rs
       bottom
       direnv
       git
