@@ -8,11 +8,15 @@
   home.stateVersion = "23.11";
 
   programs.fish.enable = true;
+  programs.atuin.enableFishIntegration = true;
+  programs.atuin.enable = true;
 
   programs.zoxide = {
     enable = true;
-    enableZshIntegration = true;
+    enableFishIntegration = true;
+    enableBashIntegration = true;
   };
+
   programs.git = {
     enable = true;
     userName = "Justin Restivo";

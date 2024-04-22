@@ -39,9 +39,9 @@ in
 
     networking.nameservers = [ "100.100.100.100" "1.1.1.1" ];
     /*TODO pass in global root state to create path from*/
-    sops.defaultSopsFile = ../secrets/secrets.yaml;
-    sops.secrets = (((lib.foldl' lib.mergeAttrs) { }) (builtins.map genDefaultPerms secrets))
-      // { tailscale_key.owner = "root"; };
+    # sops.defaultSopsFile = ../secrets/secrets.yaml;
+    # sops.secrets = (((lib.foldl' lib.mergeAttrs) { }) (builtins.map genDefaultPerms secrets))
+    #   // { tailscale_key.owner = "root"; };
 
 
     # OP ssh between all the devices
@@ -124,18 +124,26 @@ in
     };
 
     programs.fish.enable = true;
+    programs.zsh.enable = true;
     users.users = {
       siraben = {
         isNormalUser = true;
         home = "/home/siraben";
-        shell = pkgs.bash;
+        shell = pkgs.zsh;
+        extraGroups = [ "wheel" ];
       };
 
+      jachym = {
+        isNormalUser = true;
+        home = "/home/jachym";
+        shell = pkgs.zsh;
+        extraGroups = [ "wheel" ];
+      };
 
       jrestivo = {
         isNormalUser = true;
         home = "/home/jrestivo";
-        shell = pkgs.bash;
+        shell = pkgs.fish;
         description = "Justin --the owner-- Restivo";
         extraGroups =
           [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
@@ -156,6 +164,23 @@ in
       BROWSER = "chromium";
       EDITOR = "nvim";
     };
+
+    users.users.jachym.openssh.authorizedKeys.keys = [
+    ''
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDM+Q5ZKAE/OoP7uv5xjCV3DDBJhnAgSqb6VT+ZanrWhIvyBDw5ZDbhat2Urc7shbQxCjKWUN+HJi9sd3aV26SqfKCdE13xzxgMPf3GEAfcJVCIIslIr7vpXsFhE0o2WgGDkzSYc9tviLlVOWCPTMdJm4EZTbEaGI2rlCbwWQFnE7inwTh6RpDRwtONnT8enCfZ5BMPWcDFsRU/7GYxyphFZ7mxJTUoqNH4uXXsX82joPTGSGoDuxkNvkA30BR2kLNAqS31ceEPN02EhT8mzwyqwpg47y0ab7UeRHkyfpXBMH0AQA2pXjz3qRQeobF/P7Tebv2d33LUaCPFfA08Pyvva/cv4fUrRc9iVsdtEh/quCdpORfPxQ6vLNnfsrU72Z1cBQEBA99Nf3Q6R2TRz2eVBNNgHLdX+V8YQ8MwVvlBIFsjJQHN7r954jfwKw4q5hz/NttVZjj95BXMPJpzjQ5vQsR4zeVZUdQTo/L3cXGw17NFZyKD2/IajhT//7BmZcIFOb3sMvywy83RUIiSB0ch1KWbicLUDoCSlGY73uzO6LcC63Vk3/cimsJesaPCyvws6Bv7ILAhDHcFatN3SvN9tOTZgkEKi8Td2uTCJQR11H1gzWs+6wjygi5Pn8vz909V4WOQGtt4TwBP9W+r0gBPfJeuRiCT0Fy4W3EcsdbvOw==
+    ''
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGiGXTcWHOZal887+8PebZh1sR0SKBxJsRWsm3aXUSHn
+    ''
+    ];
+
+    users.users.siraben.openssh.authorizedKeys.keys = [
+    ''
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDGSUM4kaMhd0SaR7qXXbdUtTRy4uC9cPqbpfJ3QP+zZZfeU/rMg4Gv8w10JmFfvrPWFCRgZ3su7ewN+We3rbmN2qDxArOPdzjBfQ/N33epz1Th3fpswdoLmyYtUxeugqGo9TM2e4K4OwJwJnrOvfbfqqhkwvCYgcHzjsA2I1tEThI6eKcYInhq8IOSmwtnGNvl77HrH6cnXcrX3OK9XVSeHVzJKVwzb0IDsdr2fUdwCQZnlfeVj/LuXlDn5hueLQbi5qzyMdI+KeQA3i2iu+aq35Yn7ubOZjQ0kM0uCcm6nhWp4bXtSFGA4Kj4GwOvpTVULSdIW7mu6f37/OTW9MyuJnsFYxJgDUMB8giH4LHEOI9ZhYpkrvO01Lh2igCCVe8GGqDkpu9OQEzWRnFdE3oFH9QbPSWtniX2ZWH/zkoxP2iVGxJkcOiOZGAEsF19skyaCDyu0ZwC8xGzu8S6ZZic+BHeeXXstiquMuTemlU8dqxtmo+cw2xo7JqSZu20EPKjlXz/V6cVTfPQXeH+ANRz4bihdTfHEIEmAXH9PU4vni63loJvSdGqTITUtmQDpeSu+e5qF48IX+Hu+x+Hr/1HhGVn1o2G1DjutM+9BobHiMAq+rh/tPMc1zGlsdCyXf3121WBOrFG4fD/ZCdJoMAZzKaqmaIrcLvQbEVCrRHXNw==
+    ''
+
+
+    ];
 
     users.users.jrestivo.openssh.authorizedKeys.keys = [
       #laptop
@@ -263,6 +288,7 @@ in
       lsof
       nox
       nix-top
+      atuin
       nix-du
       nixpkgs-fmt
       #zsh-forgit

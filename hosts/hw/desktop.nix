@@ -6,24 +6,22 @@
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [
-  # TODO uncomment
-  # "nvidia"
+  "nvidia"
   ];
 
-  # TODO uncomment
-  # hardware.nvidia = {
-  #   package = config.boot.kernelPackages.nvidiaPackages.stable;
-  #   # wakes this shit up
-  #   nvidiaPersistenced = true;
-  #   modesetting.enable = true;
-  #   open = false;
-  # };
+  hardware.nvidia = {
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    # wakes this shit up
+    nvidiaPersistenced = true;
+    modesetting.enable = true;
+    open = false;
+  };
 
 
   # enable ip forwarding
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
   boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
-  boot.kernelParams = [ "amdgpu.dc=1" ];
+  boot.kernelParams = [/*  "amdgpu.dc=1"  */];
 
 
   boot.binfmt.emulatedSystems = [
@@ -38,7 +36,7 @@
 
   boot.kernelModules = [ "kvm-amd" /* TODO comment */ ];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
-  services.xserver.videoDrivers = [ /* TODO COMMENT  */ "amdgpu" /* "nvidia"  */];
+  services.xserver.videoDrivers = [ /* TODO COMMENT  */ /* "amdgpu" */ "nvidia" ];
   environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";

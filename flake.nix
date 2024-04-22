@@ -104,11 +104,6 @@
       flake = false;
     };
 
-    nix-zsh-shell-integration = {
-      url = "github:chisui/zsh-nix-shell";
-      flake = false;
-    };
-
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -167,7 +162,7 @@
       nixosModules = (hostname: [
         # mailserver.nixosModule
         (import ./custom_modules)
-        sops-nix.nixosModules.sops
+        # sops-nix.nixosModules.sops
         /* for hardware*/
         nixpkgs.nixosModules.notDetected
         home-manager.nixosModules.home-manager
