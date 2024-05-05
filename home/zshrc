@@ -1,7 +1,5 @@
 export EDITOR="vi"
-if not pgrep ssh-agent >/dev/null
-    ssh-agent -c | source -
-end
+ssh-agent -c | source -
 ssh-add ~/.ssh/id_rsa    # Replace id_rsa with the filename of your SSH private key
 function last_history_item
     echo $history[1]
