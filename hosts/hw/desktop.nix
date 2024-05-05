@@ -46,40 +46,37 @@
 
   swapDevices = [ ];
 
-  boot.loader.grub = {
-    enable = true;
-    zfsSupport = true;
-    efiSupport = true;
-    efiInstallAsRemovable = true;
-    mirroredBoots = [
-      { devices = [ "nodev"]; path = "/boot"; }
-    ];
-  };
-  services.zfs.autoScrub.enable = true;
-  networking.hostId = "84500694";
-
+  # boot.loader.grub = {
+  #   enable = true;
+  #   efiSupport = true;
+  #   efiInstallAsRemovable = true;
+  #   mirroredBoots = [
+  #     { devices = [ "nodev"]; path = "/boot"; }
+  #   ];
+  # };
+  # networking.hostId = "84500694";
+  #
+  boot.loader.systemd-boot.enable = true;
   fileSystems."/" =
-    { device = "zroot/root";
-      fsType = "zfs";
-    };
-
-  fileSystems."/nix" =
-    { device = "zroot/nix";
-      fsType = "zfs";
-    };
-
-  fileSystems."/var" =
-    { device = "zroot/var";
-      fsType = "zfs";
+    { device = "/dev/disk/by-uuid/2d8d366c-8799-4456-8088-a15b5f905770";
+      fsType = "btrfs";
+      options = [ "subvol=root"  "compress=zstd" ];
     };
 
   fileSystems."/home" =
-    { device = "zroot/home";
-      fsType = "zfs";
+    { device = "/dev/disk/by-uuid/2d8d366c-8799-4456-8088-a15b5f905770";
+      fsType = "btrfs";
+      options = [ "subvol=home"  "compress=zstd" ];
+    };
+
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-uuid/2d8d366c-8799-4456-8088-a15b5f905770";
+      fsType = "btrfs";
+      options = [ "subvol=nix" "noatime"];
     };
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/54BA-5520";
+    { device = "/dev/disk/by-uuid/CD38-00CA";
       fsType = "vfat";
       options = [ "fmask=0022" "dmask=0022" ];
     };

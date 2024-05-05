@@ -1,4 +1,15 @@
 export EDITOR="vi"
+if not pgrep ssh-agent >/dev/null
+    ssh-agent -c | source -
+end
+ssh-add ~/.ssh/id_rsa    # Replace id_rsa with the filename of your SSH private key
+function last_history_item
+    echo $history[1]
+end
+abbr -a !! --position anywhere --function last_history_item
+
+abbr -a n '/usr/bin/env'
+
 
 fish_vi_key_bindings
 set -U fish_greeting

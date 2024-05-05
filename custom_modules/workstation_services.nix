@@ -3,7 +3,7 @@ let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
-    lutris
+    # lutris
     # wine
     # heroic
     docker-compose
@@ -47,7 +47,7 @@ let
     xorg.xwininfo
     brightnessctl
     imagemagick
-    deepfry
+    #deepfry
     arandr
     playerctl
     gtk3
