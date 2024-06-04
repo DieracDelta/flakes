@@ -13,7 +13,7 @@
 
   programs.zoxide = {
     enable = true;
-    enableFishIntegration = true;
+    # enableFishIntegration = true;
     enableBashIntegration = true;
   };
 

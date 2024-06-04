@@ -21,6 +21,8 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
+    ollama
+    xbanish
     cudaPackages.cudatoolkit
     cudaPackages.cudnn_8_9
     # wine
@@ -37,6 +39,9 @@ let
     m4
   ];
   xPack = with pkgs; [
+    yazi
+    ghostty
+    cachix
     discord
     noisetorch
     syncthing
@@ -96,7 +101,7 @@ in
     virtualisation.docker = {
       enable = true;
       autoPrune.enable = true;
-    #   #enableNvidia = true;
+      enableNvidia = true;
       enableOnBoot = true;
     };
 
@@ -138,6 +143,18 @@ in
     services.syncthing.enable = true;
     networking.firewall.allowedTCPPorts = [ 22000 8384 ];
     programs.dconf.enable = true;
+    systemd.user.services.atuind = {
+      enable = true;
+
+      environment = {
+        ATUIN_LOG = "warn";
+      };
+      serviceConfig = {
+        ExecStart = "${pkgs.atuin}/bin/atuin daemon";
+      };
+      after = [ "network.target" ];
+      wantedBy = [ "default.target" ];
+    };
 
     #services.atd.enable = true;
 

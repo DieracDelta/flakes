@@ -81,7 +81,7 @@
       options = [ "fmask=0022" "dmask=0022" ];
     };
 
-  nix.settings.max-jobs = lib.mkDefault 13;
+  # nix.settings.max-jobs = lib.mkDefault 13;
 
   # end hw file stuff
 

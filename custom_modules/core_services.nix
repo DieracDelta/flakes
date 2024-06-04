@@ -133,11 +133,25 @@ in
         extraGroups = [ "wheel" ];
       };
 
+      john = {
+        isNormalUser = true;
+        home = "/home/john";
+        shell = pkgs.zsh;
+        extraGroups = [ "wheel" ];
+      };
+
       jachym = {
         isNormalUser = true;
         home = "/home/jachym";
         shell = pkgs.zsh;
-        extraGroups = [ "wheel" ];
+        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
+      };
+
+      faye = {
+        isNormalUser = true;
+        home = "/home/faye";
+        shell = pkgs.zsh;
+        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
       };
 
       jrestivo = {
@@ -164,6 +178,14 @@ in
       BROWSER = "chromium";
       EDITOR = "nvim";
     };
+    users.users.faye.openssh.authorizedKeys.keys = [
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINvl4EJTj/aStbkEr6Mt9VAcjFieB26i6KbYrYvcJvam wyvtt@proton.me
+    ''
+    ''
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFG7ussfetgtlBtZ500gY66cMCs9+ZTko1wqZprMOSWFFZl+EBQ2cOQj2lp8P27x31SqY2DNXlkBZ1yURxAdh9yBdm/Gtg2t/YrTwM8+9QYVUl92r/1Ogw0wV7k1WmHm4rUHMqOL6t4mF+HRdyFKY5hALNNxjI0DXn1OlNBi9wjtohkdDTokkWuMbHnfBH1rHWVN4wFG6Qfi5D4471fP4MXScP40Xmj9HcFi+l7NnelC2JvTLAYfV+jWTrXhe1CV+UGrcqGfShkiMs2rkv4rj41kM2vORFhGhUjksJje/IZeM1gOd5GG/+lcxmsBaxNEUJGj2X8WxBz6ALrlaxjFcVB7WYsywNQihb/V6ZPas2jQ7XyboziVvY2FFptryXUA/z5BkD4HjZRozbZdfhIzzVg+/FqWoc7xOktTKzEtwb1RT7nL33V3koZhqwHubqCObLIHsvr06S1OSprNHoTHwpZYV+bSWn5ufDadsyJ4SSm3XNIpYC946eyehtsFHXmJHmrV1sAMf/U3REWDww1VCWebmgV7o9yF7uoP/ixpLvos5bXD91uzrfMOdmTxE94FAcg5yQm86Rjpt++3sLPnHswEuSZWaDpv5u0PnAReGkgJxjfg9Zm9c5w1CzQWKlRiFnO4UorgcKb3CFAeM9PNNrYSngmjr5dZKYEbxMBJKBOQ== ollamaui@gpe-er14317-04m.concordia.ca
+    ''
+    ];
 
     users.users.jachym.openssh.authorizedKeys.keys = [
     ''
@@ -171,6 +193,15 @@ in
     ''
     ''
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGiGXTcWHOZal887+8PebZh1sR0SKBxJsRWsm3aXUSHn
+    ''
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJZbaVIMukjpEXeKDJG3IHl9wO3aFbyHNbucC89RywML jachym.putta@gmail.com
+    ''
+    ];
+
+    users.users.john.openssh.authorizedKeys.keys = [
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK
     ''
     ];
 
@@ -183,6 +214,10 @@ in
     ];
 
     users.users.jrestivo.openssh.authorizedKeys.keys = [
+    # vps
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINX0/chTwc1ji+HpxsbY6D0bj9XrgGvIwUKTrwala6jH your_email@example.com
+    ''
       #laptop
       ''
         ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5qlN93RBt99GVy6YDP3OMb7Yu4zwELvT5kvdTRnPzE9txmdxKiMM8eHGw4vBwcbmwY7y1wa+ijXwiT0PbwDUOQvVu8CzWHxBF0pz8LVy7XsBuQr9UtxXVV6D9KBKJJEQjpKgF0LTGOC3LSdHKqlH/4zUaUpE2ZPOaoS01S8YwNfRbr30XDeilMDD5rY0AVlydKFRZIbf/96fdo4HURKcjRMapTdYrdkj++FINCl4IDOId3UQR7Z8qDmx2IC6rOikMNMGwEFvgueCDHDuieqNfHn9LVv8gzCPZ0QtX5Ap+6FPNiUfBXuG1IK7RzeDicGUSXWfKFQImwo6pppArqvtqizEFY6WDBSso5XTveg3Z/gH5/jfMigElVAh8xob/NAW2lv6lHEjXtFVmk3N2Fz425SfXQp2qyaYOPGYohWt1ZwlMdkHYfYGtskaoUd9XCM3GC+aSSLkMPuaXtLS3aJ9R7jcz4sfXdU0s3Vd+jQl7c9n3lGYlZ59aKruUj50QtAs= jrestivo@jrestivo.local

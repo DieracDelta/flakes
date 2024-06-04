@@ -54,7 +54,7 @@ myXmobarPP = xmobarPP { ppCurrent = xmobarColor "#D0791A" "" . wrap "[" "]"  -- 
                       }
 
 myTerminal :: String
-myTerminal = "alacritty"
+myTerminal = "ghostty"
 
 
 

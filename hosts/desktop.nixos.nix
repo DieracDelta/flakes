@@ -2,8 +2,8 @@
 
 {
 
-  nix.settings.allowed-users = [ "jrestivo" "siraben"];
-  nix.settings.trusted-users = [ "jrestivo" "siraben" ];
+  nix.settings.allowed-users = [ "jrestivo" "siraben" "jachym" "faye" "john"];
+  nix.settings.trusted-users = [ "jrestivo" "siraben" "jachym" "faye" "john"];
   imports = [ ./hw/desktop.nix ];
 
   custom_modules.jellyfin.enable = false;

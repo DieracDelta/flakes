@@ -9,9 +9,10 @@
     nix = {
       url = "github:NixOS/nix";
     };
-    alacritty = {
-      url = "github:zachcoyle/alacritty-nightly";
+    ghostty = {
+      url = "git+ssh://git@github.com/mitchellh/ghostty";
     };
+
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
     unstable = {
@@ -25,18 +26,6 @@
     naersk = {
       url = "github:nmattia/naersk";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    hls = {
-      url = "github:jkachmar/easy-hls-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    rnix-lsp = {
-      url = "github:nix-community/rnix-lsp";
-      inputs.naersk.follows = "naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.utils.follows = "flake-utils";
     };
 
     home-manager = {
@@ -99,10 +88,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-fast-syntax-highlighting = {
-      url = "github:zdharma-continuum/fast-syntax-highlighting";
-      flake = false;
-    };
 
     rust-filehost = {
       url = "github:DieracDelta/filehost_rust";
@@ -128,7 +113,6 @@
     # , mailserver
     , mutt-colors-solarized
     , darwin
-    , alacritty
     , my-nvim
     , deepfry
     , ...
@@ -177,9 +161,6 @@
       overlays = [
         stable-pkgs
         emacs-overlay.overlay
-        (final: prev: {
-          hls = inputs.hls.defaultPackage.${system};
-        })
 
 
 
@@ -189,19 +170,8 @@
           nvim = my-nvim.defaultPackage.x86_64-linux;
           #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
-          nix-fast-syntax-highlighting =
-            {
-              name = "fast-sytax-highlighting";
-              file = "fast-syntax-highlighting.plugin.zsh";
-              src = "${inputs.nix-fast-syntax-highlighting.outPath}";
-            };
-          nix-zsh-shell-integration =
-            {
-              name = "zsh-shell-integration";
-              file = "nix-shell.plugin.zsh";
-              src = "${inputs.nix-zsh-shell-integration.outPath}";
-            };
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;
+          ghostty = inputs.ghostty.packages.x86_64-linux.default;
         })
         (final: prev:
           {
@@ -214,7 +184,7 @@
           }
         )
         (final: prev: {
-          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
+          # inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
           unstable = unstable-pkgs;
         })
       ];
