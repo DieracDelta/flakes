@@ -9,6 +9,12 @@
     nix = {
       url = "github:NixOS/nix";
     };
+
+    atuin = {
+      url = "github:atuinsh/atuin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     ghostty = {
       url = "git+ssh://git@github.com/mitchellh/ghostty";
     };
@@ -168,6 +174,7 @@
           inherit (deploy-rs.packages.${system}) deploy-rs;
           deepfry = inputs.deepfry.defaultPackage.x86_64-linux;
           nvim = my-nvim.defaultPackage.x86_64-linux;
+          atuin = inputs.atuin.packages.x86_64-linux.atuin;
           #neovitality = neovitality.defaultPackage.${system};
           mutt-colors-solarized = inputs.mutt-colors-solarized;
           rust-filehost = inputs.rust-filehost.packages.${system}.filehost;

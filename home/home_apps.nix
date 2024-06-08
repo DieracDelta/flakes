@@ -128,7 +128,7 @@ let
     bottom
     #gimp
     # tdesktop
-    exodus
+    # exodus
     mpv
     youtube-dl
     pciutils

@@ -21,6 +21,7 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
+    nix-janitor
     ollama
     xbanish
     cudaPackages.cudatoolkit
@@ -154,6 +155,15 @@ in
       };
       after = [ "network.target" ];
       wantedBy = [ "default.target" ];
+    };
+    #
+    services.atuin = {
+      openRegistration = true;
+      enable = true;
+      host = "0.0.0.0";
+      port = 4200;
+      openFirewall = true;
+      maxHistoryLength = 10000000;
     };
 
     #services.atd.enable = true;
