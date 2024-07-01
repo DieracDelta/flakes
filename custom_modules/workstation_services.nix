@@ -21,7 +21,8 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
-    nix-janitor
+  nix-output-monitor
+    # nix-janitor
     ollama
     xbanish
     cudaPackages.cudatoolkit
@@ -48,7 +49,7 @@ let
     syncthing
     # gnome.cheese
     kdeconnect
-    trezor-suite
+    # trezor-suite
     redshift
     xorg.xwininfo
     brightnessctl

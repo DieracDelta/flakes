@@ -37,7 +37,7 @@
   boot.kernelModules = [ "kvm-amd" /* TODO comment */ ];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
   services.xserver.videoDrivers = [ /* TODO COMMENT  */ /* "amdgpu" */ "nvidia" ];
-  environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
+  # environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";
   hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];

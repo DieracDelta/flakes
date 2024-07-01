@@ -309,6 +309,7 @@ in
       dmidecode
       # deploy-rs
       bottom
+
       direnv
       git
       tigervnc

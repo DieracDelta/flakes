@@ -9,7 +9,7 @@
     boot.kernelModules = [ "kvm-intel" ];
     boot.extraModulePackages = [ ];
     boot.binfmt.emulatedSystems = [
-            "aarch64-linux" "armv7l-linux" /* "riscv64-linux" */
+            "aarch64-linux" "armv7l-linux" "riscv64-linux"
     ];
 
     fileSystems."/" = {
