@@ -323,7 +323,6 @@ in
       ssh-to-pgp
       lsof
       nox
-      nix-top
       atuin
       nix-du
       nixpkgs-fmt

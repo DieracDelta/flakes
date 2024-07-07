@@ -50,11 +50,11 @@ in
         ls = "eza -h --git --color=auto --group-directories-first -s extension";
         nd = "nix develop -c fish ";
         sl = "ls";
-        nn = (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "") + (if pkgs.stdenv.isLinux then "/home/jrestivo/vimconfig/result/bin/nvim" else "");
+        nn = (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "") + (if pkgs.stdenv.isLinux then "/home/jrestivo/dev/vimconfig/result/bin/nvim" else "");
 
       };
       # keys.sh contains a bunch of my keys
-      interactiveShellInit = builtins.readFile ./zshrc;
+      interactiveShellInit = builtins.readFile ./fishrc;
     };
   };
 }

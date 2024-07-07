@@ -23,7 +23,7 @@
 
   /*morally speaking should automate this in the same way im doing modules*/
   imports = [
-    ../zsh.nix
+    ../fish.nix
   ];
 
   programs.tmux = {

@@ -87,6 +87,5 @@
 
   hardware.cpu.amd.updateMicrocode = true;
   systemd.services.NetworkManager-wait-online.enable = lib.mkForce false;
-  hardware.opengl.driSupport = true;
 
 }
