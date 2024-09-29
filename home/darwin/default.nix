@@ -50,7 +50,7 @@
 
   programs.zellij = {
     enable = true;
-    enableFishIntegration = true;
+    # enableFishIntegration = true;
   };
   programs.atuin.enable = true;
   programs.atuin.enableFishIntegration = true;
@@ -159,6 +159,8 @@ keybinds {
     }
     renamepane {
     }
+    // get into tmux mode, then c-o w
+
     session {
         bind "d" { Detach; }
         bind "w" {

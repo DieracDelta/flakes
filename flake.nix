@@ -15,6 +15,10 @@
       # url = "github:NixOS/nixpkgs?rev=317dde2ba4c7d998ae94289b3fc0118814eb9697";
       url = "github:NixOS/nixpkgs/master";
     };
+    atuin = {
+      url = "github:atuinsh/atuin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix = {
       url = "github:NixOS/nix/2.19.0";
     };
@@ -164,6 +168,7 @@
     , alacritty
     , my-nvim
     , jj
+    , atuin
     , ...
     }:
     let
@@ -370,6 +375,8 @@
                 #   preInstallCheck = '' echo "exit 99" > tests/gc-non-blocking.sh '';
                 # });
                 mutt-colors-solarized = inputs.mutt-colors-solarized;
+
+                atuin = inputs.atuin.packages.aarch64-darwin.atuin;
                 nix-fast-syntax-highlighting =
                   {
                     name = "fast-sytax-highlighting";

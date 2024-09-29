@@ -21,17 +21,28 @@
   # amethyst
   /* jujutsu */ #vcs
   # gitoxide
-  coqPackages.coq-lsp
-  coq
+  # coqPackages.coq-lsp
+  # coq
+  # ocamlPackages.menhir
+  # ocamlPackages.menhirLib
+  # ocaml
   hyperfine
+  cargo
+  ruby
   anki-bin
   nix
   ripgrep-all
+  rustc
   fishPlugins.fzf-fish
+  yazi
 
   corepack_latest
   nodejs_latest
   delta duf broot
+  mosh
+  dive
+  nix-output-monitor
+  john
 
 
   ];
@@ -39,6 +50,8 @@
 
   services.nix-daemon.enable = true;
   nix.package = pkgs.nix;
+  nix.extraOptions = "experimental-features = nix-command flakes";
+  
 
   # environment.systemPath = [ "/opt/homebrew/bin" ];
   environment.variables = { HOMEBREW_NO_ANALYTICS = "1"; };

@@ -1,4 +1,7 @@
-# if test -n "$IN_NIX_SHELL"; then return; fi
+# Ghostty shell integration
+if test -n "$GHOSTTY_RESOURCES_DIR"
+    source "$GHOSTTY_RESOURCES_DIR/shell-integration/fish/vendor_conf.d/ghostty-shell-integration.fish"
+end
 
 #if [ -z "$__NIX_DARWIN_SET_ENVIRONMENT_DONE" ]; then
   #. /nix/store/nwbz1bg76b0gmblw0n1y1s3r53kpsslh-set-environment
