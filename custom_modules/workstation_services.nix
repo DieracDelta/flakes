@@ -5,7 +5,8 @@ let
   virtualizationPack = with pkgs; [
     # lutris
     # wine
-    # heroic
+    heroic
+    xboxdrv
     docker-compose
     # virt-manager
     # looking-glass-client

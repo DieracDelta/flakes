@@ -4,10 +4,13 @@
   imports = [ ./shared.nix /* ./gpu_passthrough.nix */ ];
   #imports = [ ./shared.nix ];
 
-  boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" ];
+  boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod" "xpad" ];
   boot.initrd.kernelModules = [
   "nvidia"
   ];
+
+  # hardware.logitech.wireless.enable = true;
+  # hardware.logitech.wireless.enableGraphical = true;
 
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;
@@ -33,6 +36,7 @@
   # services.xserver.deviceSection = ''
   #        Option "DRI" "3"
   #    '';
+  hardware.xpadneo.enable = true;
 
   boot.kernelModules = [ "kvm-amd" /* TODO comment */ ];
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];

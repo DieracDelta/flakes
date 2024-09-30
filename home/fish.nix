@@ -54,7 +54,7 @@ in
 
       };
       # keys.sh contains a bunch of my keys
-      interactiveShellInit = builtins.readFile ./fishrc;
+      interactiveShellInit = builtins.readFile ./config.fish;
     };
   };
 }

@@ -3,6 +3,9 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    madness = {
+      url = "github:antithesishq/madness";
+    };
     # nyxt_nixpkgs = {
     #   url = "github:dariof4/nixpkgs/nyxt-31";
     # };
@@ -150,6 +153,7 @@
         imports = [ "${src}" ];
       };
       nixosModules = (hostname: [
+        (inputs.madness.nixosModules.madness)
         # mailserver.nixosModule
         (import ./custom_modules)
         # sops-nix.nixosModules.sops

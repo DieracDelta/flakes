@@ -30,12 +30,12 @@ in
     };
 
   config = lib.mkIf cfg.enable {
-    # services.pipewire = {
-    #   enable = true;
-    #   alsa.enable = true;
-    #   alsa.support32Bit = true;
-    #   pulse.enable = true;
-    # };
+    services.pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
 
     networking.nameservers = [ "100.100.100.100" "1.1.1.1" ];
     /*TODO pass in global root state to create path from*/
@@ -203,6 +203,9 @@ in
     ''
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK
     ''
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsUDBfzag72+L0fHeoFJwp8azXn7CedR77PBunqSqxS
+    ''
     ];
 
     users.users.siraben.openssh.authorizedKeys.keys = [
@@ -214,6 +217,10 @@ in
     ];
 
     users.users.jrestivo.openssh.authorizedKeys.keys = [
+    #phone
+    ''
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFJuaewj/iKW2mZP1TAMcUYuMYz5j8TN18V6EafejPNE
+    ''
     # vps
     ''
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINX0/chTwc1ji+HpxsbY6D0bj9XrgGvIwUKTrwala6jH your_email@example.com
@@ -360,7 +367,9 @@ in
       wget
       ispell
       whois
+      zoom-us
     ];
+    madness.enable = true;
 
     programs.mosh.enable = true;
   };
