@@ -11,6 +11,7 @@
   users.users.jrestivo.shell = pkgs.fish;
 
   environment.systemPackages = with pkgs; [ ghc ripgrep tree
+  fix-python
   # (zathura.overrideAttrs (attrs:  attrs // /* {nativeBuildInputs = attrs.nativeBuildInputs ++ [pkgs.xvfb-run]; */ { mesonFlags = ["-Ddocs=disabled" # docs do not seem to be installed
     # (lib.mesonEnable "tests" false)]; }))
     jq zoxide starship direnv fzf eza  bat tldr neofetch bottom htop coreutils fd
@@ -51,7 +52,7 @@
   services.nix-daemon.enable = true;
   nix.package = pkgs.nix;
   nix.extraOptions = "experimental-features = nix-command flakes";
-  
+
 
   # environment.systemPath = [ "/opt/homebrew/bin" ];
   environment.variables = { HOMEBREW_NO_ANALYTICS = "1"; };

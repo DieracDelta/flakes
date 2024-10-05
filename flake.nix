@@ -3,6 +3,7 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    fix-python.url = "github:GuillaumeDesforges/fix-python";
     nyxt-src = {
       url = "github:atlas-engineer/nyxt";
       flake = false;
@@ -368,6 +369,7 @@
               jj.overlays.default
               colmena.overlay
               (final: prev: {
+                fix-python = inputs.fix-python.packages.aarch64-darwin.default;
                 # starship = master.legacyPackages.aarch64-darwin.starship;
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
                 # nixVeryUnstable = inputs.nix.packages.aarch64-darwin.nix;
