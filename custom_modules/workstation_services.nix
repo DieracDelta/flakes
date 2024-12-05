@@ -22,12 +22,13 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
+    rustdesk
   nix-output-monitor
     # nix-janitor
     ollama
     xbanish
     cudaPackages.cudatoolkit
-    cudaPackages.cudnn_8_9
+    # cudaPackages.cudnn_8_9
     # wine
     # winetricks
     # protontricks
@@ -88,18 +89,28 @@ in
       enable = true;
       layout = "us";
       # displayManager = { lightdm.enable = true; };
-      windowManager.i3 = {
-        enable = true;
-        package = pkgs.i3-gaps;
-        extraPackages = with pkgs; [ rofi ];
-      };
+      # windowManager.i3 = {
+      #   enable = true;
+      #   package = pkgs.i3-gaps;
+      #   extraPackages = with pkgs; [ rofi ];
+      # };
       displayManager.sddm.enable = true;
-      desktopManager.plasma5.enable = true;
-      libinput.enable = true;
+      desktopManager.plasma6.enable = true;
+
       # desktopManager.gnome.enable = true;
+      # .gdm.enable = true;
+      libinput.enable = true;
+      desktopManager.gnome.enable = true;
       # displayManager.gdm.enable = true;
       # windowManager.bspwm.enable = true;
     };
+
+    services.rustdesk-server.enable = true;
+    services.rustdesk-server.openFirewall = true;
+    services.rustdesk-server.relayIP = "100.74.54.40";
+
+    programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
+
     services.xrdp.enable = true;
     virtualisation.docker = {
       enable = true;

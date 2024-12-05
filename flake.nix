@@ -14,7 +14,7 @@
     };
 
     atuin = {
-      url = "github:atuinsh/atuin";
+      url = "github:atuinsh/atuin/9be49e434e549d6b13928b530139b66fef6171f1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -175,6 +175,17 @@
 
 
         (final: prev: {
+         xdg-desktop-portal-gtk = prev.xdg-desktop-portal-gtk.overrideAttrs (old: rec {
+             buildInputs = [
+             prev.glib
+             prev.gtk3
+             prev.xdg-desktop-portal
+             prev.gsettings-desktop-schemas # settings exposed by settings portal
+             prev.gnome-desktop
+             prev.gnome-settings-daemon # schemas needed for settings api (mostly useless now that fonts were moved to g-d-s, just mouse and xsettings)
+             ];
+             mesonFlags = [];
+             });
           inherit (deploy-rs.packages.${system}) deploy-rs;
           deepfry = inputs.deepfry.defaultPackage.x86_64-linux;
           nvim = my-nvim.defaultPackage.x86_64-linux;

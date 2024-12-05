@@ -130,10 +130,11 @@ let
     # tdesktop
     # exodus
     mpv
-    youtube-dl
     pciutils
     usbutils
     lm_sensors
+    hashcat
+    rhash
     liblqr1
     zlib.dev
   ];
