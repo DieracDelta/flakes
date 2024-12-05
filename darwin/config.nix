@@ -11,6 +11,7 @@
   users.users.jrestivo.shell = pkgs.fish;
 
   environment.systemPackages = with pkgs; [ ghc ripgrep tree
+  moreutils
   fix-python
   # (zathura.overrideAttrs (attrs:  attrs // /* {nativeBuildInputs = attrs.nativeBuildInputs ++ [pkgs.xvfb-run]; */ { mesonFlags = ["-Ddocs=disabled" # docs do not seem to be installed
     # (lib.mesonEnable "tests" false)]; }))
@@ -28,12 +29,12 @@
   # ocamlPackages.menhirLib
   # ocaml
   hyperfine
-  cargo
+  # cargo
   ruby
   anki-bin
   nix
   ripgrep-all
-  rustc
+  # rustc
   fishPlugins.fzf-fish
   yazi
 

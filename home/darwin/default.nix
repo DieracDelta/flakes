@@ -3,6 +3,7 @@
 {
   # config.nixpkgs.allowUnfree = true;
   programs.home-manager.enable = true;
+  manual.manpages.enable = false;
 
   #environment.variables = { EDITOR = "nvim"; };
 

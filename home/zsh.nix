@@ -37,8 +37,12 @@ in
 
       #programs.zsh.defaultKeymap = "vicmd";
 
-      plugins = [ ];
+      plugins = with pkgs.fishPlugins; [
+         # TODO autopair.fish maybe?
+         # https://github.com/jorgebucaran/autopair.fish
 
+          { name = "puffer"; inherit (pkgs.fishPlugins.puffer) src; }
+      ];
 
       # aliases
 

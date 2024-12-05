@@ -21,10 +21,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix = {
-      url = "github:NixOS/nix/2.19.0";
-    };
-    alacritty = {
-      url = "github:zachcoyle/alacritty-nightly";
+      url = "github:NixOS/nix";
     };
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
@@ -166,7 +163,6 @@
     , mutt-colors-solarized
     , vendor-reset
     , darwin
-    , alacritty
     , my-nvim
     , jj
     , atuin
@@ -264,7 +260,7 @@
           }
         )
         (final: prev: {
-          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord alacritty linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
+          inherit (unstable-pkgs) manix maim nextcloud21 nix-du tailscale zerotierone zsa-udev-rules wally-cli rust-cbindgen discord linuxPackages_5_11 imagemagick hyperspace-cli bottom android-studio exodus innernet thunderbird rocm-device-libs rocm-opencl-icd rocm-opencl-runtime rocm-runtime rocm-smi rocm-thunk rocm-comgr rocm-cmake;
           unstable = unstable-pkgs;
         })
       ];
