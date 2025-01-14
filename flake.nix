@@ -3,6 +3,7 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    tmp_fix_tdf.url = "github:DieracDelta/nixpkgs/jr/tdf";
     fix-python.url = "github:GuillaumeDesforges/fix-python";
     nyxt-src = {
       url = "github:atlas-engineer/nyxt";
@@ -365,6 +366,7 @@
               jj.overlays.default
               colmena.overlay
               (final: prev: {
+                tdf = inputs.tmp_fix_tdf.legacyPackages.aarch64-darwin.tdf;
                 fix-python = inputs.fix-python.packages.aarch64-darwin.default;
                 # starship = master.legacyPackages.aarch64-darwin.starship;
                 nvim = my-nvim.defaultPackage.aarch64-darwin;

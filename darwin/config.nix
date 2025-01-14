@@ -1,16 +1,18 @@
 { pkgs, home-manager, lib, ... }:
 {
   fonts = {
-    enableFontDir = true;
-    fonts = with pkgs;[ (nerdfonts.override { fonts = [ "FiraCode" ]; }) hack-font ];
+    packages = with pkgs;[ nerd-fonts.fira-code hack-font ];
   };
 
   environment.variables = { EDITOR = "nvim"; };
+  system.stateVersion = 5;
 
+  programs.fish.enable = true;
   users.users.jrestivo.home = "/Users/jrestivo";
   users.users.jrestivo.shell = pkgs.fish;
 
   environment.systemPackages = with pkgs; [ ghc ripgrep tree
+  tdf
   moreutils
   fix-python
   # (zathura.overrideAttrs (attrs:  attrs // /* {nativeBuildInputs = attrs.nativeBuildInputs ++ [pkgs.xvfb-run]; */ { mesonFlags = ["-Ddocs=disabled" # docs do not seem to be installed
