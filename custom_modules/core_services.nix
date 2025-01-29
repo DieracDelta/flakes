@@ -84,7 +84,7 @@ in
 
     services.openssh = {
       enable = true;
-      passwordAuthentication = false;
+      settings.PasswordAuthentication = false;
     };
     programs.ssh = {
       forwardX11 = true;
@@ -99,7 +99,7 @@ in
 
     services.locate = {
       enable = true;
-      locate = pkgs.unstable.mlocate;
+      package = pkgs.unstable.mlocate;
       localuser = null; # mlocate does not support this option so it must be null
       interval = "weekly";
       pruneNames = [
@@ -264,12 +264,12 @@ in
     ];
 
     nix = {
-      binaryCaches = [
-        "https://jrestivo.cachix.org"
-      ];
-      binaryCachePublicKeys = [
-        "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
-      ];
+      # binaryCaches = [
+      #   "https://jrestivo.cachix.org"
+      # ];
+      # binaryCachePublicKeys = [
+      #   "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
+      # ];
 
       /*warn-dirty = true;*/
       extraOptions = ''
@@ -286,16 +286,13 @@ in
         "https://cache.nixos.org"
         "https://cuda-maintainers.cachix.org"
           "https://cachix.cachix.org"
-          "https://gytix.cachix.org/"
-          "https://jrestivo.cachix.org"
+          # "https://jrestivo.cachix.org"
           "http://nix-community.cachix.org/"
       ];
       settings.trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
           "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
-          "gytix.cachix.org-1:JXNZBxYslCV/hAkfNvJgyxlWb8jRQRKc+M0h7AaFg7Y="
-          "jrestivo.cachix.org-1:+jSOsXAAOEjs+DLkybZGQEEIbPG7gsKW1hPwseu03OE="
           "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       ];
       gc = {

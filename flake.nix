@@ -56,12 +56,6 @@
       flake = false;
     };
 
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-
     my-nvim = {
       url = "github:DieracDelta/vimconfig";
     };
@@ -102,7 +96,6 @@
       url = "github:DieracDelta/filehost_rust";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.naersk.follows = "naersk";
-      inputs.rust-overlay.follows = "rust-overlay";
       inputs.utils.follows = "flake-utils";
     };
 
@@ -112,7 +105,6 @@
     inputs@{ self
     , nixpkgs
     # , nyxt_nixpkgs
-    , rust-overlay
     , home-manager
     , emacs-overlay
     , nix-doom-emacs
@@ -305,7 +297,6 @@
           {
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
-              inputs.rust-overlay.overlay
               (final: prev: {
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
                 #nixVeryUnstable = inputs.master.legacyPackages.aarch64-darwin.nixUnstable;

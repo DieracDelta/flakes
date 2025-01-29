@@ -85,22 +85,22 @@ in
     };
 
   config = lib.mkIf cfg.enable {
+    services.desktopManager.plasma6.enable = true;
+    services.libinput.enable = true;
+    services.displayManager.sddm.enable = true;
     # weird bug. Need this in order to get xmonad to work in home-manager.
     services.xserver = {
       enable = true;
-      layout = "us";
+      xkb.layout = "us";
       # displayManager = { lightdm.enable = true; };
       windowManager.i3 = {
         enable = true;
         package = pkgs.i3-gaps;
         extraPackages = with pkgs; [ rofi ];
       };
-      displayManager.sddm.enable = true;
-      desktopManager.plasma6.enable = true;
 
       # desktopManager.gnome.enable = true;
       # .gdm.enable = true;
-      libinput.enable = true;
       desktopManager.gnome.enable = true;
       # displayManager.gdm.enable = true;
       # windowManager.bspwm.enable = true;
@@ -116,9 +116,9 @@ in
     virtualisation.docker = {
       enable = true;
       autoPrune.enable = true;
-      enableNvidia = true;
       enableOnBoot = true;
     };
+    hardware.nvidia-container-toolkit.enable = true;
 
     boot.plymouth = {
       /*TODO add in custom boot icons*/
@@ -144,7 +144,7 @@ in
         virtualizationPack
       ];
 
-    fonts.fonts = with pkgs;
+    fonts.packages = with pkgs;
       [
         d2coding
         # iosevka

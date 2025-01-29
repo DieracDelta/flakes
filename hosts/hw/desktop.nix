@@ -44,7 +44,7 @@
   # environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";
-  hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];
+  # hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];
 
   environment.variables = { };
 
