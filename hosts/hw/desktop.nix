@@ -48,8 +48,6 @@
 
   environment.variables = { };
 
-  swapDevices = [ ];
-
   # boot.loader.grub = {
   #   enable = true;
   #   efiSupport = true;
@@ -84,6 +82,8 @@
       fsType = "vfat";
       options = [ "fmask=0022" "dmask=0022" ];
     };
+
+  swapDevices = [ {device = "/swap/swapfile"; }];
 
   # nix.settings.max-jobs = lib.mkDefault 13;
 

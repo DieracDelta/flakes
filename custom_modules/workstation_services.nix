@@ -33,6 +33,7 @@ let
     # winetricks
     # protontricks
     cowsay
+    wacomtablet
     steam
     steamcmd
     # steam-run
@@ -50,7 +51,7 @@ let
     noisetorch
     syncthing
     # gnome.cheese
-    kdeconnect
+    # kdeconnect
     # trezor-suite
     redshift
     xorg.xwininfo
@@ -89,11 +90,11 @@ in
       enable = true;
       layout = "us";
       # displayManager = { lightdm.enable = true; };
-      # windowManager.i3 = {
-      #   enable = true;
-      #   package = pkgs.i3-gaps;
-      #   extraPackages = with pkgs; [ rofi ];
-      # };
+      windowManager.i3 = {
+        enable = true;
+        package = pkgs.i3-gaps;
+        extraPackages = with pkgs; [ rofi ];
+      };
       displayManager.sddm.enable = true;
       desktopManager.plasma6.enable = true;
 
@@ -192,6 +193,23 @@ in
     #  enable = true;
     #  enableSSHSupport = true;
     #};
+
+    services.ollama = {
+      loadModels = ["deepseek-r1:32b" "deepseek-r1:14b" "SIGJNF/deepseek-r1-671b-1.58bit"];
+      enable = true;
+      acceleration = "cuda";
+    };
+    services.open-webui = {
+      openFirewall = true;
+      enable = true;
+      host = "0.0.0.0";
+      environment = {
+        OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
+        # Disable authentication
+        WEBUI_AUTH = "False";
+      };
+    };
+
   };
 
 }
