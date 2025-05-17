@@ -3,9 +3,6 @@
 {
   programs.home-manager.enable = true;
 
-  #environment.variables = { EDITOR = "nvim"; };
-
-
   programs.git = {
     enable = true;
     userName = "Justin Restivo";
@@ -19,12 +16,14 @@
     #signing.key = "E68281EB2ABCE9B8";
   };
 
-
+  home.stateVersion = "21.11";
 
   /*morally speaking should automate this in the same way im doing modules*/
   imports = [
     ../fish.nix
   ];
+
+  programs.emacs.enable = true;
 
   programs.tmux = {
     enable = true;
@@ -37,13 +36,14 @@
       }
     ];
   };
+
   programs.zoxide = {
     enable = true;
-    enableZshIntegration = true;
+    enableFishIntegration = true;
   };
-  xdg.configFile = with builtins; {
-    "alacritty/alacritty.yml".text = builtins.readFile ../alacritty.yml;
-  };
+  programs.atuin.enable = true;
+  programs.atuin.enableFishIntegration = true;
+  programs.atuin.enableZshIntegration = true;
 
 
   manual.html.enable = true;

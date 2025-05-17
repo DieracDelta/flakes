@@ -139,7 +139,9 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.jrestivo = import ./home/darwin;
+            home-manager.users.jrestivo = {
+              imports = [ ./home/darwin ];
+            };
           }
           ./darwin/config.nix
           {

@@ -1,42 +1,67 @@
 { pkgs, home-manager, ... }:
-let 
-rust_build = pkgs.rust-bin.nightly."2021-10-10".default.override {
-extensions = [ "rust-src" "clippy" "cargo" "rustfmt-preview"];
-}; in
 {
   fonts = {
-    enableFontDir = true;
-    fonts = with pkgs;[ (nerdfonts.override { fonts = [ "FiraCode" ]; }) hack-font ];
+    packages = with pkgs;[ nerd-fonts.fira-code fira-code-symbols fira-math hack-font ];
   };
 
   environment.variables = { EDITOR = "nvim"; };
+  system.stateVersion = 5;
 
-  environment.systemPackages = with pkgs; [ nvim ghc ripgrep tree zathura yabai alacritty jq zoxide starship direnv fzf exa tmux bat tldr neofetch bottom htop nix coreutils fd nix-du nix-top nixfmt entr zsh syncthing];
 
+  programs.fish.enable = true;
+  users.users.jrestivo.home = "/Users/jrestivo";
+  users.users.jrestivo.shell = pkgs.fish;
 
-  services.yabai = {
-    enable = true;
-    package = pkgs.yabai;
-    config = {
-      focus_follows_mouse = "on";
-      mouse_follows_focus = "off";
-      window_placement = "second_child";
-      window_opacity = "off";
-      top_padding = 3;
-      bottom_padding = 3;
-      left_padding = 3;
-      right_padding = 3;
-      window_gap = 3;
-      layout = "bsp";
-    };
-  };
-
-  services.skhd = {
-    enable = true;
-    skhdConfig = builtins.readFile ./shkdrc;
-  };
+  environment.systemPackages = with pkgs; [
+    ghc ripgrep tree
+    tdf
+    pngpaste
+    moreutils
+    fix-python
+    jq zoxide starship direnv fzf eza  bat tldr neofetch bottom htop coreutils fd
+    nix-top nixfmt entr fish syncthing /* colmena */ zellij /* colima */ zellij jless git-filter-repo lima zathura emacs /* agda */  docker  awscli emacs /* neovide */ /* nyxt-3 */
+    atuin
+    #(rWrapper.override{ packages = with rPackages; [ ggplot2 dplyr xts languageserver ]; })
+    gh
+    hyperfine
+    kitty
+    ruby
+    anki-bin
+    nix
+    ripgrep-all
+    fishPlugins.fzf-fish
+    yazi
+    corepack_latest
+    nodejs_latest
+    delta duf broot
+    mosh
+    dive
+    nix-output-monitor
+    sbcl_2_4_10
+    libfixposix
+    pkg-config
+    john
+  ];
 
 
   services.nix-daemon.enable = true;
   nix.package = pkgs.nix;
+  nix.extraOptions = "experimental-features = nix-command flakes pipe-operators";
+
+  # environment.systemPath = [ "/opt/homebrew/bin" ];
+  environment.variables = { HOMEBREW_NO_ANALYTICS = "1"; };
+  homebrew.onActivation.autoUpdate = true;
+  homebrew.onActivation.cleanup = "zap";
+  homebrew.global.brewfile = true;
+  homebrew = {
+    enable = true;
+    casks = [
+      {
+        name = "nikitabobko/tap/aerospace";
+        args = {
+          no_quarantine = true;
+        };
+      }
+    ];
+  };
 }
