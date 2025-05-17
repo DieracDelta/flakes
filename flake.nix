@@ -4,7 +4,7 @@
 
   inputs = {
     nix = {
-      url = "github:NixOS/nix/2.28.2";
+      url = "github:NixOS/nix/2.28.3";
     };
 
     darwin.url = "github:lnl7/nix-darwin/master";

@@ -117,7 +117,6 @@ in
       # desktopManager.gnome.enable = true;
       # .gdm.enable = true;
       # desktopManager.gnome.enable = true;
-      desktopManager.plasma6.enable = true;
       # displayManager.gdm.enable = true;
       # windowManager.bspwm.enable = true;
     };
@@ -220,7 +219,7 @@ in
     #};
 
     services.ollama = {
-      package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
+      #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
       loadModels = ["deepseek-r1:32b" "deepseek-r1:14b" "SIGJNF/deepseek-r1-671b-1.58bit"];
       enable = true;
       acceleration = "cuda";
