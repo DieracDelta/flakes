@@ -1,7 +1,7 @@
 { pkgs, home-manager, lib, ... }:
 {
   fonts = {
-    packages = with pkgs;[ nerd-fonts.fira-code hack-font ];
+    packages = with pkgs;[ nerd-fonts.fira-code fira-code-symbols fira-math hack-font ];
   };
 
   environment.variables = { EDITOR = "nvim"; };
@@ -13,6 +13,7 @@
 
   environment.systemPackages = with pkgs; [ ghc ripgrep tree
   tdf
+  pngpaste
   moreutils
   fix-python
   # (zathura.overrideAttrs (attrs:  attrs // /* {nativeBuildInputs = attrs.nativeBuildInputs ++ [pkgs.xvfb-run]; */ { mesonFlags = ["-Ddocs=disabled" # docs do not seem to be installed
@@ -30,7 +31,9 @@
   # ocamlPackages.menhir
   # ocamlPackages.menhirLib
   # ocaml
+  gh
   hyperfine
+  kitty
   # cargo
   ruby
   anki-bin
@@ -46,6 +49,9 @@
   mosh
   dive
   nix-output-monitor
+  sbcl_2_4_10
+  libfixposix
+  pkg-config
   john
 
 
@@ -54,7 +60,7 @@
 
   services.nix-daemon.enable = true;
   nix.package = pkgs.nix;
-  nix.extraOptions = "experimental-features = nix-command flakes";
+  nix.extraOptions = "experimental-features = nix-command flakes pipe-operators";
 
 
   # environment.systemPath = [ "/opt/homebrew/bin" ];
