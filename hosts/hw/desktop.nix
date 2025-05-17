@@ -42,7 +42,7 @@
   boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback /* akvcam */ ];
   services.xserver.videoDrivers = [ /* TODO COMMENT  */ /* "amdgpu" */ "nvidia" ];
   # environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
-  services.trezord.enable = true;
+  # services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";
   # hardware.opengl.extraPackages = with pkgs; [ /* amdvlk */ /* rocmPackages.clr.icd  */];
 
@@ -84,6 +84,18 @@
     };
 
   swapDevices = [ {device = "/swap/swapfile"; }];
+
+  nix.settings.system-features = [ "nixos-test" "benchmark" "big-parallel" "kvm" "gccarch-znver3" ];
+
+  # nixpkgs.hostPlatform = "";
+  #
+  # nixpkgs.hostPlatform = {
+  #     system = "x86_64-linux";
+  #     gcc.arch = "gccarch-znver3";
+  #     gcc.tune = "gccarch-znver3";
+  #   };
+
+
 
   # nix.settings.max-jobs = lib.mkDefault 13;
 

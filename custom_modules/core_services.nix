@@ -1,4 +1,4 @@
-{ config, pkgs, lib, options, system, ... }:
+{ config, pkgs, lib, options, system, nixpkgs-stable, ... }:
 /*TODO read these in from secrets.yaml by parsing yaml file*/
 /*TODO fix naming inconsistency*/
 let
@@ -51,6 +51,7 @@ in
 
     # even more OP ssh between all the devices
     services.tailscale = {
+      package = nixpkgs-stable.legacyPackages.${system}.tailscale;
       enable = true;
     };
     # create a oneshot job to authenticate to Tailscale
@@ -91,7 +92,8 @@ in
       setXAuthLocation = true;
     };
 
-    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 9993 ];
+    # ollama and webui are 11434 and 8080 respectively
+    networking.firewall.allowedTCPPorts = [ 3389 80 443 444 9993 8080 11434 ];
 
     services.lorri.enable = true;
 
@@ -99,8 +101,6 @@ in
 
     services.locate = {
       enable = true;
-      package = pkgs.unstable.mlocate;
-      localuser = null; # mlocate does not support this option so it must be null
       interval = "weekly";
       pruneNames = [
         ".git"
@@ -144,14 +144,14 @@ in
         isNormalUser = true;
         home = "/home/jachym";
         shell = pkgs.zsh;
-        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
+        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "video" "render"];
       };
 
       faye = {
         isNormalUser = true;
         home = "/home/faye";
         shell = pkgs.zsh;
-        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
+        extraGroups = [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "video" "render"];
       };
 
       jrestivo = {
@@ -160,7 +160,7 @@ in
         shell = pkgs.fish;
         description = "Justin --the owner-- Restivo";
         extraGroups =
-          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "trezord" "video" "render"];
+          [ "wheel" "networkmanager" "audio" "input" "docker" "adbusers" "jackaudio" "keys" "plugdev" "video" "render" "dialout"];
         initialPassword = "bruh";
       };
     };
@@ -275,7 +275,7 @@ in
       extraOptions = ''
         gc-keep-outputs = true
         warn-dirty = false
-        experimental-features = nix-command flakes
+        experimental-features = nix-command flakes pipe-operators
         extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
         '';
@@ -284,14 +284,14 @@ in
 # cachix stuffs
       settings.substituters = [
         "https://cache.nixos.org"
-        "https://cuda-maintainers.cachix.org"
+        # "https://cuda-maintainers.cachix.org"
           "https://cachix.cachix.org"
           # "https://jrestivo.cachix.org"
           "http://nix-community.cachix.org/"
       ];
       settings.trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+        # "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
           "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
           "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       ];
@@ -318,7 +318,7 @@ in
       git
       tigervnc
       evemu
-      xdg_utils
+      xdg-utils
       dnsutils
       # NOTE: brocken apparently
       # hwloc
@@ -338,7 +338,7 @@ in
       evtest
       unzip
       nix-tree
-      nixFlakes
+      # nixFlakes
       fzf
       # cachix
       bat
@@ -366,7 +366,6 @@ in
       whois
       zoom-us
     ];
-    madness.enable = true;
 
     programs.mosh.enable = true;
   };

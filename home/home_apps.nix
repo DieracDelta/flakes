@@ -38,7 +38,8 @@ let
 
     git-lfs
     yubico-piv-tool
-    yubikey-manager-qt
+    #yubikey-manager-qt
+    #yubioath-flutter
     #nix-extract-revs-from-cache
     #matrix-construct
     github-cli
@@ -65,7 +66,7 @@ let
     gnumake
     openssl
     pkg-config
-    dog
+    # dog
     hwinfo
     # lean
   ];
@@ -95,7 +96,6 @@ let
     graphviz
     # minecraft
     signal-desktop
-    /*from gytis*/
     alacritty
     vscode
     rust-analyzer
@@ -108,6 +108,7 @@ let
   ];
   /* user */
   workstationPack = with pkgs; [
+    ifuse
     # nyxt
     # zulip
     termite
@@ -119,7 +120,7 @@ let
     # firefox
     # pkgs.unstable.chromium
     flameshot
-    urlscan
+    # urlscan
     lynx
     bottom
     # vscode
@@ -129,7 +130,7 @@ let
     #gimp
     # tdesktop
     # exodus
-    mpv
+    # nixpkgs-stable.legacyPackages.${syste}.mpv
     pciutils
     usbutils
     lm_sensors

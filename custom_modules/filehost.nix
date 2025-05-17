@@ -10,7 +10,7 @@ in
       default = false;
     };
   config = lib.mkIf cfg.enable {
-    networking.firewall.allowedTCPPorts = [ 80 443 8000 8080 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 8000 8080 11434];
     security.acme = {
       acceptTerms = true;
       # Replace the email here!

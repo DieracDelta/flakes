@@ -4,6 +4,7 @@
 , system
 , pkgs
 , nixosModules
+, nixpkgs-stable
 , ...
 }:
 let
@@ -14,10 +15,24 @@ let
 in
 {
   pkgImport = pkgs: overlays: import pkgs {
-    inherit system overlays;
+    # inherit system overlays;
+    inherit overlays;
+    localSystem = {
+      system = "x86_64-linux";
+      gcc.arch = "znver3";
+      gcc.tune = "znver3";
+      gcc.abi = "64";
+    };
+
+    crossSystem = {
+      system = "x86_64-linux";
+      gcc.arch = "znver3";
+      gcc.tune = "znver3";
+      gcc.abi = "64";
+    };
     config = {
       allowUnfree = true;
-      permittedInsecurePackages = [ "nix-2.15.3" ];
+      # permittedInsecurePackages = [ "nix-2.15.3" ];
 
       allowUnsupportedSystem = true;
     };
@@ -60,7 +75,7 @@ in
             ] ++ (nixosModules hostName);
 
           specialArgs = {
-            inherit system inputs builtins;
+            inherit system inputs builtins nixpkgs-stable;
           };
         };
       });

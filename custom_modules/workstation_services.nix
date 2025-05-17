@@ -1,12 +1,23 @@
-{ config, pkgs, lib, options, system, builtins, ... }:
+{ config, pkgs, lib, options, system, builtins, nixpkgs-stable, ... }:
 let
   cfg = config.custom_modules.workstation_services;
   /* system */
   virtualizationPack = with pkgs; [
+  nix
+  spider
     # lutris
     # wine
-    heroic
-    xboxdrv
+    nixpkgs-stable.legacyPackages.${system}.heroic
+    # qt5.wrapQtAppsHook
+    # libsForQt5.qt5.qtconnectivity
+    # libsForQt5.qt5.qtgui
+    # libsForQt5.qt5.qtgamepad
+    # libsForQt5.qt5.qtgraphicaleffects
+    # libsForQt5.qt5.qtlocation
+    # libsForQt5.qt5.qtquickcontrols2
+    # libsForQt5.qt5.qtserialport
+
+    # xboxdrv
     docker-compose
     # virt-manager
     # looking-glass-client
@@ -22,10 +33,10 @@ let
   ];
   /* system */
   gamingPack = with pkgs; [
-    rustdesk
+    # rustdesk
   nix-output-monitor
     # nix-janitor
-    ollama
+    # ollama
     xbanish
     cudaPackages.cudatoolkit
     # cudaPackages.cudnn_8_9
@@ -44,9 +55,13 @@ let
     m4
   ];
   xPack = with pkgs; [
+  tdf
+    libimobiledevice
+    ifuse
+    # kdePackages.kdeconnect-kde
     yazi
     ghostty
-    cachix
+    # cachix
     discord
     noisetorch
     syncthing
@@ -71,7 +86,7 @@ let
     # obsidian
   ];
   yubikeyPack = with pkgs; [
-    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools clinfo vulkan-loader /* vulkan-volk */ vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vulkan-cts vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
+    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools clinfo vulkan-loader /* vulkan-volk */ vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
   ];
 in
 {
@@ -101,14 +116,15 @@ in
 
       # desktopManager.gnome.enable = true;
       # .gdm.enable = true;
-      desktopManager.gnome.enable = true;
+      # desktopManager.gnome.enable = true;
+      desktopManager.plasma6.enable = true;
       # displayManager.gdm.enable = true;
       # windowManager.bspwm.enable = true;
     };
 
-    services.rustdesk-server.enable = true;
-    services.rustdesk-server.openFirewall = true;
-    services.rustdesk-server.relayIP = "100.74.54.40";
+    # services.rustdesk-server.enable = true;
+    # services.rustdesk-server.openFirewall = true;
+    # services.rustdesk-server.relayIP = "100.74.54.40";
 
     programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
 
@@ -149,14 +165,23 @@ in
         d2coding
         # iosevka
         aileron
-        nerdfonts
+        nerd-fonts.fira-code
         fira-code
         fira-code-symbols
         fira-mono
       ];
     services.picom.enable = true;
     services.syncthing.enable = true;
-    networking.firewall.allowedTCPPorts = [ 22000 8384 ];
+    networking.firewall.allowedTCPPorts = [ 22000 8384 8080 11434 ];
+    # networking.firewall = {
+    #   enable = true;
+    #   allowedTCPPortRanges = [
+    #     { from = 1714; to = 1764; } # KDE Connect
+    #   ];
+    #   allowedUDPPortRanges = [
+    #     { from = 1714; to = 1764; } # KDE Connect
+    #   ];
+    # };
     programs.dconf.enable = true;
     systemd.user.services.atuind = {
       enable = true;
@@ -195,11 +220,15 @@ in
     #};
 
     services.ollama = {
+      package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
       loadModels = ["deepseek-r1:32b" "deepseek-r1:14b" "SIGJNF/deepseek-r1-671b-1.58bit"];
       enable = true;
       acceleration = "cuda";
+      host = "0.0.0.0";
+      # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
     };
     services.open-webui = {
+      package = nixpkgs-stable.legacyPackages.${system}.open-webui;
       openFirewall = true;
       enable = true;
       host = "0.0.0.0";
@@ -208,6 +237,12 @@ in
         # Disable authentication
         WEBUI_AUTH = "False";
       };
+    };
+    programs.kdeconnect.enable = true;
+
+    services.usbmuxd = {
+      enable = true;
+      package = pkgs.usbmuxd2;
     };
 
   };

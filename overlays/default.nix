@@ -3,8 +3,7 @@ self: super: rec {
   #imagemagick = super.callPackage ./imagemagick { };
   /*firefox = super.callPackage ./firefox {}*/
   /*unchromium = super.callPackage ./unchromium {};*/
-  # hunter = super.callPackage ./hunter { };
-  trezor-suite = super.callPackage ./trezor-suite { };
+  # trezor-suite = super.callPackage ./trezor-suite { };
   #FIXME
   #nix-extract-revs-from-cache = super.callPackage ./nix-extract-revs-from-cache { };
 
