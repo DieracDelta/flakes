@@ -25,10 +25,6 @@ in
       enable = true;
       enableFishIntegration = true;
     };
-    programs.fzf = {
-      enable = true;
-      enableFishIntegration = true;
-    };
 
     programs.fish = {
       enable = true;

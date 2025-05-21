@@ -17,7 +17,6 @@
     tdf
     pngpaste
     moreutils
-    fix-python
     jq zoxide starship direnv fzf eza  bat tldr neofetch bottom htop coreutils fd
     nix-top nixfmt entr fish syncthing /* colmena */ zellij /* colima */ zellij jless git-filter-repo lima zathura emacs /* agda */  docker  awscli emacs /* neovide */ /* nyxt-3 */
     atuin
@@ -29,7 +28,6 @@
     anki-bin
     nix
     ripgrep-all
-    fishPlugins.fzf-fish
     yazi
     corepack_latest
     nodejs_latest
@@ -44,7 +42,6 @@
   ];
 
 
-  services.nix-daemon.enable = true;
   nix.package = pkgs.nix;
   nix.extraOptions = "experimental-features = nix-command flakes pipe-operators";
 
