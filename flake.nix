@@ -34,24 +34,30 @@
   };
 
   outputs =
-    inputs@{ self
-    , nixpkgs
-    , nixpkgs-stable
-    , home-manager
-    , darwin
-    , my-nvim
-    , nix
-    , ...
+    inputs@{
+      self,
+      nixpkgs,
+      nixpkgs-stable,
+      home-manager,
+      darwin,
+      my-nvim,
+      nix,
+      ...
     }:
     let
       inherit (nixpkgs) lib;
-      inherit (lib) recursiveUpdate;
       system_x86 = "x86_64-linux";
-      system_arm = "aarch64-linux";
       system = system_x86;
 
       utils = import ./utility-functions.nix {
-        inherit lib system pkgs inputs self nixpkgs-stable;
+        inherit
+          lib
+          system
+          pkgs
+          inputs
+          self
+          nixpkgs-stable
+          ;
         nixosModules = nixosModules;
       };
       pkgs = (utils.pkgImport nixpkgs overlays);
@@ -59,75 +65,100 @@
       hmImports = [
         ./home/home.nix
       ];
-      nixosModules = (hostname: [
-        (import ./custom_modules)
-        nixpkgs.nixosModules.notDetected
-        home-manager.nixosModules.home-manager
-        ({
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.jrestivo = {
-            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
-          };
-        })
-      ]);
+      nixosModules = (
+        hostname: [
+          (import ./custom_modules)
+          nixpkgs.nixosModules.notDetected
+          home-manager.nixosModules.home-manager
+          "${
+            builtins.fetchGit {
+              url = "https://github.com/antithesishq/madness.git";
+              rev = "c22c9c03579b7175d94f63e44ee0e518bb5ccdba";
+            }
+          }/modules"
+          ({
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.jrestivo = {
+              imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
+            };
+          })
+        ]
+      );
       overlays = [
         (final: prev: {
           nix = nix.packages.x86_64-linux.default;
-          openldap = prev.folly.overrideAttrs (old: { doCheck = false; });
-          folly = prev.folly.overrideAttrs (old: { checkPhase = ""; });
-          starship = prev.starship.overrideAttrs (old: { doCheck = false; });
-          libsecret = prev.libsecret.overrideAttrs (old: { doCheck = false; });
-          notmuch = prev.notmuch.overrideAttrs (old: { doCheck = false; });
-          libadwaita = prev.libadwaita.overrideAttrs (old: { doCheck = false; });
-          ibus = nixpkgs-stable.legacyPackages."x86_64-linux".ibus;
-          libqmi = nixpkgs-stable.legacyPackages."x86_64-linux".libqmi;
-          modemmanager = nixpkgs-stable.legacyPackages."x86_64-linux".modemmanager;
-          networkmanager = nixpkgs-stable.legacyPackages."x86_64-linux".networkmanager;
-          pipewire = nixpkgs-stable.legacyPackages."x86_64-linux".pipewire;
-
-          pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-            (python-final: python-prev: {
-              numpy = python-prev.numpy.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
-              });
-            })];
-          haskellPackages = prev.haskellPackages.extend (hself: hsuper: {
-            crypton =  hsuper.crypton.overrideAttrs (oldAttrs: {
-              doCheck = false;
-            });
-            crypton-x509-validation = hsuper.crypton-x509-validation.overrideAttrs (oldAttrs: {
-              doCheck = false;
-            });
-            tls =  hsuper.tls.overrideAttrs (oldAttrs: {
-              doCheck = false;
-            });
-
-          });
+          # openldap = prev.folly.overrideAttrs (old: {
+          #   doCheck = false;
+          # });
+          # folly = prev.folly.overrideAttrs (old: {
+          #   checkPhase = "";
+          # });
+          # starship = prev.starship.overrideAttrs (old: {
+          #   doCheck = false;
+          # });
+          # libsecret = prev.libsecret.overrideAttrs (old: {
+          #   doCheck = false;
+          # });
+          # notmuch = prev.notmuch.overrideAttrs (old: {
+          #   doCheck = false;
+          # });
+          # libadwaita = prev.libadwaita.overrideAttrs (old: {
+          #   doCheck = false;
+          # });
+          # ibus = nixpkgs-stable.legacyPackages."x86_64-linux".ibus;
+          # libqmi = nixpkgs-stable.legacyPackages."x86_64-linux".libqmi;
+          # modemmanager = nixpkgs-stable.legacyPackages."x86_64-linux".modemmanager;
+          # networkmanager = nixpkgs-stable.legacyPackages."x86_64-linux".networkmanager;
+          # pipewire = nixpkgs-stable.legacyPackages."x86_64-linux".pipewire;
+          #
+          # pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+          #   (python-final: python-prev: {
+          #     numpy = python-prev.numpy.overridePythonAttrs (oldAttrs: {
+          #       doCheck = false;
+          #     });
+          #   })
+          # ];
+          # haskellPackages = prev.haskellPackages.extend (
+          #   hself: hsuper: {
+          #     crypton = hsuper.crypton.overrideAttrs (oldAttrs: {
+          #       doCheck = false;
+          #     });
+          #     crypton-x509-validation = hsuper.crypton-x509-validation.overrideAttrs (oldAttrs: {
+          #       doCheck = false;
+          #     });
+          #     tls = hsuper.tls.overrideAttrs (oldAttrs: {
+          #       doCheck = false;
+          #     });
+          #
+          #   }
+          # );
           nvim = my-nvim.defaultPackage.x86_64-linux;
         })
       ];
     in
     {
 
-
       homeConfigurations = {
-        jrestivo =
-          home-manager.lib.homeManagerConfiguration {
-            inherit system;
-            homeDirectory = /home/jrestivo;
-            username = "jrestivo";
-            configuration = { pkgs, ... }: {
+        jrestivo = home-manager.lib.homeManagerConfiguration {
+          inherit system;
+          homeDirectory = /home/jrestivo;
+          username = "jrestivo";
+          configuration =
+            { pkgs, ... }:
+            {
               imports = hmImports;
               nixpkgs.overlays = overlays;
             };
-          };
+        };
       };
 
-      /*very simply get all the stuff in hosts/directory to provide as outputs*/
+      # very simply get all the stuff in hosts/directory to provide as outputs
       nixosConfigurations =
         let
-          dirs = lib.filterAttrs (name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)) (builtins.readDir ./hosts);
+          dirs = lib.filterAttrs (
+            name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)
+          ) (builtins.readDir ./hosts);
           fullyQualifiedDirs = (lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs);
         in
         utils.buildNixosConfigurations fullyQualifiedDirs;
