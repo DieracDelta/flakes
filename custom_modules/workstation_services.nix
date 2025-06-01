@@ -16,7 +16,7 @@ let
     spider
     # lutris
     # wine
-    nixpkgs-stable.legacyPackages.${system}.heroic
+    heroic
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
     # libsForQt5.qt5.qtgui
@@ -265,6 +265,39 @@ in
     #  enable = true;
     #  enableSSHSupport = true;
     #};
+    services.searx = {
+      enable = true;
+      redisCreateLocally = true;
+      settings.server = {
+        bind_address = "0.0.0.0";
+        port = "3838";
+        secret_key = "secret key";
+      };
+      settings.search = {
+        formats = [
+          "html"
+          "json"
+        ];
+      };
+
+    };
+
+    services.comfyui = {
+      enable = true;
+      acceleration = "cuda";
+      host = "0.0.0.0";
+      openFirewall = true;
+      # withModels = [
+      #   pkgs.fetchResource
+      #   {
+      #     url = "https://civitai.com/api/download/models/1026423?type=Model&format=SafeTensor";
+      #     sha256 = "B1C4DDF95671E6B51817B4F3802865E544040C232C467E76B1CB0C251BD6B634";
+      #     passthru = {
+      #       comfyui.installPaths = [ "loras" ];
+      #     };
+      #   }
+      # ];
+    };
 
     services.ollama = {
       #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;

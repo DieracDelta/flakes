@@ -6,6 +6,8 @@
     nix = {
       url = "github:NixOS/nix/2.28.3";
     };
+    nixified-ai.url = "github:nixified-ai/flake";
+    nixified-ai.inputs.nixpkgs.follows = "nixpkgs";
 
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
@@ -76,6 +78,7 @@
               rev = "c22c9c03579b7175d94f63e44ee0e518bb5ccdba";
             }
           }/modules"
+          inputs.nixified-ai.nixosModules.comfyui
           ({
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
@@ -86,6 +89,9 @@
         ]
       );
       overlays = [
+        inputs.nixified-ai.overlays.comfyui
+        inputs.nixified-ai.overlays.models
+        inputs.nixified-ai.overlays.fetchers
         (final: prev: {
           nix = nix.packages.x86_64-linux.default;
           # openldap = prev.folly.overrideAttrs (old: {
@@ -112,13 +118,14 @@
           # networkmanager = nixpkgs-stable.legacyPackages."x86_64-linux".networkmanager;
           # pipewire = nixpkgs-stable.legacyPackages."x86_64-linux".pipewire;
           #
-          # pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-          #   (python-final: python-prev: {
-          #     numpy = python-prev.numpy.overridePythonAttrs (oldAttrs: {
-          #       doCheck = false;
-          #     });
-          #   })
-          # ];
+          pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+            (python-final: python-prev: {
+
+              rapidocr-onnxruntime = python-prev.rapidocr-onnxruntime.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+            })
+          ];
           # haskellPackages = prev.haskellPackages.extend (
           #   hself: hsuper: {
           #     crypton = hsuper.crypton.overrideAttrs (oldAttrs: {

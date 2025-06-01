@@ -41,6 +41,7 @@ in
         gcc.abi = "64";
       };
       config = {
+        cudaSupport = true;
         allowUnfree = true;
         # permittedInsecurePackages = [ "nix-2.15.3" ];
 

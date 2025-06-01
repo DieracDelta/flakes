@@ -104,6 +104,7 @@ in
 
     # ollama and webui are 11434 and 8080 respectively
     networking.firewall.allowedTCPPorts = [
+      3838
       3389
       80
       443
@@ -423,6 +424,7 @@ in
       zoom-us
       uv
       gamescope
+      nixpkgs-review
       (sunshine.override { cudaSupport = true; })
       # sunshine
     ];
