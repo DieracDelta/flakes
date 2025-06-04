@@ -167,7 +167,7 @@
     "darwin": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-unpatched"
         ]
       },
       "locked": {
@@ -1915,7 +1915,7 @@
         "flake-parts": "flake-parts_13",
         "hercules-ci-effects": "hercules-ci-effects_3",
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-unpatched"
         ]
       },
       "locked": {
@@ -2113,17 +2113,33 @@
     },
     "nixpkgs-stable_3": {
       "locked": {
-        "lastModified": 1746957726,
-        "narHash": "sha256-k9ut1LSfHCr0AW82ttEQzXVCqmyWVA5+SHJkS5ID/Jo=",
+        "lastModified": 1748889542,
+        "narHash": "sha256-Hb4iMhIbjX45GcrgOp3b8xnyli+ysRPqAgZ/LZgyT5k=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a39ed32a651fdee6842ec930761e31d1f242cb94",
+        "rev": "10d7f8d34e5eb9c0f9a0485186c1ca691d2c5922",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-24.11",
+        "ref": "nixos-25.05",
         "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-unpatched": {
+      "locked": {
+        "lastModified": 1748648646,
+        "narHash": "sha256-qHmrdCq/AYkdFtCWJ7PgOzbLuJ2XcXePdWMgkrM97Ok=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e32e3fcd18f9301cbaa2ac4198a03e0f3e065928",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e32e3fcd18f9301cbaa2ac4198a03e0f3e065928",
         "type": "github"
       }
     },
@@ -2299,22 +2315,6 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_20": {
-      "locked": {
-        "lastModified": 1748648646,
-        "narHash": "sha256-qHmrdCq/AYkdFtCWJ7PgOzbLuJ2XcXePdWMgkrM97Ok=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e32e3fcd18f9301cbaa2ac4198a03e0f3e065928",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -2623,8 +2623,8 @@
         "my-nvim": "my-nvim",
         "nix": "nix",
         "nixified-ai": "nixified-ai",
-        "nixpkgs": "nixpkgs_20",
-        "nixpkgs-stable": "nixpkgs-stable_3"
+        "nixpkgs-stable": "nixpkgs-stable_3",
+        "nixpkgs-unpatched": "nixpkgs-unpatched"
       }
     },
     "rust-overlay": {

@@ -61,7 +61,7 @@ in
 
     # even more OP ssh between all the devices
     services.tailscale = {
-      package = nixpkgs-stable.legacyPackages.${system}.tailscale;
+      # package = nixpkgs-stable.legacyPackages.${system}.tailscale;
       enable = true;
     };
     # create a oneshot job to authenticate to Tailscale

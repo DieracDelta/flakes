@@ -7,18 +7,20 @@
       url = "github:NixOS/nix/2.28.3";
     };
     nixified-ai.url = "github:nixified-ai/flake";
-    nixified-ai.inputs.nixpkgs.follows = "nixpkgs";
+    nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     darwin.url = "github:lnl7/nix-darwin/master";
-    darwin.inputs.nixpkgs.follows = "nixpkgs";
-    nixpkgs = {
+    darwin.inputs.nixpkgs.follows = "nixpkgs-unpatched";
+    nixpkgs-unpatched = {
+      # url = "git+file:///home/jrestivo/dev/nixpkgs";
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs/master";
+      # url = "github:NixOS/nixpkgs/master";
+      url = "github:NixOS/nixpkgs/e32e3fcd18f9301cbaa2ac4198a03e0f3e065928";
     };
 
     nixpkgs-stable = {
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs/nixos-24.11";
+      url = "github:NixOS/nixpkgs/nixos-25.05";
     };
 
     home-manager = {
@@ -38,7 +40,7 @@
   outputs =
     inputs@{
       self,
-      nixpkgs,
+      nixpkgs-unpatched,
       nixpkgs-stable,
       home-manager,
       darwin,
@@ -47,9 +49,15 @@
       ...
     }:
     let
-      inherit (nixpkgs) lib;
       system_x86 = "x86_64-linux";
       system = system_x86;
+      tmp_pkgs = import nixpkgs-unpatched { localSystem = "x86_64-linux"; };
+      nixpkgs = tmp_pkgs.applyPatches {
+        name = "nixpkgs";
+        src = nixpkgs-unpatched;
+        patches = [ ./PATCH ];
+      };
+      inherit (nixpkgs-unpatched) lib;
 
       utils = import ./utility-functions.nix {
         inherit
@@ -70,7 +78,7 @@
       nixosModules = (
         hostname: [
           (import ./custom_modules)
-          nixpkgs.nixosModules.notDetected
+          nixpkgs-unpatched.nixosModules.notDetected
           home-manager.nixosModules.home-manager
           "${
             builtins.fetchGit {
@@ -93,7 +101,56 @@
         inputs.nixified-ai.overlays.models
         inputs.nixified-ai.overlays.fetchers
         (final: prev: {
+          haskell = prev.haskell // {
+            compiler = prev.haskell.compiler // {
+              ghc984 = prev.haskell.compiler.ghc984.override {
+                useLLVM = true;
+              };
+            };
+          };
+        })
+        (
+          final: prev:
+
+          let
+            inherit (final) lib;
+            haskellLib = final.haskell.lib.compose;
+            makeGhcOptions = opts: lib.concatStringsSep " " (map (opt: "--ghc-option=${opt}") opts);
+          in
+
+          {
+            haskell = prev.haskell // {
+              packages = prev.haskell.packages // {
+                ghc984 = prev.haskell.packages.ghc984.override {
+                  overrides = hfinal: hprev: {
+                    mkDerivation =
+                      args:
+                      hprev.mkDerivation (
+                        args
+                        // {
+                          configureFlags = [
+                            (makeGhcOptions [
+                              "-fllvm"
+                              "-optlo=-march=znver3"
+                              "-optlc=-march=znver3"
+                              "-O2"
+                            ])
+                          ];
+                        }
+                      );
+                  };
+                };
+              };
+            };
+          }
+        )
+        (final: prev: {
           nix = nix.packages.x86_64-linux.default;
+          makeRustPlatform = (
+            final.callPackage "${nixpkgs}/pkgs/development/compilers/rust/make-rust-platform.nix" {
+              rustConfig.RUSTFLAGS = "-C target-cpu=znver3 ";
+            }
+          );
           # openldap = prev.folly.overrideAttrs (old: {
           #   doCheck = false;
           # });
@@ -122,6 +179,14 @@
             (python-final: python-prev: {
 
               rapidocr-onnxruntime = python-prev.rapidocr-onnxruntime.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+
+              # psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
+              #   doCheck = false;
+              # });
+
+              anyio = python-prev.anyio.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
               });
             })
@@ -192,5 +257,7 @@
           }
         ];
       };
+
+      mything = pkgs;
     };
 }

@@ -33,7 +33,8 @@ let
     cdrkit
     qemu
     OVMF
-    chromium
+    elfx86exts
+    # chromium
     # libvirt
     # ghc
     # cabal-install
