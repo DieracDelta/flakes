@@ -60,7 +60,7 @@ let
     #matrix-construct
     github-cli
     #neovitality
-    stack
+    # stack
     nixpkgs-fmt
     yubikey-personalization
     _7zz

@@ -43,6 +43,9 @@ in
       config = {
         cudaSupport = true;
         allowUnfree = true;
+        # replaceStdenv = ({ pkgs }: pkgs.clangStdenv);
+
+        # RUSTFLAGS = "-C target-cpu=znver3 ";
         # permittedInsecurePackages = [ "nix-2.15.3" ];
 
         allowUnsupportedSystem = true;

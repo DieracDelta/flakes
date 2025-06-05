@@ -1,15 +1,19 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   extraPackages = import ./extraPackages.nix;
   cfg = config.profiles.xmonad;
 in
 {
-  options.profiles.xmonad.enable =
-    lib.mkOption {
-      description = "Enable custom vim configuration.";
-      type = with lib.types; bool;
-      default = true;
-    };
+  options.profiles.xmonad.enable = lib.mkOption {
+    description = "Enable custom vim configuration.";
+    type = with lib.types; bool;
+    default = true;
+  };
 
   config = lib.mkIf cfg.enable {
 

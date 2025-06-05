@@ -111,7 +111,6 @@
         })
         (
           final: prev:
-
           let
             inherit (final) lib;
             haskellLib = final.haskell.lib.compose;
@@ -128,11 +127,12 @@
                       hprev.mkDerivation (
                         args
                         // {
-                          configureFlags = [
+                          configureFlags = (args.configureFlags or [ ]) ++ [
                             (makeGhcOptions [
                               "-fllvm"
-                              "-optlo=-march=znver3"
-                              "-optlc=-march=znver3"
+                              "-optc=-march=znver3"
+                              "-optlo=-mcpu=znver3"
+                              # "-optlo=-flto"
                               "-O2"
                             ])
                           ];
@@ -191,20 +191,25 @@
               });
             })
           ];
-          # haskellPackages = prev.haskellPackages.extend (
-          #   hself: hsuper: {
-          #     crypton = hsuper.crypton.overrideAttrs (oldAttrs: {
-          #       doCheck = false;
-          #     });
-          #     crypton-x509-validation = hsuper.crypton-x509-validation.overrideAttrs (oldAttrs: {
-          #       doCheck = false;
-          #     });
-          #     tls = hsuper.tls.overrideAttrs (oldAttrs: {
-          #       doCheck = false;
-          #     });
-          #
-          #   }
-          # );
+          haskellPackages = prev.haskellPackages.extend (
+            hself: hsuper: {
+              #     crypton = hsuper.crypton.overrideAttrs (oldAttrs: {
+              #       doCheck = false;
+              #     });
+              #     crypton-x509-validation = hsuper.crypton-x509-validation.overrideAttrs (oldAttrs: {
+              #       doCheck = false;
+              #     });
+              wherefrom-compat = hsuper.wherefrom-compat.overrideAttrs (oldAttrs: {
+                doCheck = false;
+              });
+
+              # xmobar = hsuper.xmobar.overrideAttrs (oldAttrs: {
+              #   isLibrary = false;
+              # });
+
+              #
+            }
+          );
           nvim = my-nvim.defaultPackage.x86_64-linux;
         })
       ];
