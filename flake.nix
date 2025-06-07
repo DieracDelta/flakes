@@ -113,7 +113,6 @@
           final: prev:
           let
             inherit (final) lib;
-            haskellLib = final.haskell.lib.compose;
             makeGhcOptions = opts: lib.concatStringsSep " " (map (opt: "--ghc-option=${opt}") opts);
           in
 
@@ -191,6 +190,9 @@
               });
             })
           ];
+          # xmobar = final.haskell.lib.compose.overrideCabal (drv: {
+          #   enableSeparateBinOutput = false;
+          # }) prev.haskellPackages.xmobar;
           haskellPackages = prev.haskellPackages.extend (
             hself: hsuper: {
               #     crypton = hsuper.crypton.overrideAttrs (oldAttrs: {
@@ -202,15 +204,19 @@
               wherefrom-compat = hsuper.wherefrom-compat.overrideAttrs (oldAttrs: {
                 doCheck = false;
               });
+              xmobar = final.haskell.lib.compose.overrideCabal (drv: {
+                enableSeparateBinOutput = false;
+              }) hsuper.xmobar;
 
               # xmobar = hsuper.xmobar.overrideAttrs (oldAttrs: {
-              #   isLibrary = false;
+              #   enableSeparateBinOutput = false;
               # });
 
               #
             }
           );
           nvim = my-nvim.defaultPackage.x86_64-linux;
+          xmobar = final.haskellPackages.xmobar;
         })
       ];
     in
