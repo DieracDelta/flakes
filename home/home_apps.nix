@@ -1,9 +1,28 @@
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 let
   cfg = config.profiles.dev;
-  haskellPack = with pkgs.haskellPackages;
+  haskellPack =
+    with pkgs.haskellPackages;
     let
-      ps = p: with p;  [ async base containers lens mtl random stm text transformers unliftio ];
+      ps =
+        p: with p; [
+          async
+          base
+          containers
+          lens
+          mtl
+          random
+          stm
+          text
+          transformers
+          unliftio
+        ];
       ghc = ghcWithHoogle ps;
     in
     [
@@ -31,10 +50,7 @@ let
     # rocm-comgr
     # rocm-cmake
 
-
-
     innernet
-
 
     git-lfs
     yubico-piv-tool
@@ -44,7 +60,7 @@ let
     #matrix-construct
     github-cli
     #neovitality
-    stack
+    # stack
     nixpkgs-fmt
     yubikey-personalization
     _7zz
@@ -62,7 +78,7 @@ let
     # lua
     gdb
     # binutils
-    /*gcc*/
+    # gcc
     gnumake
     openssl
     pkg-config
@@ -70,7 +86,7 @@ let
     hwinfo
     # lean
   ];
-  /* user */
+  # user
   appPack = with pkgs; [
     idris2
     lshw
@@ -95,7 +111,7 @@ let
     # obs-studio
     graphviz
     # minecraft
-    signal-desktop
+    # signal-desktop
     alacritty
     vscode
     rust-analyzer
@@ -106,7 +122,7 @@ let
     mimic
     # zoom-us
   ];
-  /* user */
+  # user
   workstationPack = with pkgs; [
     ifuse
     # nyxt
@@ -160,15 +176,14 @@ let
     nmap
     aircrack-ng
   ];
-  texPack = with pkgs;
-    [
-      # pdftk
-      # (
-      #   texlive.combine {
-      #     inherit (texlive) scheme-medium lipsum fmtcount datetime;
-      #   }
-      # )
-    ];
+  texPack = with pkgs; [
+    # pdftk
+    # (
+    #   texlive.combine {
+    #     inherit (texlive) scheme-medium lipsum fmtcount datetime;
+    #   }
+    # )
+  ];
   languageserverPack = with pkgs; [
     # shellcheck
     # rnix-lsp
@@ -182,12 +197,11 @@ let
   ];
 in
 {
-  options.profiles.dev.enable =
-    lib.mkOption {
-      description = "Enable custom vim configuration.";
-      type = with lib.types; bool;
-      default = true;
-    };
+  options.profiles.dev.enable = lib.mkOption {
+    description = "Enable custom vim configuration.";
+    type = with lib.types; bool;
+    default = true;
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = builtins.concatLists [

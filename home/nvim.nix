@@ -1,17 +1,25 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.profiles.vim;
 in
 {
-  options.profiles.vim.enable =
-    lib.mkOption {
-      description = "Enable custom vim configuration.";
-      type = with lib.types; bool;
-      default = true;
-    };
+  options.profiles.vim.enable = lib.mkOption {
+    description = "Enable custom vim configuration.";
+    type = with lib.types; bool;
+    default = true;
+  };
 
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [ nixpkgs-fmt stack bear nvim ]; #pkgs.neovitality ];
+    home.packages = with pkgs; [
+      nixfmt-rfc-style
+      bear
+      nvim
+    ]; # pkgs.neovitality ];
     # xdg.configFile."nvim/coc-settings.json".source = ./coc-settings.json;
     # programs.neovim = {
     #   enable = true;

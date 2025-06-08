@@ -1,13 +1,22 @@
-{ config, pkgs, lib, options, system, builtins, nixpkgs-stable, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  options,
+  system,
+  builtins,
+  nixpkgs-stable,
+  ...
+}:
 let
   cfg = config.custom_modules.workstation_services;
-  /* system */
+  # system
   virtualizationPack = with pkgs; [
-  nix
-  spider
+    nix
+    spider
     # lutris
     # wine
-    nixpkgs-stable.legacyPackages.${system}.heroic
+    heroic
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
     # libsForQt5.qt5.qtgui
@@ -24,17 +33,18 @@ let
     cdrkit
     qemu
     OVMF
-    chromium
+    elfx86exts
+    # chromium
     # libvirt
     # ghc
     # cabal-install
     # stack
     #firefox
   ];
-  /* system */
+  # system
   gamingPack = with pkgs; [
     # rustdesk
-  nix-output-monitor
+    nix-output-monitor
     # nix-janitor
     # ollama
     xbanish
@@ -45,7 +55,22 @@ let
     # protontricks
     cowsay
     wacomtablet
-    steam
+    (steam.override {
+      extraPkgs =
+        p: with p; [
+          xorg.libXcursor
+          xorg.libXi
+          xorg.libXinerama
+          xorg.libXScrnSaver
+          libpng
+          libpulseaudio
+          libvorbis
+          stdenv.cc.cc.lib
+          libkrb5
+          keyutils
+
+        ];
+    })
     steamcmd
     # steam-run
     mesa
@@ -55,7 +80,7 @@ let
     m4
   ];
   xPack = with pkgs; [
-  tdf
+    tdf
     libimobiledevice
     ifuse
     # kdePackages.kdeconnect-kde
@@ -86,18 +111,38 @@ let
     # obsidian
   ];
   yubikeyPack = with pkgs; [
-    gnupg pinentry-curses pinentry-qt paperkey wget rng-tools clinfo vulkan-loader /* vulkan-volk */ vulkan-tools vulkan-utility-libraries vulkan-validation-layers vulkan-helper vulkan-headers vulkan-caps-viewer vulkan-extension-layer vk-bootstrap amdvlk vkmark vkdisplayinfo vk-bootstrap gpu-viewer cntr
+    gnupg
+    pinentry-curses
+    pinentry-qt
+    paperkey
+    wget
+    rng-tools
+    clinfo
+    vulkan-loader # vulkan-volk
+    vulkan-tools
+    vulkan-utility-libraries
+    vulkan-validation-layers
+    vulkan-helper
+    vulkan-headers
+    vulkan-caps-viewer
+    vulkan-extension-layer
+    vk-bootstrap
+    amdvlk
+    vkmark
+    vkdisplayinfo
+    vk-bootstrap
+    gpu-viewer
+    cntr
   ];
 in
 {
-  options.custom_modules.workstation_services.enable =
-    lib.mkOption {
-      description = ''
-        Extraneous services to be enabled only when X server is used (e.g. not on servers).
-      '';
-      type = lib.types.bool;
-      default = false;
-    };
+  options.custom_modules.workstation_services.enable = lib.mkOption {
+    description = ''
+      Extraneous services to be enabled only when X server is used (e.g. not on servers).
+    '';
+    type = lib.types.bool;
+    default = false;
+  };
 
   config = lib.mkIf cfg.enable {
     services.desktopManager.plasma6.enable = true;
@@ -136,42 +181,46 @@ in
     hardware.nvidia-container-toolkit.enable = true;
 
     boot.plymouth = {
-      /*TODO add in custom boot icons*/
+      # TODO add in custom boot icons
       enable = true;
-      /*logo = ''*/
-      /*pkgs.fetchurl {*/
-      /*url = "https://nixos.org/logo/nixos-hires.png";*/
-      /*sha256 = "1ivzgd7iz0i06y36p8m5w48fd8pjqwxhdaavc0pxs7w1g7mcy5si";*/
-      /*}'';*/
+      # logo = ''
+      # pkgs.fetchurl {
+      # url = "https://nixos.org/logo/nixos-hires.png";
+      # sha256 = "1ivzgd7iz0i06y36p8m5w48fd8pjqwxhdaavc0pxs7w1g7mcy5si";
+      # }'';
     };
-    /*TODO add in configuration option for this (like embedded dev enable)*/
+    # TODO add in configuration option for this (like embedded dev enable)
     programs.adb.enable = true;
     programs.java.enable = true;
     programs.steam.enable = true;
     programs.steam.remotePlay.openFirewall = true;
     programs.steam.dedicatedServer.openFirewall = true;
 
-    environment.systemPackages =
-      builtins.concatLists [
-        yubikeyPack
-        gamingPack
-        xPack
-        virtualizationPack
-      ];
+    environment.systemPackages = builtins.concatLists [
+      yubikeyPack
+      gamingPack
+      xPack
+      virtualizationPack
+    ];
 
-    fonts.packages = with pkgs;
-      [
-        d2coding
-        # iosevka
-        aileron
-        nerd-fonts.fira-code
-        fira-code
-        fira-code-symbols
-        fira-mono
-      ];
+    fonts.packages = with pkgs; [
+      d2coding
+      # iosevka
+      aileron
+      nerd-fonts.fira-code
+      fira-code
+      fira-code-symbols
+      fira-mono
+    ];
     services.picom.enable = true;
     services.syncthing.enable = true;
-    networking.firewall.allowedTCPPorts = [ 22000 8384 8080 11434 ];
+    networking.firewall.allowedTCPPorts = [
+      22000
+      8384
+      8080
+      8188
+      11434
+    ];
     # networking.firewall = {
     #   enable = true;
     #   allowedTCPPortRanges = [
@@ -217,17 +266,54 @@ in
     #  enable = true;
     #  enableSSHSupport = true;
     #};
+    services.searx = {
+      enable = true;
+      redisCreateLocally = true;
+      settings.server = {
+        bind_address = "0.0.0.0";
+        port = "3838";
+        secret_key = "secret key";
+      };
+      settings.search = {
+        formats = [
+          "html"
+          "json"
+        ];
+      };
+
+    };
+
+    services.comfyui = {
+      enable = true;
+      acceleration = "cuda";
+      host = "0.0.0.0";
+      openFirewall = true;
+      # withModels = [
+      #   pkgs.fetchResource
+      #   {
+      #     url = "https://civitai.com/api/download/models/1026423?type=Model&format=SafeTensor";
+      #     sha256 = "B1C4DDF95671E6B51817B4F3802865E544040C232C467E76B1CB0C251BD6B634";
+      #     passthru = {
+      #       comfyui.installPaths = [ "loras" ];
+      #     };
+      #   }
+      # ];
+    };
 
     services.ollama = {
       #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
-      loadModels = ["deepseek-r1:32b" "deepseek-r1:14b" "SIGJNF/deepseek-r1-671b-1.58bit"];
+      loadModels = [
+        "deepseek-r1:32b"
+        "deepseek-r1:14b"
+        "SIGJNF/deepseek-r1-671b-1.58bit"
+      ];
       enable = true;
       acceleration = "cuda";
       host = "0.0.0.0";
       # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
     };
     services.open-webui = {
-      package = nixpkgs-stable.legacyPackages.${system}.open-webui;
+      # package = nixpkgs-stable.legacyPackages.${system}.open-webui;
       openFirewall = true;
       enable = true;
       host = "0.0.0.0";
@@ -237,6 +323,15 @@ in
         WEBUI_AUTH = "False";
       };
     };
+
+    services.sunshine = {
+      package = pkgs.sunshine.override { cudaSupport = true; };
+      autoStart = true;
+      enable = true;
+      capSysAdmin = true;
+      openFirewall = true;
+    };
+
     programs.kdeconnect.enable = true;
 
     services.usbmuxd = {

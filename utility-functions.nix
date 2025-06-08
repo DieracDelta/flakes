@@ -1,11 +1,12 @@
-{ lib
-, self
-, inputs
-, system
-, pkgs
-, nixosModules
-, nixpkgs-stable
-, ...
+{
+  lib,
+  self,
+  inputs,
+  system,
+  pkgs,
+  nixosModules,
+  nixpkgs-stable,
+  ...
 }:
 let
   inherit (lib) removeSuffix;
@@ -14,32 +15,47 @@ let
 
 in
 {
-  pkgImport = pkgs: overlays: import pkgs {
-    # inherit system overlays;
-    inherit overlays;
-    localSystem = {
-      system = "x86_64-linux";
-      gcc.arch = "znver3";
-      gcc.tune = "znver3";
-      gcc.abi = "64";
+  pkgImport =
+    pkgs: overlays:
+    import pkgs {
+      # inherit system overlays;
+      inherit overlays;
+      localSystem = "x86_64-linux";
+      # {
+      #   system = "x86_64-linux";
+      #   gcc.arch = "znver3";
+      #   gcc.tune = "znver3";
+      #   gcc.abi = "64";
+      # };
+
+      hostPlatform = {
+        system = "x86_64-linux";
+        gcc.arch = "znver3";
+        gcc.tune = "znver3";
+        gcc.abi = "64";
+      };
+      targetPlatform = {
+        system = "x86_64-linux";
+        gcc.arch = "znver3";
+        gcc.tune = "znver3";
+        gcc.abi = "64";
+      };
+      config = {
+        cudaSupport = true;
+        allowUnfree = true;
+        # replaceStdenv = ({ pkgs }: pkgs.clangStdenv);
+
+        # RUSTFLAGS = "-C target-cpu=znver3 ";
+        # permittedInsecurePackages = [ "nix-2.15.3" ];
+
+        allowUnsupportedSystem = true;
+      };
     };
 
-    crossSystem = {
-      system = "x86_64-linux";
-      gcc.arch = "znver3";
-      gcc.tune = "znver3";
-      gcc.abi = "64";
-    };
-    config = {
-      allowUnfree = true;
-      # permittedInsecurePackages = [ "nix-2.15.3" ];
-
-      allowUnsupportedSystem = true;
-    };
-  };
-
-  buildNixosConfigurations = paths:
-    genAttrs' paths (path:
+  buildNixosConfigurations =
+    paths:
+    genAttrs' paths (
+      path:
       let
         hostName = removeSuffix ".nixos.nix" (baseNameOf path);
       in
@@ -58,25 +74,35 @@ in
                 nix = {
                   # package = pkgs.nixUnstable;
                   nixPath =
-                    let path = toString ./.; in
+                    let
+                      path = toString ./.;
+                    in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
                   registry =
-                    (lib.mapAttrs'
-                      (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; }))
-                      inputs) // { ${hostName}.flake = self; };
+                    (lib.mapAttrs' (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; })) inputs)
+                    // {
+                      ${hostName}.flake = self;
+                    };
                 };
               };
 
             in
             [
-              /*this actually imports the specific host file*/
+              # this actually imports the specific host file
               (import path)
               global
-            ] ++ (nixosModules hostName);
+            ]
+            ++ (nixosModules hostName);
 
           specialArgs = {
-            inherit system inputs builtins nixpkgs-stable;
+            inherit
+              system
+              inputs
+              builtins
+              nixpkgs-stable
+              ;
           };
         };
-      });
+      }
+    );
 }
