@@ -10,6 +10,7 @@ if test $os = "Darwin"
   # ssh-add ~/.ssh/id_rsa_old
   fish_add_path /run/current-system/sw/bin
   fish_add_path /opt/homebrew/bin
+  fish_add_path /Users/jrestivo/dev/tdf/target/release/
   export EDITOR="/Users/jrestivo/dev/vimconfig/result/bin/nvim"
 else if test $os = "Linux"
   ssh-add ~/.ssh/id_rsa

@@ -180,7 +180,6 @@
               rapidocr-onnxruntime = python-prev.rapidocr-onnxruntime.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
               });
-
               # psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
               #   doCheck = false;
               # });
@@ -263,6 +262,30 @@
             nixpkgs.overlays = [
               (final: prev: {
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
+                tdf = prev.tdf.overrideAttrs (
+                  finalAttrs: prevAttrs: {
+                    pname = "tdf";
+                    version = "custom";
+                    useFetchCargoVendor = true;
+                    src = prev.fetchFromGitHub {
+                      owner = "itsjunetime";
+                      repo = "tdf";
+                      fetchSubmodules = false;
+                      rev = "d01da40f13a29371d7a705f822597923dab1a9e7";
+                      hash = "sha256-a82m0d1cFi5EwnDrgeZQnsS5ScPdLo/D9NPFN27hvo4=";
+                    };
+                    nativeBuildInputs = [ final.rustPlatform.bindgenHook ];
+                    RUSTC_BOOTSTRAP = true;
+                    # cargoHash = lib.fakeHash;
+                    cargoDeps = final.rustPlatform.fetchCargoVendor {
+                      inherit (finalAttrs) src;
+                      name = "${finalAttrs.pname}-${finalAttrs.version}";
+                      hash = "sha256-DxD+Zu6e/YkbFP/R0kBHpuj7E9ZJ2aRpF01VQwMAfkU=";
+                    };
+
+                  }
+                );
+
               })
             ];
           }
