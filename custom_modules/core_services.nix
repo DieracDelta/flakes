@@ -422,7 +422,7 @@ in
       ispell
       whois
       zoom-us
-      uv
+      # uv
       gamescope
       nixpkgs-review
       (sunshine.override { cudaSupport = true; })

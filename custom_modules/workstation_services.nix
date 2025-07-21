@@ -34,6 +34,10 @@ let
     qemu
     OVMF
     elfx86exts
+    gitoxide
+    pax-utils
+    fselect
+    kmon
     # chromium
     # libvirt
     # ghc
@@ -174,8 +178,11 @@ in
 
     services.xrdp.enable = true;
     virtualisation.docker = {
+      rootless.enable = true;
+
+      rootless.setSocketVariable = true;
       enable = true;
-      autoPrune.enable = true;
+      # autoPrune.enable = true;
       enableOnBoot = true;
     };
     hardware.nvidia-container-toolkit.enable = true;
@@ -215,6 +222,7 @@ in
     services.picom.enable = true;
     services.syncthing.enable = true;
     networking.firewall.allowedTCPPorts = [
+      8081
       22000
       8384
       8080
@@ -285,6 +293,7 @@ in
 
     services.comfyui = {
       enable = true;
+      home = "/var/lib/comfyui";
       acceleration = "cuda";
       host = "0.0.0.0";
       openFirewall = true;
@@ -338,6 +347,8 @@ in
       enable = true;
       package = pkgs.usbmuxd2;
     };
+
+    security.sudo-rs.enable = true;
 
   };
 
