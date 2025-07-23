@@ -1,4 +1,9 @@
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 
 {
   programs.home-manager.enable = true;
@@ -18,7 +23,7 @@
 
   home.stateVersion = "21.11";
 
-  /*morally speaking should automate this in the same way im doing modules*/
+  # morally speaking should automate this in the same way im doing modules
   imports = [
     ../fish.nix
   ];
@@ -44,7 +49,6 @@
   programs.atuin.enable = true;
   programs.atuin.enableFishIntegration = true;
   programs.atuin.enableZshIntegration = true;
-
 
   manual.html.enable = true;
 }
