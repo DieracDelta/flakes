@@ -40,6 +40,7 @@
     bottom
     htop
     coreutils
+    eternal-terminal
     fd
     nix-top
     entr

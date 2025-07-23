@@ -19,6 +19,8 @@ else
     echo "Unknown OS: $os"
 end
 
+export ET_NO_TELEMETRY="y"
+
 export _ZO_MAXAGE=10000000
 export _ZO_RESOLVE_SYMLINKS=1
 
