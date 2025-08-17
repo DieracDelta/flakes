@@ -1,12 +1,29 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
 
-  nix.settings.allowed-users = [ "jrestivo" "siraben" "jachym" "faye" "john"];
-  nix.settings.trusted-users = [ "jrestivo" "siraben" "jachym" "faye" "john"];
+  nix.settings.allowed-users = [
+    "jrestivo"
+    "siraben"
+    "jachym"
+    "faye"
+    "john"
+  ];
+  nix.settings.trusted-users = [
+    "jrestivo"
+    "siraben"
+    "jachym"
+    "faye"
+    "john"
+  ];
   imports = [ ./hw/desktop.nix ];
 
-  custom_modules.jellyfin.enable = false;
+  custom_modules.jellyfin.enable = true;
   custom_modules.nextcloud.enable = false;
   custom_modules.core_services.enable = true;
   custom_modules.workstation_services.enable = true;

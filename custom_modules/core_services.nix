@@ -147,6 +147,7 @@ in
 
     programs.fish.enable = true;
     programs.zsh.enable = true;
+    # users.groups.jellyfinMedia = { };
     users.users = {
       siraben = {
         isNormalUser = true;
@@ -218,6 +219,8 @@ in
           "video"
           "render"
           "dialout"
+          "jellyfin"
+          # "jellyfinMedia"
         ];
         initialPassword = "bruh";
       };

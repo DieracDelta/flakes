@@ -12,6 +12,7 @@ let
   cfg = config.custom_modules.workstation_services;
   # system
   virtualizationPack = with pkgs; [
+    eternal-terminal
     nix
     spider
     # lutris
@@ -28,12 +29,17 @@ let
 
     # xboxdrv
     docker-compose
+    smartmontools
+    oxker # docker shit
+    magic-wormhole-rs # file transfer
+    spotdl
     # virt-manager
     # looking-glass-client
     cdrkit
     qemu
     OVMF
     elfx86exts
+    magic-wormhole
     gitoxide
     pax-utils
     fselect
@@ -226,6 +232,7 @@ in
       22000
       8384
       8080
+      2022
       8188
       11434
     ];
@@ -349,6 +356,7 @@ in
     };
 
     security.sudo-rs.enable = true;
+    services.eternal-terminal.enable = true;
 
   };
 

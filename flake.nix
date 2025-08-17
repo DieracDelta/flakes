@@ -4,7 +4,7 @@
 
   inputs = {
     nix = {
-      url = "github:NixOS/nix/2.28.3";
+      url = "github:NixOS/nix/2.30.2";
     };
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";

@@ -41,11 +41,11 @@
     # "amdgpu.dc=1"
   ];
 
-  boot.binfmt.emulatedSystems = [
-    "aarch64-linux"
-    "armv7l-linux"
-    "riscv64-linux"
-  ];
+  # boot.binfmt.emulatedSystems = [
+  #   "aarch64-linux"
+  #   "armv7l-linux"
+  #   "riscv64-linux"
+  # ];
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
   # boot.kernelPackages = pkgs.linuxPackages_5_15;
 
@@ -105,7 +105,9 @@
     fsType = "btrfs";
     options = [
       "subvol=nix"
+      "compress=zstd"
       "noatime"
+      "commit=600"
     ];
   };
 
@@ -117,6 +119,13 @@
       "dmask=0022"
     ];
   };
+
+  # zramSwap = {
+  #   enable = true;
+  #   algorithm = "zstd";
+  #   memoryPercent = 100;
+  #   priority = 10;
+  # };
 
   swapDevices = [ { device = "/swap/swapfile"; } ];
 
