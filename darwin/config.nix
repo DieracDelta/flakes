@@ -41,6 +41,7 @@
     htop
     coreutils
     eternal-terminal
+    magic-wormhole-rs
     fd
     nix-top
     entr
