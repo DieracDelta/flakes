@@ -50,5 +50,10 @@
   programs.atuin.enableFishIntegration = true;
   programs.atuin.enableZshIntegration = true;
 
+  programs.carapace = {
+    enable = true;
+    enableFishIntegration = true;
+  };
+
   manual.html.enable = true;
 }

@@ -2,11 +2,29 @@
   config,
   pkgs,
   lib,
+  nixpkgs-master,
+  system,
   ...
 }:
 with lib;
 let
   cfg = config.custom_modules.jellyfin;
+  ##### SPOTIZERR
+  redis-port = 32141;
+
+  # Directory paths
+  spotizerrStateDir = "/var/lib/spotizerr";
+  musicLibraryDir = "/var/lib/musiclibrary";
+  redisPasswordDir = "/var/lib/redis-spotizerr";
+  redisPasswordFile = "${redisPasswordDir}/password";
+  spotizerrEnvFile = "${spotizerrStateDir}/.env";
+  spotizerrLogDir = "/var/lib/spotizzer_logs";
+  spotizerrDataDir = "/var/lib/spotizerr_data";
+
+  # User/group references
+  mediaGroup = "jellyfin";
+  spotizerrUid = 32141;
+  mediaGid = 979;
 in
 {
   options.custom_modules.jellyfin.enable = mkOption {
@@ -21,21 +39,195 @@ in
     services.navidrome.group = "jellyfin";
     services.navidrome.openFirewall = true;
     services.navidrome.settings.Address = "0.0.0.0";
+    services.navidrome.settings."Scanner.FollowSymlinks" = true;
     services.navidrome.settings.MusicFolder = "/jellyfin/MUSIC";
+    services.navidrome.package = nixpkgs-master.legacyPackages.${system}.navidrome;
+    systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
 
     services.jellyfin.enable = true;
     # services.jellyfin.user = "jrestivo";
     # per https://jellyfin.org/docs/general/networking/index.html
 
     networking.firewall.allowedTCPPorts = [
+      32141
       8096
       4533
       8920
+      7171
+      28981
     ];
     networking.firewall.allowedUDPPorts = [
       1900
       4533
       7359
+      28981
     ];
+
+    # copied from https://github.com/miniluz/nixos-config/blob/main/modules/nixos/selfhosting/jellyfin/spotizerr.nix
+    # thank you !!
+
+    users.users.spotizerr = {
+      uid = spotizerrUid;
+      group = "spotizerr";
+      extraGroups = [ mediaGroup ];
+
+      isSystemUser = true;
+
+      home = spotizerrStateDir;
+      createHome = true;
+    };
+
+    users.users.jellyfin = {
+      uid = 984;
+      group = "jellyfin";
+      extraGroups = [ "spotizerr" ];
+      createHome = false;
+    };
+
+    users.groups.spotizerr.gid = spotizerrUid;
+
+    systemd.tmpfiles.rules = [
+      "d ${musicLibraryDir} 0775 spotizerr ${mediaGroup} -"
+      "d ${spotizerrLogDir} 0700 spotizerr spotizerr -"
+      "d ${spotizerrDataDir} 0700 spotizerr spotizerr -"
+      "d ${redisPasswordDir} 0750 redis-spotizerr redis-spotizerr -"
+    ];
+
+    systemd.services.spotizerr-password-generator = {
+      description = "Generate Redis password for Spotizerr";
+      wantedBy = [ "multi-user.target" ];
+      before = [
+        "redis-spotizerr.service"
+        "quadlet-spotizerr-app.service"
+      ];
+      requires = [ "systemd-tmpfiles-setup.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        User = "root";
+        RemainAfterExit = true;
+      };
+
+      script = ''
+                set -euo pipefail
+
+                # Set secure file creation mask
+                umask 077
+
+                echo "Setting up Spotizerr Redis authentication..."
+
+                # Generate password if it doesn't exist
+                if [ ! -f "${redisPasswordFile}" ]; then
+                  echo "Generating new Redis password..."
+                  if ! ${pkgs.openssl}/bin/openssl rand -base64 32 > "${redisPasswordFile}"; then
+                    echo "ERROR: Failed to generate Redis password" >&2
+                    exit 1
+                  fi
+                  echo "Redis password generated successfully"
+                else
+                  echo "Redis password already exists, skipping generation"
+                fi
+
+                # Set secure permissions for Redis password file
+                chown redis-spotizerr:redis-spotizerr "${redisPasswordFile}"
+                chmod 400 "${redisPasswordFile}"
+
+                # Create environment file for container
+                echo "Creating Spotizerr environment file..."
+                cat > "${spotizerrEnvFile}" << EOF
+        REDIS_PASSWORD=$(cat "${redisPasswordFile}")
+        EOF
+
+                # Set secure permissions for environment file
+                chown spotizerr:spotizerr "${spotizerrEnvFile}"
+                chmod 600 "${spotizerrEnvFile}"
+
+                echo "Spotizerr authentication setup completed"
+      '';
+    };
+
+    services.redis.servers.spotizerr = {
+      enable = true;
+      port = redis-port;
+      bind = "127.0.0.1";
+      requirePassFile = redisPasswordFile;
+    };
+
+    # Ensure Redis waits for password generation
+    systemd.services.redis-spotizerr = {
+      requires = [ "spotizerr-password-generator.service" ];
+      after = [ "spotizerr-password-generator.service" ];
+    };
+
+    virtualisation.quadlet.containers.spotizerr-app = {
+      autoStart = true;
+
+      containerConfig = {
+        image = "docker.io/cooldockerizer93/spotizerr";
+        publishPorts = [ "7171:7171" ];
+
+        # needed to access redis on host
+        networks = [ "host" ];
+
+        environments = {
+          HOST = "0.0.0.0";
+
+          REDIS_HOST = "127.0.0.1";
+          REDIS_PORT = toString redis-port;
+          REDIS_DB = "0";
+
+          PUID = toString spotizerrUid;
+          PGID = toString mediaGid;
+        };
+
+        environmentFiles = [ spotizerrEnvFile ];
+
+        volumes = [
+          "${spotizerrDataDir}:/app/data"
+          "${spotizerrLogDir}:/app/logs"
+
+          "${musicLibraryDir}:/app/downloads"
+        ];
+      };
+
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = "10";
+      };
+
+      unitConfig = {
+        Requires = [
+          "redis-spotizerr.service"
+          "spotizerr-password-generator.service"
+        ];
+        After = [
+          "redis-spotizerr.service"
+          "spotizerr-password-generator.service"
+        ];
+      };
+    };
+
+    services.paperless = {
+      enable = true;
+      # passwordFile = "/etc/paperless-admin-pass";
+      port = 28981;
+      # dataDir = "/var/lib/paperless";
+      # mediaDir = "/var/lib/paperless/media";
+      # consumptionDir = "/var/lib/paperless/in";
+      # consumptionDirIsPublic = true;
+      address = "0.0.0.0";
+    };
+    services.immich = {
+      enable = true;
+      port = 2283;
+      openFirewall = true;
+      accelerationDevices = null;
+      host = "0.0.0.0";
+    };
+    users.users.immich.extraGroups = [
+      "video"
+      "render"
+    ];
+
   };
 }

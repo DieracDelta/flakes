@@ -8,6 +8,7 @@
     };
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
+    quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -21,6 +22,11 @@
     nixpkgs-stable = {
       # url = "path:/home/jrestivo/nixpkgs";
       url = "github:NixOS/nixpkgs/nixos-25.05";
+    };
+
+    nixpkgs-master = {
+      # url = "path:/home/jrestivo/nixpkgs";
+      url = "github:NixOS/nixpkgs/master";
     };
 
     home-manager = {
@@ -42,10 +48,12 @@
       self,
       nixpkgs-unpatched,
       nixpkgs-stable,
+      nixpkgs-master,
       home-manager,
       darwin,
       my-nvim,
       nix,
+      quadlet-nix,
       ...
     }:
     let
@@ -67,6 +75,7 @@
           inputs
           self
           nixpkgs-stable
+          nixpkgs-master
           ;
         nixosModules = nixosModules;
       };
@@ -94,6 +103,7 @@
               imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
             };
           })
+          quadlet-nix.nixosModules.quadlet
         ]
       );
       overlays = [

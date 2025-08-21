@@ -24,6 +24,10 @@
     # enableFishIntegration = true;
     enableBashIntegration = true;
   };
+  programs.carapace = {
+    enable = true;
+    enableFishIntegration = true;
+  };
 
   programs.git = {
     enable = true;

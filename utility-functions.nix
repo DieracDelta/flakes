@@ -6,6 +6,7 @@
   pkgs,
   nixosModules,
   nixpkgs-stable,
+  nixpkgs-master,
   ...
 }:
 let
@@ -100,6 +101,7 @@ in
               inputs
               builtins
               nixpkgs-stable
+              nixpkgs-master
               ;
           };
         };

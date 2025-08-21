@@ -16,6 +16,8 @@ let
     nix
     spider
     # lutris
+    yq
+    spicetify-cli
     # wine
     heroic
     # qt5.wrapQtAppsHook
@@ -33,6 +35,8 @@ let
     oxker # docker shit
     magic-wormhole-rs # file transfer
     spotdl
+    vorbis-tools
+    fio
     # virt-manager
     # looking-glass-client
     cdrkit

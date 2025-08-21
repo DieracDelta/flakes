@@ -2063,6 +2063,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-master": {
+      "locked": {
+        "lastModified": 1755522504,
+        "narHash": "sha256-bSCssIl9hZa4M9IFiJeUjnOIFG0QB1cbRtrQ0ghBnZk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "324edb565410a6d2e9dac82a72c851d06a8271d9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "master",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-regression": {
       "locked": {
         "lastModified": 1643052045,
@@ -2599,6 +2615,21 @@
         "type": "github"
       }
     },
+    "quadlet-nix": {
+      "locked": {
+        "lastModified": 1754008153,
+        "narHash": "sha256-MYT1mDtSkiVg343agxgBFsnuNU3xS8vRy399JXX1Vw0=",
+        "owner": "SEIAROTg",
+        "repo": "quadlet-nix",
+        "rev": "1b2d27d460d8c7e4da5ba44ede463b427160b5c4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "SEIAROTg",
+        "repo": "quadlet-nix",
+        "type": "github"
+      }
+    },
     "quick-scope-src": {
       "flake": false,
       "locked": {
@@ -2623,8 +2654,10 @@
         "my-nvim": "my-nvim",
         "nix": "nix",
         "nixified-ai": "nixified-ai",
+        "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-stable": "nixpkgs-stable_3",
-        "nixpkgs-unpatched": "nixpkgs-unpatched"
+        "nixpkgs-unpatched": "nixpkgs-unpatched",
+        "quadlet-nix": "quadlet-nix"
       }
     },
     "rust-overlay": {
