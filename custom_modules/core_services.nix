@@ -37,7 +37,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    madness.enable = true;
+    # madness.enable = true;
     services.pipewire = {
       enable = true;
       alsa.enable = true;
@@ -366,8 +366,6 @@ in
       };
     };
 
-    # to get zsh autocomplete to work
-    environment.pathsToLink = [ "/share/zsh" ];
     # ONLY cli stuff
     environment.systemPackages = with pkgs; [
       dmidecode

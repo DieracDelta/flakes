@@ -612,13 +612,17 @@
         plugin = tmuxPlugins.gruvbox;
         extraConfig = "set -g @tmux-gruvbox 'dark'";
       }
+      # {
+      #   plugin = tmuxPlugins.tmux-ressurect;
+      #
+      # }
     ];
   };
 
-  programs.mbsync.enable = true;
-  programs.notmuch = {
-    enable = true;
-  };
+  # programs.mbsync.enable = true;
+  # programs.notmuch = {
+  #   enable = true;
+  # };
   #   programs.neomutt = {
   #     enable = true;
   #     sidebar = {
@@ -762,64 +766,64 @@
   #
   #     vimKeys = true;
   #   };
-  programs.msmtp.enable = true;
-  accounts.email.accounts.jrestivo = {
-    imapnotify = {
-      enable = true;
-      boxes = [ "Inbox" ];
-      onNotifyPost = {
-        mail = ''
-          ${pkgs.notmuch}/bin/notmuch new \*/
-          && ${pkgs.libnotify}/bin/notify-send "New mail has arrived!"
-        '';
-      };
-    };
-    msmtp = {
-      enable = true;
-      extraConfig = {
-        auth = "login";
-      };
-    };
-
-    smtp = {
-      host = "mail.restivo.me";
-    };
-    imap = {
-      host = "mail.restivo.me";
-    };
-
-    neomutt.enable = true;
-    mbsync = {
-      enable = true;
-      create = "maildir";
-    };
-    notmuch.enable = true;
-    offlineimap.enable = true;
-
-    passwordCommand = "cat /var/run/secrets/email_password";
-    address = "justin@restivo.me";
-    folders = {
-      inbox = "Inbox";
-      sent = "Sent";
-      drafts = "Drafts";
-      trash = "Trash";
-    };
-    primary = true;
-    realName = "Justin Restivo";
-    signature = {
-      text = ''
-        Draper Research Staff
-        MIT SB '19 Meng '20
-        Justin Restivo
-        justin.restivo.me
-      '';
-      showSignature = "append";
-    };
-    userName = "justin@restivo.me";
-
-  };
+  # programs.msmtp.enable = true;
+  # accounts.email.accounts.jrestivo = {
+  #   imapnotify = {
+  #     enable = true;
+  #     boxes = [ "Inbox" ];
+  #     onNotifyPost = {
+  #       mail = ''
+  #         ${pkgs.notmuch}/bin/notmuch new \*/
+  #         && ${pkgs.libnotify}/bin/notify-send "New mail has arrived!"
+  #       '';
+  #     };
+  #   };
+  #   msmtp = {
+  #     enable = true;
+  #     extraConfig = {
+  #       auth = "login";
+  #     };
+  #   };
+  #
+  #   smtp = {
+  #     host = "mail.restivo.me";
+  #   };
+  #   imap = {
+  #     host = "mail.restivo.me";
+  #   };
+  #
+  #   neomutt.enable = true;
+  #   mbsync = {
+  #     enable = true;
+  #     create = "maildir";
+  #   };
+  #   notmuch.enable = true;
+  #   offlineimap.enable = true;
+  #
+  #   passwordCommand = "cat /var/run/secrets/email_password";
+  #   address = "justin@restivo.me";
+  #   folders = {
+  #     inbox = "Inbox";
+  #     sent = "Sent";
+  #     drafts = "Drafts";
+  #     trash = "Trash";
+  #   };
+  #   primary = true;
+  #   realName = "Justin Restivo";
+  #   signature = {
+  #     text = ''
+  #       Draper Research Staff
+  #       MIT SB '19 Meng '20
+  #       Justin Restivo
+  #       justin.restivo.me
+  #     '';
+  #     showSignature = "append";
+  #   };
+  #   userName = "justin@restivo.me";
+  #
+  # };
 
   programs.go.enable = true;
 
-  manual.html.enable = true;
+  manual.html.enable = false;
 }

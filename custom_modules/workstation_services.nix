@@ -6,9 +6,16 @@
   system,
   builtins,
   nixpkgs-stable,
+  nixpkgs-master,
   ...
 }:
 let
+  tmpnixpkgs = import nixpkgs-master {
+    inherit system;
+    config = {
+      allowUnfree = true;
+    };
+  };
   cfg = config.custom_modules.workstation_services;
   # system
   virtualizationPack = with pkgs; [
@@ -20,8 +27,10 @@ let
     spicetify-cli
     # wine
     heroic
+    croc
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
+    sqlite
     # libsForQt5.qt5.qtgui
     # libsForQt5.qt5.qtgamepad
     # libsForQt5.qt5.qtgraphicaleffects
@@ -68,7 +77,7 @@ let
     # winetricks
     # protontricks
     cowsay
-    wacomtablet
+    kdePackages.wacomtablet
     (steam.override {
       extraPkgs =
         p: with p; [
@@ -127,7 +136,7 @@ let
   yubikeyPack = with pkgs; [
     gnupg
     pinentry-curses
-    pinentry-qt
+    # pinentry-qt
     paperkey
     wget
     rng-tools
@@ -184,7 +193,7 @@ in
     # services.rustdesk-server.openFirewall = true;
     # services.rustdesk-server.relayIP = "100.74.54.40";
 
-    programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
+    # programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
 
     services.xrdp.enable = true;
     virtualisation.docker = {
@@ -229,6 +238,7 @@ in
       fira-code-symbols
       fira-mono
     ];
+
     services.picom.enable = true;
     services.syncthing.enable = true;
     networking.firewall.allowedTCPPorts = [
@@ -302,25 +312,26 @@ in
 
     };
 
-    services.comfyui = {
-      enable = true;
-      home = "/var/lib/comfyui";
-      acceleration = "cuda";
-      host = "0.0.0.0";
-      openFirewall = true;
-      # withModels = [
-      #   pkgs.fetchResource
-      #   {
-      #     url = "https://civitai.com/api/download/models/1026423?type=Model&format=SafeTensor";
-      #     sha256 = "B1C4DDF95671E6B51817B4F3802865E544040C232C467E76B1CB0C251BD6B634";
-      #     passthru = {
-      #       comfyui.installPaths = [ "loras" ];
-      #     };
-      #   }
-      # ];
-    };
+    # services.comfyui = {
+    #   enable = true;
+    #   home = "/var/lib/comfyui";
+    #   acceleration = "cuda";
+    #   host = "0.0.0.0";
+    #   openFirewall = true;
+    #   # withModels = [
+    #   #   pkgs.fetchResource
+    #   #   {
+    #   #     url = "https://civitai.com/api/download/models/1026423?type=Model&format=SafeTensor";
+    #   #     sha256 = "B1C4DDF95671E6B51817B4F3802865E544040C232C467E76B1CB0C251BD6B634";
+    #   #     passthru = {
+    #   #       comfyui.installPaths = [ "loras" ];
+    #   #     };
+    #   #   }
+    #   # ];
+    # };
 
     services.ollama = {
+      package = tmpnixpkgs.ollama;
       #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
       loadModels = [
         "deepseek-r1:32b"
@@ -333,7 +344,7 @@ in
       # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
     };
     services.open-webui = {
-      # package = nixpkgs-stable.legacyPackages.${system}.open-webui;
+      package = tmpnixpkgs.open-webui;
       openFirewall = true;
       enable = true;
       host = "0.0.0.0";
@@ -352,7 +363,7 @@ in
       openFirewall = true;
     };
 
-    programs.kdeconnect.enable = true;
+    # programs.kdeconnect.enable = true;
 
     services.usbmuxd = {
       enable = true;

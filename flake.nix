@@ -16,7 +16,7 @@
       # url = "git+file:///home/jrestivo/dev/nixpkgs";
       # url = "path:/home/jrestivo/nixpkgs";
       # url = "github:NixOS/nixpkgs/master";
-      url = "github:NixOS/nixpkgs/e32e3fcd18f9301cbaa2ac4198a03e0f3e065928";
+      url = "github:NixOS/nixpkgs/master";
     };
 
     nixpkgs-stable = {
@@ -89,13 +89,13 @@
           (import ./custom_modules)
           nixpkgs-unpatched.nixosModules.notDetected
           home-manager.nixosModules.home-manager
-          "${
-            builtins.fetchGit {
-              url = "https://github.com/antithesishq/madness.git";
-              rev = "c22c9c03579b7175d94f63e44ee0e518bb5ccdba";
-            }
-          }/modules"
-          inputs.nixified-ai.nixosModules.comfyui
+          # "${
+          #   builtins.fetchGit {
+          #     url = "https://github.com/antithesishq/madness.git";
+          #     rev = "c22c9c03579b7175d94f63e44ee0e518bb5ccdba";
+          #   }
+          # }/modules"
+          # inputs.nixified-ai.nixosModules.comfyui
           ({
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
@@ -107,9 +107,9 @@
         ]
       );
       overlays = [
-        inputs.nixified-ai.overlays.comfyui
-        inputs.nixified-ai.overlays.models
-        inputs.nixified-ai.overlays.fetchers
+        # inputs.nixified-ai.overlays.comfyui
+        # inputs.nixified-ai.overlays.models
+        # inputs.nixified-ai.overlays.fetchers
         (final: prev: {
           haskell = prev.haskell // {
             compiler = prev.haskell.compiler // {
@@ -155,11 +155,11 @@
         )
         (final: prev: {
           nix = nix.packages.x86_64-linux.default;
-          makeRustPlatform = (
-            final.callPackage "${nixpkgs}/pkgs/development/compilers/rust/make-rust-platform.nix" {
-              rustConfig.RUSTFLAGS = "-C target-cpu=znver3 ";
-            }
-          );
+          makeRustPlatform =
+            final.callPackage "${nixpkgs}/pkgs/development/compilers/rust/make-rust-platform.nix"
+              {
+                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3 ";
+              };
           # openldap = prev.folly.overrideAttrs (old: {
           #   doCheck = false;
           # });
@@ -186,6 +186,31 @@
           #
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
+              # django = python-prev.django.overridePythonAttrs (oldAttrs: {
+              #   doCheck = false;
+              # });
+
+              dj-database-url = python-prev.dj-database-url.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+
+              curl-cffi = python-prev.curl-cffi.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+              django = python-prev.django.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+              granian = python-prev.granian.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+
+              # psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
+              #   doCheck = false;
+              # });
+
+              django-pytest = python-prev.django-pytest.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
 
               rapidocr-onnxruntime = python-prev.rapidocr-onnxruntime.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
@@ -216,6 +241,10 @@
               xmobar = final.haskell.lib.compose.overrideCabal (drv: {
                 enableSeparateBinOutput = false;
               }) hsuper.xmobar;
+
+              yaml = final.haskell.lib.compose.overrideCabal (drv: {
+                enableSeparateBinOutput = false;
+              }) hsuper.yaml;
 
               # xmobar = hsuper.xmobar.overrideAttrs (oldAttrs: {
               #   enableSeparateBinOutput = false;

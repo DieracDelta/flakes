@@ -1,10 +1,13 @@
-{ config, lib, pkgs, ... }:
 {
-  systemd.extraConfig = "DefaultLimitNOFILE=1024:1048576";
-
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
+  # systemd.extraConfig = "DefaultLimitNOFILE=1024:1048576";
 
   # environment.memoryAllocator.provider = "jemalloc";
-
 
   # from hw
   hardware.enableRedistributableFirmware = lib.mkDefault true;
@@ -14,7 +17,6 @@
   hardware.graphics.enable32Bit = true;
   services.pulseaudio.support32Bit = true;
   # zramSwap.enable = true;
-
 
   # sound
   # sound.enable = true;

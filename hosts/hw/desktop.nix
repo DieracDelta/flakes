@@ -135,6 +135,7 @@
     "big-parallel"
     "kvm"
     "gccarch-znver3"
+    "gccarch-znver1"
   ];
 
   # nixpkgs.hostPlatform = "";

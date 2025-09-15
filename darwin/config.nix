@@ -20,7 +20,7 @@
 
   environment.systemPackages = with pkgs; [
     ghc
-    moonlight-qt
+    # moonlight-qt
     ripgrep
     tree
     # tdf

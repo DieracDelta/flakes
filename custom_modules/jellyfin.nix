@@ -55,12 +55,21 @@ in
       8920
       7171
       28981
+      6969
+      8000
+      8181
+      1234
+      2345
     ];
     networking.firewall.allowedUDPPorts = [
       1900
       4533
       7359
       28981
+      6969
+      8000
+      8181
+      2345
     ];
 
     # copied from https://github.com/miniluz/nixos-config/blob/main/modules/nixos/selfhosting/jellyfin/spotizerr.nix
@@ -75,6 +84,10 @@ in
 
       home = spotizerrStateDir;
       createHome = true;
+    };
+    users.users.paperless = {
+      shell = pkgs.bashInteractive;
+      isSystemUser = true;
     };
 
     users.users.jellyfin = {
@@ -163,7 +176,7 @@ in
       autoStart = true;
 
       containerConfig = {
-        image = "docker.io/cooldockerizer93/spotizerr";
+        image = "lavaforge.org/spotizerr/spotizerr";
         publishPorts = [ "7171:7171" ];
 
         # needed to access redis on host
@@ -218,16 +231,16 @@ in
       address = "0.0.0.0";
     };
     services.immich = {
-      enable = true;
+      enable = false;
       port = 2283;
       openFirewall = true;
       accelerationDevices = null;
       host = "0.0.0.0";
     };
-    users.users.immich.extraGroups = [
-      "video"
-      "render"
-    ];
+    # users.users.immich.extraGroups = [
+    #   "video"
+    #   "render"
+    # ];
 
   };
 }
