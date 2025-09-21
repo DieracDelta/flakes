@@ -63,7 +63,10 @@
       nixpkgs = tmp_pkgs.applyPatches {
         name = "nixpkgs";
         src = nixpkgs-unpatched;
-        patches = [ ./PATCH ];
+        patches = [
+          ./PATCH
+          ./PATCH_ZIG
+        ];
       };
       inherit (nixpkgs-unpatched) lib;
 
@@ -160,6 +163,33 @@
               {
                 GLOBAL_RUSTFLAGS = "-C target-cpu=znver3 ";
               };
+          zig_0_13 = prev.zig_0_13.overrideAttrs (finalAttrs: {
+            passthru = finalAttrs.passthru // {
+              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
+                zig = final.zig_0_13;
+                globalBuildFlags = [ "-Dcpu=znver3" ];
+              };
+              zig = finalAttrs.finalPackage;
+            };
+          });
+          zig_0_14 = prev.zig_0_14.overrideAttrs (finalAttrs: {
+            passthru = finalAttrs.passthru // {
+              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
+                zig = final.zig_0_14;
+                globalBuildFlags = [ "-Dcpu=znver3" ];
+              };
+              zig = finalAttrs.finalPackage;
+            };
+          });
+          zig_0_15 = prev.zig_0_15.overrideAttrs (finalAttrs: {
+            passthru = finalAttrs.passthru // {
+              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
+                zig = final.zig_0_15;
+                globalBuildFlags = [ "-Dcpu=znver3" ];
+              };
+              zig = finalAttrs.finalPackage;
+            };
+          });
           # openldap = prev.folly.overrideAttrs (old: {
           #   doCheck = false;
           # });
@@ -332,5 +362,6 @@
       };
 
       mything = pkgs;
+      mything2 = nixpkgs.outPath;
     };
 }

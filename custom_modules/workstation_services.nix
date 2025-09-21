@@ -44,6 +44,7 @@ let
     oxker # docker shit
     magic-wormhole-rs # file transfer
     spotdl
+    kitty
     vorbis-tools
     fio
     # virt-manager
@@ -134,6 +135,8 @@ let
     # obsidian
   ];
   yubikeyPack = with pkgs; [
+    lsr
+    zig
     gnupg
     pinentry-curses
     # pinentry-qt
