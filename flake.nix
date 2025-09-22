@@ -167,7 +167,10 @@
             passthru = finalAttrs.passthru // {
               hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
                 zig = final.zig_0_13;
-                globalBuildFlags = [ "-Dcpu=znver3" ];
+                globalBuildFlags = [
+                  "-Dcpu=znver3"
+                  # "-flto"
+                ];
               };
               zig = finalAttrs.finalPackage;
             };
@@ -176,7 +179,11 @@
             passthru = finalAttrs.passthru // {
               hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
                 zig = final.zig_0_14;
-                globalBuildFlags = [ "-Dcpu=znver3" ];
+                globalBuildFlags = [
+                  "-Dcpu=znver3"
+                  "-fno-reference-trace"
+                  # "-flto"
+                ];
               };
               zig = finalAttrs.finalPackage;
             };
@@ -185,7 +192,10 @@
             passthru = finalAttrs.passthru // {
               hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
                 zig = final.zig_0_15;
-                globalBuildFlags = [ "-Dcpu=znver3" ];
+                globalBuildFlags = [
+                  "-Dcpu=znver3"
+                  # "-flto"
+                ];
               };
               zig = finalAttrs.finalPackage;
             };

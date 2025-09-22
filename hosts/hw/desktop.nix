@@ -82,6 +82,8 @@
   # networking.hostId = "84500694";
   #
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.memtest86.enable = true;
+
   fileSystems."/" = {
     device = "/dev/disk/by-uuid/2d8d366c-8799-4456-8088-a15b5f905770";
     fsType = "btrfs";
@@ -136,6 +138,7 @@
     "kvm"
     "gccarch-znver3"
     "gccarch-znver1"
+    "x86_64-v3"
   ];
 
   # nixpkgs.hostPlatform = "";
