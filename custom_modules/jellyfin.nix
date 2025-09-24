@@ -60,6 +60,11 @@ in
       8181
       1234
       2345
+      3141
+      31415
+      1618
+      16180
+      3000
     ];
     networking.firewall.allowedUDPPorts = [
       1900
@@ -84,10 +89,6 @@ in
 
       home = spotizerrStateDir;
       createHome = true;
-    };
-    users.users.paperless = {
-      shell = pkgs.bashInteractive;
-      isSystemUser = true;
     };
 
     users.users.jellyfin = {
@@ -230,6 +231,10 @@ in
       # consumptionDirIsPublic = true;
       address = "0.0.0.0";
     };
+    users.users.paperless = {
+      shell = pkgs.bashInteractive;
+      isSystemUser = true;
+    };
     services.immich = {
       enable = false;
       port = 2283;
@@ -237,6 +242,153 @@ in
       accelerationDevices = null;
       host = "0.0.0.0";
     };
+
+    power.ups = {
+      enable = true;
+      mode = "netserver";
+      ups.eaton5sc = {
+        driver = "usbhid-ups";
+        port = "auto";
+        directives = [
+          "vendorid = 0463"
+          "productid = ffff"
+        ];
+        description = "Eaton 5SC1000";
+      };
+
+      upsd.listen = [
+        {
+          address = "0.0.0.0";
+          port = 1618;
+        }
+      ];
+
+      upsmon.monitor.eaton5sc = {
+        user = "monuser";
+        system = "eaton5sc@127.0.0.1:1618";
+        type = "primary";
+      };
+
+      users.monuser = {
+        passwordFile = "/etc/nut/mon.pw";
+        upsmon = "primary";
+      };
+
+      openFirewall = true;
+
+    };
+
+    environment.etc."nut/mon.pw" = {
+      text = "password";
+      mode = "0600";
+      user = "root";
+      group = "nut";
+    };
+
+    services.prometheus.exporters.nut = {
+      enable = true;
+      nutServer = "127.0.0.1";
+      extraFlags = [
+        "--nut.serverport=1618"
+        # "--metrics.namespace=nut"
+        "--nut.vars_enable="
+      ];
+      port = 16180;
+      listenAddress = "0.0.0.0";
+    };
+
+    services.prometheus = {
+      enable = true;
+      scrapeConfigs = [
+        {
+          job_name = "nut";
+          metrics_path = "/ups_metrics";
+          static_configs = [
+            {
+              targets = [ "127.0.0.1:16180" ];
+              # labels.ups = "eaton5sc";
+            }
+          ];
+          # metric_relabel_configs = [
+          #   {
+          #     action = "drop";
+          #     source_labels = [ "ups" ];
+          #     regex = ""; # if label missing, value is empty — match and drop
+          #   }
+          # ];
+        }
+      ];
+    };
+    services.grafana = {
+      enable = true;
+      settings.server = {
+        http_addr = "0.0.0.0";
+        http_port = 3000;
+      };
+      # 1) Tell Grafana where to read dashboards from
+      provision.dashboards.settings = {
+        apiVersion = 1;
+        providers = [
+          {
+            name = "mynutdashboard";
+            orgId = 1;
+            folder = "NUT";
+            type = "file";
+            disableDeletion = false;
+            editable = true;
+            options = {
+              path = "/etc/grafana-dashboards/nut";
+            };
+          }
+        ];
+      };
+
+      # 2) Provision Prometheus datasource (so the dashboard has data)
+      provision.datasources.settings = {
+        apiVersion = 1;
+        datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            url = "http://127.0.0.1:9090";
+            access = "proxy";
+            isDefault = true;
+          }
+        ];
+        # {
+        #   name = "Prometheus";
+        #   type = "prometheus";
+        #   access = "proxy";
+        #   url = "http://127.0.0.1:9090";
+        #   isDefault = true;
+        # }
+      };
+    };
+    environment.etc."grafana-dashboards/nut/mynutdashboard.json" = {
+      text =
+        let
+          raw = builtins.fetchurl {
+            url = "https://grafana.com/api/dashboards/15406/revisions/1/download";
+            sha256 = "1pvyyxyy6prd0aqkvki04ayr4sw2rfyzx9gc3scyhzjy6rq648ca";
+          };
+          fixed = builtins.replaceStrings [ "$${DS_PROMETHEUS}" ] [ "Prometheus" ] (builtins.readFile raw);
+        in
+        fixed;
+      user = "grafana";
+      group = "grafana";
+      mode = "0644";
+    };
+    # TODO fix
+
+    # users = {
+    #   jrestivo = {
+    #     # passwordFile = config.age.secrets.nut-password.path;
+    #     upsmon = "primary";
+    #   };
+    # };
+
+    # services.prometheus.exporters.
+
     # users.users.immich.extraGroups = [
     #   "video"
     #   "render"

@@ -226,11 +226,15 @@
           #
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
-              # django = python-prev.django.overridePythonAttrs (oldAttrs: {
-              #   doCheck = false;
-              # });
+              psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+                propagatedBuildInputs = (oldAttrs.propagatedBuildInputs or [ ]) ++ [ python-final.psycopg-pool ];
+              });
 
               dj-database-url = python-prev.dj-database-url.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
+              chromadb = python-prev.chromadb.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
               });
 
@@ -243,10 +247,6 @@
               granian = python-prev.granian.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
               });
-
-              # psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
-              #   doCheck = false;
-              # });
 
               django-pytest = python-prev.django-pytest.overridePythonAttrs (oldAttrs: {
                 doCheck = false;

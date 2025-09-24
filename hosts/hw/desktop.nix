@@ -138,7 +138,8 @@
     "kvm"
     "gccarch-znver3"
     "gccarch-znver1"
-    "x86_64-v3"
+    "gccarch-alderlake"
+    "gccarch-x86_64-v3"
   ];
 
   # nixpkgs.hostPlatform = "";

@@ -334,7 +334,7 @@ in
     # };
 
     services.ollama = {
-      package = tmpnixpkgs.ollama;
+      # package = tmpnixpkgs.ollama;
       #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
       loadModels = [
         "deepseek-r1:32b"
@@ -347,7 +347,7 @@ in
       # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
     };
     services.open-webui = {
-      package = tmpnixpkgs.open-webui;
+      # package = tmpnixpkgs.open-webui;
       openFirewall = true;
       enable = true;
       host = "0.0.0.0";
