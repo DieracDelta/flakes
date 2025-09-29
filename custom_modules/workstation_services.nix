@@ -38,7 +38,10 @@ let
     # libsForQt5.qt5.qtquickcontrols2
     # libsForQt5.qt5.qtserialport
 
+    btop
     # xboxdrv
+    nethogs
+    cachix
     docker-compose
     smartmontools
     oxker # docker shit

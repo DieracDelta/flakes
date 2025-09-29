@@ -4,7 +4,7 @@
 
   inputs = {
     nix = {
-      url = "github:NixOS/nix/2.30.2";
+      url = "github:NixOS/nix/2.31.2";
     };
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -275,12 +275,19 @@
               #     crypton-x509-validation = hsuper.crypton-x509-validation.overrideAttrs (oldAttrs: {
               #       doCheck = false;
               #     });
+              cryptonite = hsuper.cryptonite.overrideAttrs (oldAttrs: {
+                doCheck = false;
+              });
               wherefrom-compat = hsuper.wherefrom-compat.overrideAttrs (oldAttrs: {
                 doCheck = false;
               });
               xmobar = final.haskell.lib.compose.overrideCabal (drv: {
                 enableSeparateBinOutput = false;
               }) hsuper.xmobar;
+
+              cachix = final.haskell.lib.compose.overrideCabal (drv: {
+                enableSeparateBinOutput = false;
+              }) hsuper.cachix;
 
               yaml = final.haskell.lib.compose.overrideCabal (drv: {
                 enableSeparateBinOutput = false;
