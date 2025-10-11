@@ -150,7 +150,8 @@
   #     gcc.tune = "gccarch-znver3";
   #   };
 
-  # nix.settings.max-jobs = lib.mkDefault 13;
+  nix.settings.max-jobs = 4;
+  nix.settings.cores = 7;
 
   # end hw file stuff
 

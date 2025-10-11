@@ -66,6 +66,7 @@
         patches = [
           ./PATCH
           ./PATCH_ZIG
+          ./PATCH_SUNSHINE
         ];
       };
       inherit (nixpkgs-unpatched) lib;
