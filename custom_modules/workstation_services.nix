@@ -43,6 +43,7 @@ let
     nethogs
     cachix
     docker-compose
+    nix-search
     smartmontools
     oxker # docker shit
     magic-wormhole-rs # file transfer
@@ -362,11 +363,27 @@ in
     };
 
     services.sunshine = {
+      # package =
+      #   let
+      #     tmp_pkgs = import nixpkgs-master {
+      #       system = "x86_64-linux";
+      #       config.allowUnfree = true;
+      #     };
+      #   in
+      #   tmp_pkgs.sunshine.override { cudaSupport = true; };
       package = pkgs.sunshine.override { cudaSupport = true; };
+
       autoStart = true;
       enable = true;
       capSysAdmin = true;
       openFirewall = true;
+      settings.port = 48011;
+      # settings = {
+      #   port = 48011;
+      #   https_port = 48006;
+      #   web_ui_port = 48012;
+      #   rtsp_port = 48032;
+      # };
     };
 
     # programs.kdeconnect.enable = true;
