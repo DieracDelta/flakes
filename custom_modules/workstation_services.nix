@@ -42,6 +42,7 @@ let
     # xboxdrv
     nethogs
     cachix
+    nix-btm
     docker-compose
     nix-search
     smartmontools
@@ -157,7 +158,7 @@ let
     vulkan-caps-viewer
     vulkan-extension-layer
     vk-bootstrap
-    amdvlk
+    # amdvlk
     vkmark
     vkdisplayinfo
     vk-bootstrap

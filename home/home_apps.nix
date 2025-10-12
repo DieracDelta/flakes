@@ -88,7 +88,6 @@ let
   ];
   # user
   appPack = with pkgs; [
-    idris2
     lshw
     # teams
     # bluejeans-gui
@@ -102,18 +101,12 @@ let
     # slack
     # weechat
     gmp.static.dev
-    # skypeforlinux
-    # spotify
-    browsh
     keybase
     keybase-gui
     kbfs
-    # obs-studio
     graphviz
     # minecraft
     # signal-desktop
-    alacritty
-    vscode
     rust-analyzer
     wally-cli
 
@@ -125,28 +118,16 @@ let
   # user
   workstationPack = with pkgs; [
     ifuse
-    # nyxt
-    # zulip
     termite
     pavucontrol
-    # pywal
-    # pithos
     noip
     remmina
-    # firefox
-    # pkgs.unstable.chromium
     flameshot
     # urlscan
     lynx
     bottom
-    # vscode
     dante
-    # android-studio
     bottom
-    #gimp
-    # tdesktop
-    # exodus
-    # nixpkgs-stable.legacyPackages.${syste}.mpv
     pciutils
     usbutils
     lm_sensors
@@ -176,20 +157,6 @@ let
     nmap
     aircrack-ng
   ];
-  texPack = with pkgs; [
-    # pdftk
-    # (
-    #   texlive.combine {
-    #     inherit (texlive) scheme-medium lipsum fmtcount datetime;
-    #   }
-    # )
-  ];
-  languageserverPack = with pkgs; [
-    # shellcheck
-    # rnix-lsp
-    # nixfmt
-    # clang-tools
-  ];
   cPack = with pkgs; [
     clang
     valgrind
@@ -212,8 +179,6 @@ in
       workstationPack
       embeddedPack
       pentestPack
-      texPack
-      languageserverPack
       cPack
       financialPack
     ];
