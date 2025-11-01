@@ -38,6 +38,7 @@ let
     # libsForQt5.qt5.qtquickcontrols2
     # libsForQt5.qt5.qtserialport
 
+    nix-inspect
     btop
     # xboxdrv
     nethogs
@@ -176,6 +177,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    environment.plasma6.excludePackages = [ pkgs.kdePackages.baloo ];
     services.desktopManager.plasma6.enable = true;
     services.libinput.enable = true;
     services.displayManager.sddm.enable = true;
@@ -206,11 +208,11 @@ in
     services.xrdp.enable = true;
     virtualisation.docker = {
       rootless.enable = true;
-
       rootless.setSocketVariable = true;
       enable = true;
       # autoPrune.enable = true;
       enableOnBoot = true;
+      # storageDriver = "btrfs";
     };
     hardware.nvidia-container-toolkit.enable = true;
 

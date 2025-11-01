@@ -43,4 +43,4 @@ set -U fish_greeting
 eval "$(starship init fish)"
 zoxide init fish | source
 
-export NIX_BUILD_SHELL="fish"
+export NIX_BUILD_SHELL="bash"

@@ -338,6 +338,7 @@ in
         experimental-features = nix-command flakes pipe-operators
         extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
+        nix-log-file = /tmp/nixbtm.sock
       '';
       # riscv64-linux
 
@@ -400,6 +401,14 @@ in
       fzf
       # cachix
       bat
+      entr
+      bat-extras.prettybat
+      bat-extras.batgrep
+      bat-extras.batdiff
+      bat-extras.batman
+      bat-extras.batpipe
+      bat-extras.batwatch
+      bat-extras.core
       manix
       zsh
       ripgrep
