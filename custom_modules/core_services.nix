@@ -338,8 +338,9 @@ in
         experimental-features = nix-command flakes pipe-operators
         extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
-        nix-log-file = /tmp/nixbtm.sock
+        json-log-path = /tmp/nixbtm.sock
       '';
+      # json-log-path = /tmp/nixbtm.sock
       # riscv64-linux
 
       # cachix stuffs

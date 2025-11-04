@@ -1,4 +1,10 @@
-{ config, pkgs, lib, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 let
   cfg = config.profiles.zsh;
 in
@@ -29,9 +35,12 @@ in
     programs.fish = {
       enable = true;
       plugins = with pkgs.fishPlugins; [
-         # TODO autopair.fish maybe?
-         # https://github.com/jorgebucaran/autopair.fish
-        { name = "puffer"; inherit (puffer) src; }
+        # TODO autopair.fish maybe?
+        # https://github.com/jorgebucaran/autopair.fish
+        {
+          name = "puffer";
+          inherit (puffer) src;
+        }
       ];
       shellAliases = {
         ga = "git add";
@@ -54,7 +63,25 @@ in
         sl = "ls";
         # yes this is morally wrong
         # no I don't care
-        nn = (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "") + (if pkgs.stdenv.isLinux then "/home/jrestivo/dev/vimconfig/result/bin/nvim" else "");
+        nn =
+          let
+            nvimPath =
+              (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "")
+              + (
+                if pkgs.stdenv.isLinux then
+                  "${pkgs.coreutils}/bin/nice -n -10 ${pkgs.util-linux}/bin/ionice -c2 -n0  /home/jrestivo/dev/vimconfig/result/bin/nvim"
+                else
+                  ""
+              );
+          in
+          nvimPath;
+        # ''
+        #   ${nvimPath} $argv &;
+        #   set pid $last_pid;
+        #   renice -n -10 -p $pid;
+        #   ionice -c2 -n0 -p $pid;
+        #   fg $pid
+        # '';
       };
       # keys.sh contains a bunch of my keys
       interactiveShellInit = builtins.readFile ./config.fish;

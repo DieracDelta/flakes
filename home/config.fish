@@ -2,6 +2,20 @@ if test -n "$GHOSTTY_RESOURCES_DIR"
     source "$GHOSTTY_RESOURCES_DIR/shell-integration/fish/vendor_conf.d/ghostty-shell-integration.fish"
 end
 
+if status is-interactive
+    # Raise CPU scheduling priority
+    renice -n -10 -p $fish_pid 2>/dev/null
+    # Raise IO priority
+    ionice -c2 -n0 -p $fish_pid 2>/dev/null
+end
+
+function nn --description 'launch nvim, then boost its priority'
+      /home/jrestivo/dev/vimconfig/result/bin/nvim  $argv &; set pid $last_pid
+      renice -n -10 -p $pid
+      ionice -c2 -n0 -p $pid
+      fg $pid
+end
+
 set os (uname)
 
 ssh-agent -c | source -

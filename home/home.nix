@@ -34,16 +34,14 @@
     userName = "Justin Restivo";
     userEmail = "justin@restivo.me";
     extraConfig = {
-      core.commitGraph = true;
-      fetch.writeCommitGraph = true;
-      # Performance improvements
-      core.preloadIndex = true;
-      core.fscache = true;
-      core.untrackedCache = true;
-      feature.manyFiles = true;
-      gc.writeCommitGraph = true;
-      # Diff performance
-      diff.algorithm = "histogram";
+      # core.commitGraph = true;
+      # fetch.writeCommitGraph = true;
+      # core.preloadIndex = true;
+      # core.fscache = true;
+      # core.untrackedCache = true;
+      # feature.manyFiles = true;
+      # gc.writeCommitGraph = true;
+      # diff.algorithm = "histogram";
 
     };
     # extraConfig = {

@@ -110,6 +110,7 @@ let
     m4
   ];
   xPack = with pkgs; [
+    asciinema
     tdf
     libimobiledevice
     ifuse
@@ -151,9 +152,11 @@ let
     rng-tools
     clinfo
     vulkan-loader # vulkan-volk
+    powertop
     vulkan-tools
     vulkan-utility-libraries
     vulkan-validation-layers
+    id3v2
     vulkan-helper
     vulkan-headers
     vulkan-caps-viewer
@@ -205,6 +208,21 @@ in
 
     # programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
 
+    security.sudo-rs.extraRules = [
+      {
+        users = [ "jrestivo" ];
+        commands = [
+          {
+            command = "${pkgs.coreutils}/bin/nice";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "${pkgs.util-linux}/bin/ionice";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+    ];
     services.xrdp.enable = true;
     virtualisation.docker = {
       rootless.enable = true;
@@ -398,6 +416,11 @@ in
 
     security.sudo-rs.enable = true;
     services.eternal-terminal.enable = true;
+    systemd.services.nix-daemon.serviceConfig = {
+      Nice = lib.mkForce 15;
+      IOSchedulingClass = lib.mkForce "idle";
+      IOSchedulingPriority = lib.mkForce 7;
+    };
 
   };
 
