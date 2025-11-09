@@ -97,6 +97,60 @@ in
       enable = true;
       settings.PasswordAuthentication = false;
     };
+    services.sunshine = {
+      # package =
+      #   let
+      #     tmp_pkgs = import nixpkgs-master {
+      #       system = "x86_64-linux";
+      #       config.allowUnfree = true;
+      #     };
+      #   in
+      #   tmp_pkgs.sunshine.override { cudaSupport = true; };
+      package = pkgs.sunshine.override { cudaSupport = true; };
+
+      autoStart = true;
+      enable = true;
+      capSysAdmin = true;
+      openFirewall = true;
+      settings.port = 48011;
+      # serviceConfig = {
+      #   IPEgressPriority = 1;
+      #   IPIngressPriority = 1;
+      #   Nice = -10;
+      #   CPUWeight = 1000;
+      #   IOSchedulingPriority = 0;
+      #   IOWeight = 1000;
+      #   # IOSchedulingClass = "best-effort"; # too aggressive imo
+      # };
+      # settings = {
+      #   port = 48011;
+      #   https_port = 48006;
+      #   web_ui_port = 48012;
+      #   rtsp_port = 48032;
+      # };
+    };
+    systemd.user.services.sunshine.serviceConfig = {
+      IPEgressPriority = 1;
+      IPIngressPriority = 1;
+      Nice = -10;
+      CPUWeight = 1000;
+      IOSchedulingPriority = 0;
+      IOWeight = 1000;
+    };
+
+    systemd.services.ssdh.serviceConfig = {
+      IPEgressPriority = 1;
+      IPIngressPriority = 1;
+      Nice = -10;
+      CPUWeight = 1000;
+      IOSchedulingPriority = 0;
+      IOWeight = 1000;
+    };
+
+    systemd.settings.Manager = {
+      DefaultIOAccounting = true;
+      DefaultIPAccounting = true;
+    };
     programs.ssh = {
       forwardX11 = true;
       setXAuthLocation = true;

@@ -58,12 +58,14 @@
     "kvm-amd" # TODO comment
   ];
   boot.extraModulePackages = with config.boot.kernelPackages; [
+    zenergy
     v4l2loopback # akvcam
   ];
   services.xserver.videoDrivers = [
     # TODO COMMENT "amdgpu"
     "nvidia"
   ];
+  services.vscode-server.enable = true;
   # environment.systemPackages = with pkgs; [ trezord trezor-udev-rules python310Packages.trezor_agent python310Packages.trezor ];
   # services.trezord.enable = true;
   # environment.sessionVariables.AMD_VULKAN_ICD = "RADV";

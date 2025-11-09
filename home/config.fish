@@ -11,8 +11,8 @@ end
 
 function nn --description 'launch nvim, then boost its priority'
       /home/jrestivo/dev/vimconfig/result/bin/nvim  $argv &; set pid $last_pid
-      renice -n -10 -p $pid
-      ionice -c2 -n0 -p $pid
+      sudo -n $(which renice) -n -10 -p $pid
+      sudo -n $(which ionice) -c2 -n0 -p $pid
       fg $pid
 end
 

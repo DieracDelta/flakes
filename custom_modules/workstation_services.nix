@@ -58,6 +58,13 @@ let
     cdrkit
     qemu
     OVMF
+    bandwhich
+    binsider
+    dua
+    fzf-make
+    oxker
+    rainfrog
+    trippy
     elfx86exts
     magic-wormhole
     gitoxide
@@ -137,6 +144,7 @@ let
     xclip
     xmobar
     libGL
+    # trickle // TODO currently broken
     libGLU
     glxinfo
     # obsidian
@@ -213,11 +221,15 @@ in
         users = [ "jrestivo" ];
         commands = [
           {
-            command = "${pkgs.coreutils}/bin/nice";
+            command = "${pkgs.coreutils-full}/bin/nice";
             options = [ "NOPASSWD" ];
           }
           {
             command = "${pkgs.util-linux}/bin/ionice";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "${pkgs.util-linux}/bin/renice";
             options = [ "NOPASSWD" ];
           }
         ];
@@ -383,30 +395,6 @@ in
       };
     };
 
-    services.sunshine = {
-      # package =
-      #   let
-      #     tmp_pkgs = import nixpkgs-master {
-      #       system = "x86_64-linux";
-      #       config.allowUnfree = true;
-      #     };
-      #   in
-      #   tmp_pkgs.sunshine.override { cudaSupport = true; };
-      package = pkgs.sunshine.override { cudaSupport = true; };
-
-      autoStart = true;
-      enable = true;
-      capSysAdmin = true;
-      openFirewall = true;
-      settings.port = 48011;
-      # settings = {
-      #   port = 48011;
-      #   https_port = 48006;
-      #   web_ui_port = 48012;
-      #   rtsp_port = 48032;
-      # };
-    };
-
     # programs.kdeconnect.enable = true;
 
     services.usbmuxd = {
@@ -415,11 +403,28 @@ in
     };
 
     security.sudo-rs.enable = true;
-    services.eternal-terminal.enable = true;
+    services.eternal-terminal = {
+      enable = true;
+    };
+
+    systemd.services.eternal-terminal.serviceConfig = {
+      IPEgressPriority = 1;
+      IPIngressPriority = 1;
+      Nice = -10;
+      CPUWeight = 1000;
+      IOSchedulingPriority = 0;
+      IOWeight = 1000;
+    };
+
     systemd.services.nix-daemon.serviceConfig = {
       Nice = lib.mkForce 15;
       IOSchedulingClass = lib.mkForce "idle";
       IOSchedulingPriority = lib.mkForce 7;
+      IPEgressPriority = 7;
+      IPIngressPriority = 7;
+      # NOTE we could add these if we really wanted to limit under contention
+      # CPUWeight = 10;   # low CPU share
+      # IOWeight = 10;    # low disk share
     };
 
   };
