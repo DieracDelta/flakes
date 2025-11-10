@@ -4,7 +4,7 @@
 
   inputs = {
     nix = {
-      url = "github:NixOS/nix/2.32.1";
+      url = "github:NixOS/nix/2.32.3";
     };
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -16,7 +16,7 @@
       # url = "git+file:///home/jrestivo/dev/nixpkgs";
       # url = "path:/home/jrestivo/nixpkgs";
       # url = "github:NixOS/nixpkgs/master";
-      url = "github:NixOS/nixpkgs/master";
+      url = "github:NixOS/nixpkgs/9967182c2d4b41d6e66fe16b547a65697c27601e";
     };
 
     nixpkgs-stable = {
@@ -26,7 +26,7 @@
 
     nixpkgs-master = {
       # url = "path:/home/jrestivo/nixpkgs";
-      url = "github:NixOS/nixpkgs/master";
+      url = "github:NixOS/nixpkgs/9967182c2d4b41d6e66fe16b547a65697c27601e";
     };
 
     home-manager = {
@@ -265,6 +265,9 @@
               });
             })
           ];
+          libsecret = prev.libsecret.overrideAttrs (oldAttrs: {
+            doCheck = false;
+          });
           # xmobar = final.haskell.lib.compose.overrideCabal (drv: {
           #   enableSeparateBinOutput = false;
           # }) prev.haskellPackages.xmobar;

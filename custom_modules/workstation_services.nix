@@ -146,14 +146,12 @@ let
     libGL
     # trickle // TODO currently broken
     libGLU
-    glxinfo
     # obsidian
   ];
   yubikeyPack = with pkgs; [
     lsr
     zig
     gnupg
-    pinentry-curses
     # pinentry-qt
     paperkey
     wget
@@ -199,7 +197,7 @@ in
       # displayManager = { lightdm.enable = true; };
       windowManager.i3 = {
         enable = true;
-        package = pkgs.i3-gaps;
+        package = pkgs.i3;
         extraPackages = with pkgs; [ rofi ];
       };
 
@@ -423,8 +421,8 @@ in
       IPEgressPriority = 7;
       IPIngressPriority = 7;
       # NOTE we could add these if we really wanted to limit under contention
-      # CPUWeight = 10;   # low CPU share
-      # IOWeight = 10;    # low disk share
+      # CPUWeight = 10;
+      # IOWeight = 10;
     };
 
   };

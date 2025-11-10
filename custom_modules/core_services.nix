@@ -106,9 +106,11 @@ in
       #     };
       #   in
       #   tmp_pkgs.sunshine.override { cudaSupport = true; };
-      package = pkgs.sunshine.override { cudaSupport = true; };
+      package = pkgs.sunshine;
 
       autoStart = true;
+      # broken b/c depends on this for some reason?
+      # https://github.com/NixOS/nixpkgs/pull/459164
       enable = true;
       capSysAdmin = true;
       openFirewall = true;
@@ -490,7 +492,7 @@ in
       # uv
       gamescope
       nixpkgs-review
-      (sunshine.override { cudaSupport = true; })
+      # (sunshine.override { cudaSupport = true; })
       # sunshine
     ];
     security.pam.loginLimits = [

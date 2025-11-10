@@ -24,7 +24,7 @@ in
     # yubikey tools
     environment.systemPackages = with pkgs; [
       gnupg
-      pinentry
+      pinentry-curses
     ];
 
     # expose u2f
@@ -32,7 +32,7 @@ in
       libu2f-host
       yubikey-personalization
       opensc
-      pcsctools
+      pcsc-tools
     ];
 
     # smartcard daemon

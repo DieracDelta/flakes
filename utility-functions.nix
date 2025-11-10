@@ -49,7 +49,7 @@ in
         # RUSTFLAGS = "-C target-cpu=znver3 ";
         # permittedInsecurePackages = [ "nix-2.15.3" ];
 
-        allowUnsupportedSystem = true;
+        # allowUnsupportedSystem = true;
       };
     };
 
