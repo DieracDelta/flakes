@@ -132,8 +132,6 @@ in
       # };
     };
     systemd.user.services.sunshine.serviceConfig = {
-      IPEgressPriority = 1;
-      IPIngressPriority = 1;
       Nice = -10;
       CPUWeight = 1000;
       IOSchedulingPriority = 0;
@@ -141,8 +139,6 @@ in
     };
 
     systemd.services.ssdh.serviceConfig = {
-      IPEgressPriority = 1;
-      IPIngressPriority = 1;
       Nice = -10;
       CPUWeight = 1000;
       IOSchedulingPriority = 0;
@@ -153,6 +149,21 @@ in
       DefaultIOAccounting = true;
       DefaultIPAccounting = true;
     };
+
+    # systemd.sockets.sshd.socketConfig = {
+    #   IPTOS = "low-delay";
+    #   Priority = 6;
+    # };
+    #
+    # systemd.sockets.nix-daemon.socketConfig = {
+    #   IPTOS = "low-delay";
+    #   Priority = 2;
+    # };
+    # systemd.sockets.sunshine.socketConfig = {
+    #   IPTOS = "low-delay";
+    #   Priority = 7;
+    # };
+
     programs.ssh = {
       forwardX11 = true;
       setXAuthLocation = true;
@@ -394,7 +405,6 @@ in
         experimental-features = nix-command flakes pipe-operators
         extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
-        json-log-path = /tmp/nixbtm.sock
       '';
       # json-log-path = /tmp/nixbtm.sock
       # riscv64-linux
