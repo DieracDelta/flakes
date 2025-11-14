@@ -63,18 +63,18 @@ in
         sl = "ls";
         # yes this is morally wrong
         # no I don't care
-        nn =
-          let
-            nvimPath =
-              (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "")
-              + (
-                if pkgs.stdenv.isLinux then
-                  "${pkgs.coreutils}/bin/nice -n -10 ${pkgs.util-linux}/bin/ionice -c2 -n0  /home/jrestivo/dev/vimconfig/result/bin/nvim"
-                else
-                  ""
-              );
-          in
-          nvimPath;
+        # nn =
+        #   let
+        #     nvimPath =
+        #       (if pkgs.stdenv.isDarwin then " /Users/jrestivo/dev/vimconfig/result/bin/nvim" else "")
+        #       + (
+        #         if pkgs.stdenv.isLinux then
+        #           "${pkgs.coreutils}/bin/nice -n -10 ${pkgs.util-linux}/bin/ionice -c2 -n0  /home/jrestivo/dev/vimconfig/result/bin/nvim"
+        #         else
+        #           ""
+        #       );
+        #   in
+        #   nvimPath;
         # ''
         #   ${nvimPath} $argv &;
         #   set pid $last_pid;

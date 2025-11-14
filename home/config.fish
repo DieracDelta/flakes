@@ -3,17 +3,43 @@ if test -n "$GHOSTTY_RESOURCES_DIR"
 end
 
 if status is-interactive
-    # Raise CPU scheduling priority
-    renice -n -10 -p $fish_pid 2>/dev/null
-    # Raise IO priority
-    ionice -c2 -n0 -p $fish_pid 2>/dev/null
+    if type -q renice
+        sudo -n renice -n -10 -p $fish_pid
+    end
+
+    if type -q ionice
+        sudo -n ionice -c2 -n0 -p $fish_pid
+    end
 end
 
-function nn --description 'launch nvim, then boost its priority'
-      /home/jrestivo/dev/vimconfig/result/bin/nvim  $argv &; set pid $last_pid
-      sudo -n $(which renice) -n -10 -p $pid
-      sudo -n $(which ionice) -c2 -n0 -p $pid
-      fg $pid
+function nn --description 'launch nvim with priority boosting where available'
+    set OS (uname)
+
+    if test "$OS" = "Darwin"
+        /Users/jrestivo/dev/vimconfig/result/bin/nvim $argv &; set pid $last_pid
+
+        if type -q renice
+            sudo -n renice -n -10 -p $pid 2>/dev/null
+        end
+
+        fg
+
+    else if test "$OS" = "Linux"
+        /home/jrestivo/dev/vimconfig/result/bin/nvim $argv &; set pid $last_pid
+
+        if type -q renice
+            sudo -n renice -n -10 -p $pid 2>/dev/null
+        end
+
+        if type -q ionice
+            sudo -n ionice -c2 -n0 -p $pid 2>/dev/null
+        end
+
+        fg
+
+    else
+        echo "nn: unsupported OS: $OS" >&2
+    end
 end
 
 set os (uname)
@@ -49,6 +75,7 @@ abbr --position anywhere --add \.\.\. '../../'
 abbr --position anywhere --add \.\.\.\. '../../../'
 abbr --position anywhere --add \.\.\.\.\. '../../../../'
 abbr --position anywhere --add \.\.\.\.\.\. '../../../../../'
+abbr --position anywhere --add \.\.\.\.\.\.\. '../../../../../../'
 
 
 fish_vi_key_bindings

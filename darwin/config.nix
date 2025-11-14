@@ -77,8 +77,12 @@
     nix-output-monitor
     libfixposix
     pkg-config
+    bingrep
     john
   ];
+  security.sudo.extraConfig = ''
+    jrestivo ALL=(ALL) NOPASSWD: /usr/bin/renice
+  '';
 
   nix.package = pkgs.nix;
   nix.extraOptions = ''
