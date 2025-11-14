@@ -17,6 +17,7 @@
   programs.fish.enable = true;
   users.users.jrestivo.home = "/Users/jrestivo";
   users.users.jrestivo.shell = pkgs.fish;
+  system.primaryUser = "jrestivo";
 
   environment.systemPackages = with pkgs; [
     ripgrep
@@ -74,7 +75,6 @@
     mosh
     dive
     nix-output-monitor
-    sbcl_2_4_10
     libfixposix
     pkg-config
     john
