@@ -19,8 +19,6 @@
   users.users.jrestivo.shell = pkgs.fish;
 
   environment.systemPackages = with pkgs; [
-    ghc
-    # moonlight-qt
     ripgrep
     tree
     # tdf
@@ -43,6 +41,7 @@
     eternal-terminal
     magic-wormhole-rs
     fd
+    spicetify-cli
     nix-top
     entr
     fish
@@ -82,7 +81,10 @@
   ];
 
   nix.package = pkgs.nix;
-  nix.extraOptions = "experimental-features = nix-command flakes pipe-operators";
+  nix.extraOptions = ''
+    experimental-features = nix-command flakes pipe-operators
+    json-log-path = /tmp/nixbtm.sock
+  '';
 
   # environment.systemPath = [ "/opt/homebrew/bin" ];
   environment.variables = {

@@ -4,7 +4,7 @@
 
   inputs = {
     nix = {
-      url = "github:NixOS/nix/2.32.3";
+      url = "github:NixOS/nix/2.32.4";
     };
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -335,7 +335,7 @@
         in
         utils.buildNixosConfigurations fullyQualifiedDirs;
 
-      darwinConfigurations."jrestivo-2" = darwin.lib.darwinSystem {
+      darwinConfigurations."jrestivo-4" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         modules = [
           home-manager.darwinModules.home-manager
@@ -352,6 +352,8 @@
             nixpkgs.overlays = [
               (final: prev: {
                 nvim = my-nvim.defaultPackage.aarch64-darwin;
+                nix = inputs.nix.packages.aarch64-darwin.default;
+
                 tdf = prev.tdf.overrideAttrs (
                   finalAttrs: prevAttrs: {
                     pname = "tdf";
