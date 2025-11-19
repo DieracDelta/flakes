@@ -28,9 +28,17 @@ let
     # wine
     heroic
     croc
+    claude-code
+    opencode
+    lmstudio
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
     sqlite
+    goose-cli
+    bingrep
+    qwen-code
+    aider-chat-full
+    streamrip
     # libsForQt5.qt5.qtgui
     # libsForQt5.qt5.qtgamepad
     # libsForQt5.qt5.qtgraphicaleffects
@@ -237,7 +245,7 @@ in
     virtualisation.docker = {
       rootless.enable = true;
       rootless.setSocketVariable = true;
-      enable = true;
+      # enable = true;
       # autoPrune.enable = true;
       enableOnBoot = true;
       # storageDriver = "btrfs";
