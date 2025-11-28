@@ -31,6 +31,9 @@ let
     claude-code
     opencode
     lmstudio
+    partclone
+    scrutiny
+    scrutiny-collector
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
     sqlite
@@ -431,6 +434,33 @@ in
       # NOTE we could add these if we really wanted to limit under contention
       # CPUWeight = 10;
       # IOWeight = 10;
+    };
+
+    services.scrutiny.enable = true;
+    services.scrutiny.collector.enable = true;
+    services.scrutiny.settings.web.listen.port = 5123;
+    services.scrutiny.openFirewall = true;
+
+    services.netdata = {
+      package = pkgs.netdata.override { withCloudUi = true; };
+      enable = true;
+      config.global = {
+        "memory mode" = "ram";
+        "debug log" = "none";
+        "access log" = "none";
+        "error log" = "syslog";
+      };
+      # configDir."python.d.conf" = pkgs.writeText "python.d.conf" ''
+      #   nvidia_smi: yes
+      # '';
+    };
+    # systemd.services.netdata.path = [ config.hardware.nvidia.package ];
+
+    services.glances = {
+      enable = true;
+      openFirewall = true;
+      port = 5124;
+
     };
 
   };

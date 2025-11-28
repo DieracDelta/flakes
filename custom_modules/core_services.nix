@@ -171,6 +171,7 @@ in
 
     # ollama and webui are 11434 and 8080 respectively
     networking.firewall.allowedTCPPorts = [
+      19999
       3838
       3389
       80
@@ -402,9 +403,11 @@ in
       extraOptions = ''
         gc-keep-outputs = true
         warn-dirty = false
-        experimental-features = nix-command flakes pipe-operators
+        experimental-features = nix-command flakes pipe-operators auto-allocate-uids cgroups
         extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
+        use-cgroups = true
+        auto-allocate-uids = true
       '';
       # json-log-path = /tmp/nixbtm.sock
       # riscv64-linux
