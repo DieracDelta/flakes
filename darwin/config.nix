@@ -4,7 +4,7 @@
     packages = with pkgs; [
       nerd-fonts.fira-code
       fira-code-symbols
-      fira-math
+      # fira-math
       hack-font
     ];
   };
@@ -34,17 +34,23 @@
     fzf
     eza
     bat
+    hl
     tldr
+    smartmontools
     neofetch
     bottom
     htop
     coreutils
     eternal-terminal
     magic-wormhole-rs
+    # ollama
     fd
     spicetify-cli
+    gemini-cli
     nix-top
+    strace-macos
     entr
+    claude-code
     fish
     syncthing # colmena
     zellij # colima

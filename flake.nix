@@ -2,25 +2,27 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
+    hl.url = "github:pamburus/hl";
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs-unpatched";
+    strace_macos.url = "github:Mic92/strace-macos";
 
     flake-utils.url = "github:numtide/flake-utils";
 
     home-manager.url = "github:nix-community/home-manager/master";
 
-    my-nvim.url = "github:DieracDelta/vimconfig";
+    # my-nvim.url = "github:DieracDelta/vimconfig";
 
     nix.url = "github:NixOS/nix/2.32.4";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
-    nixpkgs-master.url = "github:NixOS/nixpkgs/9967182c2d4b41d6e66fe16b547a65697c27601e";
+    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
 
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
 
-    nixpkgs-unpatched.url = "github:NixOS/nixpkgs/9967182c2d4b41d6e66fe16b547a65697c27601e";
+    nixpkgs-unpatched.url = "github:NixOS/nixpkgs/master";
 
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
   };
@@ -33,7 +35,7 @@
       nixpkgs-master,
       home-manager,
       darwin,
-      my-nvim,
+      # my-nvim,
       nix,
       quadlet-nix,
       ...
@@ -216,7 +218,7 @@
               }) hsuper.yaml;
             }
           );
-          nvim = my-nvim.defaultPackage.x86_64-linux;
+          # nvim = my-nvim.defaultPackage.x86_64-linux;
           xmobar = final.haskellPackages.xmobar;
         })
       ];
@@ -259,8 +261,10 @@
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
               (final: prev: {
-                nvim = my-nvim.defaultPackage.aarch64-darwin;
+                strace-macos = inputs.strace_macos.packages.aarch64-darwin.default;
+                # nvim = my-nvim.defaultPackage.aarch64-darwin;
                 nix = inputs.nix.packages.aarch64-darwin.default;
+                hl = inputs.hl.packages."aarch64-darwin".default;
               })
             ];
           }
