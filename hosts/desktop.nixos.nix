@@ -31,6 +31,7 @@
   custom_modules.hydra.enable = false;
   custom_modules.yubikey.enable = true;
   custom_modules.container_configs.enable = false;
+  custom_modules.bens_config.enable = true;
   programs.noisetorch.enable = false;
 
 }
