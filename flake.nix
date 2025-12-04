@@ -11,7 +11,7 @@
 
     home-manager.url = "github:nix-community/home-manager/master";
 
-    # my-nvim.url = "github:DieracDelta/vimconfig";
+    my-nvim.url = "github:DieracDelta/vimconfig";
 
     nix.url = "github:NixOS/nix/2.32.4";
 
@@ -20,7 +20,7 @@
 
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
 
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.11";
 
     nixpkgs-unpatched.url = "github:NixOS/nixpkgs/master";
 
@@ -35,7 +35,7 @@
       nixpkgs-master,
       home-manager,
       darwin,
-      # my-nvim,
+      my-nvim,
       nix,
       quadlet-nix,
       ...
@@ -166,6 +166,9 @@
           });
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
+              websockets = python-prev.websockets.overridePythonAttrs {
+                doCheck = false;
+              };
               psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
                 propagatedBuildInputs = (oldAttrs.propagatedBuildInputs or [ ]) ++ [ python-final.psycopg-pool ];
@@ -194,6 +197,9 @@
               anyio = python-prev.anyio.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
               });
+              fastapi = python-prev.fastapi.overridePythonAttrs (oldAttrs: {
+                doCheck = false;
+              });
             })
           ];
           libsecret = prev.libsecret.overrideAttrs (oldAttrs: {
@@ -218,7 +224,7 @@
               }) hsuper.yaml;
             }
           );
-          # nvim = my-nvim.defaultPackage.x86_64-linux;
+          nvim = my-nvim.defaultPackage.x86_64-linux;
           xmobar = final.haskellPackages.xmobar;
         })
       ];

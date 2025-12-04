@@ -41,11 +41,11 @@
     # "amdgpu.dc=1"
   ];
 
-  # boot.binfmt.emulatedSystems = [
-  #   "aarch64-linux"
-  #   "armv7l-linux"
-  #   "riscv64-linux"
-  # ];
+  boot.binfmt.emulatedSystems = [
+    "aarch64-linux"
+    "armv7l-linux"
+    # "riscv64-linux"
+  ];
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
   # boot.kernelPackages = pkgs.linuxPackages_5_15;
 
@@ -124,14 +124,30 @@
     ];
   };
 
-  # zramSwap = {
-  #   enable = true;
-  #   algorithm = "zstd";
-  #   memoryPercent = 100;
-  #   priority = 10;
-  # };
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 33;
+    priority = 100;
+  };
 
-  swapDevices = [ { device = "/swap/swapfile"; } ];
+  swapDevices = [
+    {
+      device = "/swap/swapfile";
+      priority = 10;
+      options = [
+        "defaults"
+        "discard"
+      ];
+    }
+  ];
+
+  boot.kernel.sysctl = {
+    "vm.page-cluster" = 0;
+    "vm.swappiness" = 60;
+    "vm.watermark_scale_factor" = 125;
+
+  };
 
   nix.settings.system-features = [
     "nixos-test"
@@ -153,7 +169,7 @@
   #   };
 
   nix.settings.max-jobs = 4;
-  nix.settings.cores = 7;
+  nix.settings.cores = 24;
 
   # end hw file stuff
 

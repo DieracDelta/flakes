@@ -32,6 +32,7 @@ let
     opencode
     lmstudio
     partclone
+    gemini-cli
     scrutiny
     scrutiny-collector
     # qt5.wrapQtAppsHook
@@ -53,6 +54,7 @@ let
     btop
     # xboxdrv
     nethogs
+    difftastic
     cachix
     nix-btm
     docker-compose

@@ -408,6 +408,7 @@ in
         sandbox-dev-shm-size = 5%
         use-cgroups = true
         auto-allocate-uids = true
+        download-buffer-size = 500000000
       '';
       # json-log-path = /tmp/nixbtm.sock
       # riscv64-linux
