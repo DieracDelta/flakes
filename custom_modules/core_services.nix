@@ -106,7 +106,7 @@ in
       #     };
       #   in
       #   tmp_pkgs.sunshine.override { cudaSupport = true; };
-      package = pkgs.sunshine;
+      package = pkgs.sunshine.override { cudaSupport = true; };
 
       autoStart = true;
       # broken b/c depends on this for some reason?
