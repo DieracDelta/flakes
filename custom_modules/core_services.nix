@@ -301,7 +301,7 @@ in
     time.timeZone = "America/New_York";
     location.provider = "geoclue2";
 
-    system.stateVersion = "23.11";
+    system.stateVersion = "25.11";
 
     environment.variables = {
       BROWSER = "chromium";

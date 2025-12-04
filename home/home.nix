@@ -12,7 +12,7 @@
     EDITOR = "nvim";
   };
 
-  home.stateVersion = "23.11";
+  home.stateVersion = "25.11";
 
   programs.fish.enable = true;
   programs.fish.generateCompletions = false;
