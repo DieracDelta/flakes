@@ -56,11 +56,15 @@
 
   boot.kernelModules = [
     "kvm-amd" # TODO comment
+    "r8125"
   ];
+  boot.blacklistedKernelModules = [ "r8169" ];
   boot.extraModulePackages = with config.boot.kernelPackages; [
     zenergy
     v4l2loopback # akvcam
+    config.boot.kernelPackages.r8125
   ];
+
   services.xserver.videoDrivers = [
     # TODO COMMENT "amdgpu"
     "nvidia"

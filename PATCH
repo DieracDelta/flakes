@@ -1,5 +1,5 @@
 diff --git a/pkgs/build-support/rust/build-rust-package/default.nix b/pkgs/build-support/rust/build-rust-package/default.nix
-index 7efbc8a9ea36..14262fbb107b 100644
+index 7ad39a58935c..edefdaa5f75c 100644
 --- a/pkgs/build-support/rust/build-rust-package/default.nix
 +++ b/pkgs/build-support/rust/build-rust-package/default.nix
 @@ -13,6 +13,7 @@
@@ -9,8 +9,8 @@ index 7efbc8a9ea36..14262fbb107b 100644
 +  GLOBAL_RUSTFLAGS ? "",
  }:
  
- lib.extendMkDerivation {
-@@ -68,6 +69,7 @@ lib.extendMkDerivation {
+ let
+@@ -79,6 +80,7 @@ lib.extendMkDerivation {
        # case for `rustfmt`/etc from the `rust-sources).
        # Otherwise, everything from the tarball would've been built/tested.
        buildAndTestSubdir ? null,
@@ -18,40 +18,21 @@ index 7efbc8a9ea36..14262fbb107b 100644
        ...
      }@args:
  
-@@ -78,8 +80,12 @@ lib.extendMkDerivation {
-       "buildRustPackage: `useFetchCargoVendor` is non‐optional and enabled by default as of 25.05, remove it"
-       true;
+@@ -93,11 +95,10 @@ lib.extendMkDerivation {
+         PKG_CONFIG_ALLOW_CROSS = if stdenv.buildPlatform != stdenv.hostPlatform then 1 else 0;
+         RUST_LOG = logLevel;
+         RUSTFLAGS =
+-          lib.optionalString (
++          (lib.optionalString (
+             stdenv.hostPlatform.isDarwin && buildType == "debug"
+-          ) "-C split-debuginfo=packed "
+-          # Workaround the existing RUSTFLAGS specified as a list.
+-          + interpolateString (args.RUSTFLAGS or "");
++          ) "-C split-debuginfo=packed ")
++          + interpolateString (args.RUSTFLAGS or GLOBAL_RUSTFLAGS);
+       }
+       // args.env or { };
  
--    lib.optionalAttrs (stdenv.hostPlatform.isDarwin && buildType == "debug") {
--      RUSTFLAGS = "-C split-debuginfo=packed " + (args.RUSTFLAGS or "");
-+    {
-+      RUSTFLAGS =
-+        (lib.optionalString (
-+          stdenv.hostPlatform.isDarwin && buildType == "debug"
-+        ) "-C split-debuginfo=packed ")
-+        + (args.RUSTFLAGS or GLOBAL_RUSTFLAGS);
-     }
-     // {
-       cargoDeps =
-@@ -145,12 +151,13 @@ lib.extendMkDerivation {
- 
-       PKG_CONFIG_ALLOW_CROSS = if stdenv.buildPlatform != stdenv.hostPlatform then 1 else 0;
- 
--      postUnpack = ''
--        eval "$cargoDepsHook"
-+      postUnpack =
-+        ''
-+          eval "$cargoDepsHook"
- 
--        export RUST_LOG=${logLevel}
--      ''
--      + (args.postUnpack or "");
-+          export RUST_LOG=${logLevel}
-+        ''
-+        + (args.postUnpack or "");
- 
-       configurePhase =
-         args.configurePhase or ''
 diff --git a/pkgs/development/compilers/rust/make-rust-platform.nix b/pkgs/development/compilers/rust/make-rust-platform.nix
 index 1f69bb92e213..0bf0bf9cdcce 100644
 --- a/pkgs/development/compilers/rust/make-rust-platform.nix

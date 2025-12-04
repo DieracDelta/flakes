@@ -35,6 +35,7 @@ let
     gemini-cli
     scrutiny
     scrutiny-collector
+    ethtool
     # qt5.wrapQtAppsHook
     # libsForQt5.qt5.qtconnectivity
     sqlite
