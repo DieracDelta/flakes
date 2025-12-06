@@ -44,7 +44,8 @@ in
     services.navidrome.package = nixpkgs-master.legacyPackages.${system}.navidrome;
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
 
-    services.jellyfin.enable = true;
+    services.jellyfin.enable = false;
+    users.groups.jellyfin = { };
     # services.jellyfin.user = "jrestivo";
     # per https://jellyfin.org/docs/general/networking/index.html
 
@@ -377,6 +378,7 @@ in
         # }
       };
     };
+    # TODO fix
     environment.etc."grafana-dashboards/nut/mynutdashboard.json" = {
       text =
         let
@@ -391,7 +393,18 @@ in
       group = "grafana";
       mode = "0644";
     };
-    # TODO fix
+
+    systemd.services.upsmon.serviceConfig.LogNamespace = "power";
+    systemd.services.upsd.serviceConfig.LogNamespace = "power";
+    # The "@" targets the template, covering nut-driver@eaton5sc and any others
+    systemd.services."nut-driver@".serviceConfig.LogNamespace = "power";
+
+    environment.etc."systemd/journald@power.conf".text = ''
+      [Journal]
+      MaxRetentionSec=infinity
+      SystemMaxUse=500G
+      Storage=persistent
+    '';
 
     # users = {
     #   jrestivo = {

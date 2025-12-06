@@ -87,33 +87,51 @@
 
       overlays = [
         (final: prev: {
-          haskell = prev.haskell // {
-            compiler = prev.haskell.compiler // {
-              ghc984 = prev.haskell.compiler.ghc984.override {
-                useLLVM = true;
-              };
-            };
-          };
-        })
-        (
-          final: prev:
-          let
-            inherit (final) lib;
-            makeGhcOptions = opts: lib.concatStringsSep " " (map (opt: "--ghc-option=${opt}") opts);
-          in
-          {
-            haskell = prev.haskell // {
-              packages = prev.haskell.packages // {
-                ghc984 = prev.haskell.packages.ghc984.override {
-                  overrides = hfinal: hprev: {
-                    mkDerivation =
-                      args:
-                      hprev.mkDerivation (
+
+          haskell =
+            let
+              inherit (final) lib;
+              makeGhcOptions = opts: lib.concatStringsSep " " (map (opt: "--ghc-option=${opt}") opts);
+            in
+            prev.haskell
+            // {
+              # compiler = prev.haskell.compiler // {
+              #   ghc9103 = prev.haskell.compiler.ghc9103.override {
+              #     useLLVM = true;
+              #     # llvmPackages = final.llvmPackages_18;
+              #   };
+              # };
+              # compiler = prev.lib.mapAttrs (
+              #   name: drv:
+              #   # 1. Check if it is a derivation and supports overrides
+              #   if prev.lib.isDerivation drv && drv ? override then
+              #     # 2. NAME CHECK: Skip "Binary" distributions (pre-compiled)
+              #     #    Source versions (ghc98, ghc910) support useLLVM.
+              #     #    Binary versions (ghc984Binary) do not.
+              #     if !(prev.lib.hasSuffix "Binary" name) then
+              #       drv.override {
+              #         useLLVM = true;
+              #         # llvmPackages = final.llvmPackages_18;
+              #       }
+              #     else
+              #       drv
+              #   else
+              #     drv
+              # ) prev.haskell.compiler;
+
+              packageOverrides =
+                hfinal: hprev:
+                prev.lib.composeExtensions (prev.haskell.packageOverrides or (_: _: { })) (hfinal: hprev: {
+                  mkDerivation =
+                    args:
+                    let
+                      baseDrv = hprev.mkDerivation (
                         args
                         // {
+                          doCheck = false;
                           configureFlags = (args.configureFlags or [ ]) ++ [
                             (makeGhcOptions [
-                              "-fllvm"
+                              # "-fllvm"
                               "-optc=-march=znver3"
                               "-optlo=-mcpu=znver3"
                               "-O2"
@@ -121,84 +139,239 @@
                           ];
                         }
                       );
-                  };
-                };
-              };
+                    in
+                    baseDrv.overrideAttrs (old: {
+                      doInstallCheck = false;
+                    });
+                }) hfinal hprev;
             };
+
+        })
+        (
+          final: prev:
+          let
+            lib = prev.lib;
+
+            disableCheckInScope =
+              scope:
+              if builtins.hasAttr "overrideScope" scope then
+                scope.overrideScope (
+                  self: super:
+                  lib.mapAttrs (
+                    name: drv:
+                    # confirm it has overrideAttrs
+                    if lib.isDerivation drv && drv ? overrideAttrs then
+                      drv.overrideAttrs (_: {
+                        doCheck = false;
+                        doInstallCheck = false;
+                      })
+                    else
+                      drv
+                  ) super
+                )
+              else
+                scope;
+
+            llvmVersions = map (v: "llvmPackages_${toString v}") (lib.range 12 19);
+
+            bigPkgSets = [
+              "llvmPackages"
+              "qt6Packages"
+              "libsForQt5"
+              "kdePackages"
+              "cudaPackages"
+            ]
+            ++ llvmVersions;
+
+            validPkgSets = builtins.filter (name: builtins.hasAttr name prev) bigPkgSets;
+
+          in
+          lib.genAttrs validPkgSets (name: disableCheckInScope prev.${name})
+        )
+        (
+          final: prev:
+          let
+            customizeZig =
+              name: drv:
+              let
+                extraFlags = if name == "zig_0_14" then [ "-fno-reference-trace" ] else [ ];
+                myGlobalFlags = [ "-Dcpu=znver3" ] ++ extraFlags;
+
+                finalZig = drv.overrideAttrs (old: {
+                  doCheck = false;
+                  doInstallCheck = false;
+                  passthru = old.passthru // {
+                    hook = final.callPackage "${prev.path}/pkgs/development/compilers/zig/hook.nix" {
+                      zig = finalZig;
+                      globalBuildFlags = myGlobalFlags;
+                    };
+                    zig = finalZig;
+                  };
+                });
+              in
+              finalZig;
+            zigTargets = [
+              "zig_0_13"
+              "zig_0_14"
+              "zig_0_15"
+            ];
+            validZigSets = builtins.filter (name: builtins.hasAttr name prev) zigTargets;
+          in
+          lib.genAttrs validZigSets (name: customizeZig name prev.${name})
+        )
+        (
+          final: prev:
+          let
+            disableTestsWrapper =
+              originalBuilder:
+              let
+                wrap = original: {
+                  __functor =
+                    self: buildArgs:
+                    (original buildArgs).overrideAttrs (old: {
+                      doCheck = false;
+                      doInstallCheck = false;
+                      # Specific to Node: Remove the hook that triggers tests
+                      npmCheckHook = null;
+                    });
+
+                  override = newArgs: wrap (original.override newArgs);
+                };
+              in
+              wrap originalBuilder;
+
+            disableCheckInScope =
+              scope:
+              if builtins.hasAttr "overrideScope" scope then
+                scope.overrideScope (
+                  self: super:
+                  lib.mapAttrs (
+                    name: drv:
+                    if lib.isDerivation drv && drv ? overrideAttrs then
+                      drv.overrideAttrs (_: {
+                        doCheck = false;
+                        doInstallCheck = false;
+                      })
+                    else
+                      drv
+                  ) super
+                )
+              else
+                scope;
+          in
+          {
+            buildNpmPackage = disableTestsWrapper prev.buildNpmPackage;
+            mkYarnPackage = disableTestsWrapper prev.mkYarnPackage;
+            nodePackages = disableCheckInScope prev.nodePackages;
           }
         )
         (final: prev: {
+          nototools = prev.nototools.overridePythonAttrs (old: {
+            dontCheckRuntimeDeps = true;
+            catchConflicts = false;
+          });
+
+          libp11 = prev.libp11.overrideAttrs (oldAttrs: {
+            src = prev.fetchFromGitHub {
+              owner = "OpenSC";
+              repo = "libp11";
+              rev = "${prev.libp11.pname}-${prev.libp11.version}";
+              sha256 = "sha256-xH5Ic8HpWB5O2MWXf2A9FUiV10VZajDdPqEVF0Hs6u0=";
+            };
+
+          });
+          libkate = prev.libkate.overrideAttrs (old: {
+            src = final.fetchFromGitLab {
+              domain = "gitlab.xiph.org";
+              owner = "xiph";
+              repo = "kate";
+              rev = "kate-0.4.3";
+              hash = "sha256-HwDahmjDC+O321Ba7MnHoQdHOFUMpFzaNdLHQeEg11Q=";
+            };
+          });
+          # TODO fix this -- it's very broken and IDK why
+          influxdb2 = inputs.nixpkgs-master.legacyPackages.x86_64-linux.influxdb2;
+          usbmuxd2 = prev.usbmuxd2.overrideAttrs (oldAttrs: {
+            src = prev.fetchFromGitHub {
+              owner = "tihmstar";
+              repo = "usbmuxd2";
+              rev = "2ce399ddbacb110bd5a83a6b8232d42c9a9b6e84";
+              hash = "sha256-u7qRKH5y+Q1HnnumjVm3Ce4SlT3YaEVSPUXYOAiFBes=";
+              # Leave DotGit so that autoconfigure can read version from git tags
+              leaveDotGit = true;
+            };
+          });
+        })
+        (final: prev: {
           nix = nix.packages.x86_64-linux.default;
           makeRustPlatform =
-            final.callPackage "${nixpkgs}/pkgs/development/compilers/rust/make-rust-platform.nix"
-              {
-                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3 ";
+            args:
+            let
+              platform = prev.callPackage "${prev.path}/pkgs/development/compilers/rust/make-rust-platform.nix" {
+                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3";
+              } args;
+              wrapBuildRustPackage = original: {
+                __functor =
+                  self: buildArgs:
+                  (original buildArgs).overrideAttrs (old: {
+                    doCheck = false;
+                    doInstallCheck = false;
+                  });
+
+                override = newArgs: wrapBuildRustPackage (original.override newArgs);
               };
-          zig_0_13 = prev.zig_0_13.overrideAttrs (finalAttrs: {
-            passthru = finalAttrs.passthru // {
-              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
-                zig = final.zig_0_13;
-                globalBuildFlags = [ "-Dcpu=znver3" ];
-              };
-              zig = finalAttrs.finalPackage;
+            in
+            platform
+            // {
+              buildRustPackage = wrapBuildRustPackage platform.buildRustPackage;
             };
-          });
-          zig_0_14 = prev.zig_0_14.overrideAttrs (finalAttrs: {
-            passthru = finalAttrs.passthru // {
-              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
-                zig = final.zig_0_14;
-                globalBuildFlags = [
-                  "-Dcpu=znver3"
-                  "-fno-reference-trace"
-                ];
-              };
-              zig = finalAttrs.finalPackage;
-            };
-          });
-          zig_0_15 = prev.zig_0_15.overrideAttrs (finalAttrs: {
-            passthru = finalAttrs.passthru // {
-              hook = final.callPackage "${nixpkgs}/pkgs/development/compilers/zig/hook.nix" {
-                zig = final.zig_0_15;
-                globalBuildFlags = [ "-Dcpu=znver3" ];
-              };
-              zig = finalAttrs.finalPackage;
-            };
-          });
+
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
-              websockets = python-prev.websockets.overridePythonAttrs {
-                doCheck = false;
-              };
+              buildPythonPackage =
+                args:
+                python-prev.buildPythonPackage (
+                  args
+                  // {
+                    doCheck = false;
+                    doInstallCheck = false;
+                  }
+                );
               psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
                 doCheck = false;
                 propagatedBuildInputs = (oldAttrs.propagatedBuildInputs or [ ]) ++ [ python-final.psycopg-pool ];
               });
-              dj-database-url = python-prev.dj-database-url.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              mutatormath = python-prev.mutatormath.overridePythonAttrs (old: {
+                catchConflicts = false;
               });
-              chromadb = python-prev.chromadb.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              jeepney = python-prev.jeepney.overridePythonAttrs (old: {
+                pythonImportsCheck = [ "jeepney" ];
               });
-              curl-cffi = python-prev.curl-cffi.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              fontparts = python-prev.fontparts.overridePythonAttrs (old: {
+                catchConflicts = false;
+                dontCheckRuntimeDeps = true;
               });
-              django = python-prev.django.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              ufoprocessor = python-prev.ufoprocessor.overridePythonAttrs (old: {
+                catchConflicts = false;
+                dontCheckRuntimeDeps = true;
               });
-              granian = python-prev.granian.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              afdko = python-prev.afdko.overridePythonAttrs (old: {
+                dontCheckRuntimeDeps = true;
+                catchConflicts = false;
               });
-              django-pytest = python-prev.django-pytest.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+
+              img2pdf = python-prev.img2pdf.overridePythonAttrs (old: {
+                src = final.fetchFromGitHub {
+                  owner = "josch";
+                  repo = "img2pdf";
+                  rev = "0.6.1";
+                  hash = "sha256-71u6ex+UAEFPDtR9QI8Ezah5zCorn4gMdAnzFz4blsI=";
+                };
               });
-              rapidocr-onnxruntime = python-prev.rapidocr-onnxruntime.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
-              });
-              anyio = python-prev.anyio.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
-              });
-              fastapi = python-prev.fastapi.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
+              debugpy = python-prev.debugpy.overrideAttrs (oldAttrs: {
+                src = oldAttrs.src.override {
+                  hash = "sha256-eAiCtSJUqLASapxnYCyq1UCiGz6QmKQum7Vs3MoU1s8=";
+                };
               });
             })
           ];
@@ -207,12 +380,6 @@
           });
           haskellPackages = prev.haskellPackages.extend (
             hself: hsuper: {
-              cryptonite = hsuper.cryptonite.overrideAttrs (oldAttrs: {
-                doCheck = false;
-              });
-              wherefrom-compat = hsuper.wherefrom-compat.overrideAttrs (oldAttrs: {
-                doCheck = false;
-              });
               xmobar = final.haskell.lib.compose.overrideCabal (drv: {
                 enableSeparateBinOutput = false;
               }) hsuper.xmobar;
@@ -277,6 +444,7 @@
         ];
       };
 
+      mymaster = nixpkgs-master;
       mything = pkgs;
       mything2 = nixpkgs.outPath;
     };

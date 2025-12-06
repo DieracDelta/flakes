@@ -42,7 +42,7 @@ let
     goose-cli
     bingrep
     qwen-code
-    aider-chat-full
+    # aider-chat-full
     streamrip
     # libsForQt5.qt5.qtgui
     # libsForQt5.qt5.qtgamepad
@@ -200,7 +200,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.plasma6.excludePackages = [ pkgs.kdePackages.baloo ];
+    environment.plasma6.excludePackages = [
+      pkgs.kdePackages.baloo
+      pkgs.kdePackages.spectacle
+      pkgs.kdePackages.kate
+    ];
     services.desktopManager.plasma6.enable = true;
     services.libinput.enable = true;
     services.displayManager.sddm.enable = true;
@@ -284,11 +288,11 @@ in
     fonts.packages = with pkgs; [
       d2coding
       # iosevka
-      aileron
+      # aileron
       nerd-fonts.fira-code
       fira-code
       fira-code-symbols
-      fira-mono
+      # fira-mono
     ];
 
     services.picom.enable = true;
@@ -382,30 +386,31 @@ in
     #   # ];
     # };
 
-    services.ollama = {
-      # package = tmpnixpkgs.ollama;
-      #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
-      loadModels = [
-        "deepseek-r1:32b"
-        "deepseek-r1:14b"
-        "SIGJNF/deepseek-r1-671b-1.58bit"
-      ];
-      enable = true;
-      acceleration = "cuda";
-      host = "0.0.0.0";
-      # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
-    };
-    services.open-webui = {
-      # package = tmpnixpkgs.open-webui;
-      openFirewall = true;
-      enable = true;
-      host = "0.0.0.0";
-      environment = {
-        OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
-        # Disable authentication
-        WEBUI_AUTH = "False";
-      };
-    };
+    # services.ollama = {
+    #   # package = tmpnixpkgs.ollama;
+    #   #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
+    #   loadModels = [
+    #     "deepseek-r1:32b"
+    #     "deepseek-r1:14b"
+    #     "SIGJNF/deepseek-r1-671b-1.58bit"
+    #   ];
+    #   enable = true;
+    #   package = pkgs.ollama-cuda;
+    #   # acceleration = "cuda";
+    #   host = "0.0.0.0";
+    #   # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
+    # };
+    # services.open-webui = {
+    #   # package = tmpnixpkgs.open-webui;
+    #   openFirewall = true;
+    #   enable = true;
+    #   host = "0.0.0.0";
+    #   environment = {
+    #     OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
+    #     # Disable authentication
+    #     WEBUI_AUTH = "False";
+    #   };
+    # };
 
     # programs.kdeconnect.enable = true;
 
@@ -465,6 +470,13 @@ in
       port = 5124;
 
     };
+
+    # retain a significant amount of logs
+    services.journald.extraConfig = ''
+      SystemMaxUse=500G
+      MaxRetentionSec=6month
+      MaxFileSec=1week
+    '';
 
   };
 

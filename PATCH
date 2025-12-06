@@ -8,7 +8,7 @@ index 7ad39a58935c..edefdaa5f75c 100644
    windows,
 +  GLOBAL_RUSTFLAGS ? "",
  }:
- 
+
  let
 @@ -79,6 +80,7 @@ lib.extendMkDerivation {
        # case for `rustfmt`/etc from the `rust-sources).
@@ -17,7 +17,7 @@ index 7ad39a58935c..edefdaa5f75c 100644
 +      RUSTFLAGS ? "",
        ...
      }@args:
- 
+
 @@ -93,11 +95,10 @@ lib.extendMkDerivation {
          PKG_CONFIG_ALLOW_CROSS = if stdenv.buildPlatform != stdenv.hostPlatform then 1 else 0;
          RUST_LOG = logLevel;
@@ -32,7 +32,7 @@ index 7ad39a58935c..edefdaa5f75c 100644
 +          + interpolateString (args.RUSTFLAGS or GLOBAL_RUSTFLAGS);
        }
        // args.env or { };
- 
+
 diff --git a/pkgs/development/compilers/rust/make-rust-platform.nix b/pkgs/development/compilers/rust/make-rust-platform.nix
 index 1f69bb92e213..0bf0bf9cdcce 100644
 --- a/pkgs/development/compilers/rust/make-rust-platform.nix
@@ -43,7 +43,7 @@ index 1f69bb92e213..0bf0bf9cdcce 100644
    makeScopeWithSplicing',
 +  GLOBAL_RUSTFLAGS ? "",
  }@prev:
- 
+
  {
 @@ -36,6 +37,7 @@
            rustc
@@ -52,4 +52,4 @@ index 1f69bb92e213..0bf0bf9cdcce 100644
 +          GLOBAL_RUSTFLAGS
            ;
        };
- 
+

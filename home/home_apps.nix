@@ -110,7 +110,7 @@ let
     rust-analyzer
     wally-cli
 
-    yubikey-manager
+    # yubikey-manager
     keepass
     mimic
     # zoom-us

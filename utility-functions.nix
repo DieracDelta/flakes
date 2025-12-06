@@ -19,15 +19,8 @@ in
   pkgImport =
     pkgs: overlays:
     import pkgs {
-      # inherit system overlays;
       inherit overlays;
       localSystem = "x86_64-linux";
-      # {
-      #   system = "x86_64-linux";
-      #   gcc.arch = "znver3";
-      #   gcc.tune = "znver3";
-      #   gcc.abi = "64";
-      # };
 
       hostPlatform = {
         system = "x86_64-linux";
@@ -42,8 +35,12 @@ in
         gcc.abi = "64";
       };
       config = {
+        # TODO allowVariants could be interesting
         cudaSupport = true;
         allowUnfree = true;
+        warnUndeclaredOptions = true;
+        fetchedSourceNameDefault = "full";
+        doCheckByDefault = false;
         # replaceStdenv = ({ pkgs }: pkgs.clangStdenv);
 
         # RUSTFLAGS = "-C target-cpu=znver3 ";
