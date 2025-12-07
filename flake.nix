@@ -289,7 +289,6 @@
               hash = "sha256-HwDahmjDC+O321Ba7MnHoQdHOFUMpFzaNdLHQeEg11Q=";
             };
           });
-          # TODO fix this -- it's very broken and IDK why
           influxdb2 = inputs.nixpkgs-master.legacyPackages.x86_64-linux.influxdb2;
           usbmuxd2 = prev.usbmuxd2.overrideAttrs (oldAttrs: {
             src = prev.fetchFromGitHub {
@@ -308,7 +307,7 @@
             args:
             let
               platform = prev.callPackage "${prev.path}/pkgs/development/compilers/rust/make-rust-platform.nix" {
-                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3";
+                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3 -C link-arg=-Wl,-z,pack-relative-relocs";
               } args;
               wrapBuildRustPackage = original: {
                 __functor =
