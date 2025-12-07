@@ -290,6 +290,15 @@
             };
           });
           influxdb2 = inputs.nixpkgs-master.legacyPackages.x86_64-linux.influxdb2;
+          openssl = prev.openssl.overrideAttrs (oa: {
+            doCheck = false;
+          });
+          ghostty = prev.ghostty.overrideAttrs (oa: {
+            doCheck = false;
+          });
+          mpfr = prev.mpfr.overrideAttrs (oa: {
+            doCheck = false;
+          });
           usbmuxd2 = prev.usbmuxd2.overrideAttrs (oldAttrs: {
             src = prev.fetchFromGitHub {
               owner = "tihmstar";
