@@ -368,6 +368,12 @@
                   hash = "sha256-71u6ex+UAEFPDtR9QI8Ezah5zCorn4gMdAnzFz4blsI=";
                 };
               });
+
+              pyasn = python-prev.pyasn.overridePythonAttrs (old: {
+                datasrc = old.datasrc.override {
+                  hash = "sha256-7zpaxDe5qHUy/ekOJLxKawjaPQnByrOVj+m2bsUqfdg=";
+                };
+              });
               debugpy = python-prev.debugpy.overrideAttrs (oldAttrs: {
                 src = oldAttrs.src.override {
                   hash = "sha256-eAiCtSJUqLASapxnYCyq1UCiGz6QmKQum7Vs3MoU1s8=";

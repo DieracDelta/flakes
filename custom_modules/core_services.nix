@@ -488,6 +488,7 @@ in
       zsh
       ripgrep
       neofetch
+      opensnitch-ui
       tmux
       fasd
       jq

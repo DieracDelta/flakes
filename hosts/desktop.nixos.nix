@@ -32,6 +32,8 @@
   custom_modules.yubikey.enable = true;
   custom_modules.container_configs.enable = false;
   custom_modules.bens_config.enable = true;
+  custom_modules.network_monitor.enable = true;
+  custom_modules.nethog_monitor.enable = true;
   programs.noisetorch.enable = false;
 
 }

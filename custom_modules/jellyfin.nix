@@ -433,6 +433,9 @@ in
     services.vnstat.enable = true;
     services.ntopng.enable = true;
     services.ntopng.httpPort = 3123;
+
+    services.opensnitch.enable = true;
+
     # programs.atop.enable = true;
     # programs.atop.netatop.enable = true;
 
@@ -449,6 +452,5 @@ in
     #   "video"
     #   "render"
     # ];
-
   };
 }
