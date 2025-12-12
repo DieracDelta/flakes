@@ -96,21 +96,24 @@ in
     services.openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
+      # I'm adding all these ports because apparently southwest blocks ssh ports after
+      # a certain amount of time? So I'll need to switch between them.
+      ports = [
+        22
+        24
+        200
+        201
+        202
+        443
+        2001
+        2002
+      ];
+      openFirewall = true;
     };
     services.sunshine = {
-      # package =
-      #   let
-      #     tmp_pkgs = import nixpkgs-master {
-      #       system = "x86_64-linux";
-      #       config.allowUnfree = true;
-      #     };
-      #   in
-      #   tmp_pkgs.sunshine.override { cudaSupport = true; };
       package = pkgs.sunshine.override { cudaSupport = true; };
 
       autoStart = true;
-      # broken b/c depends on this for some reason?
-      # https://github.com/NixOS/nixpkgs/pull/459164
       enable = true;
       capSysAdmin = true;
       openFirewall = true;
@@ -179,6 +182,7 @@ in
       444
       9993
       8080
+      3123
       8188
       11434
       47990

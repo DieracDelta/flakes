@@ -50,6 +50,18 @@ in
     # per https://jellyfin.org/docs/general/networking/index.html
 
     networking.firewall.allowedTCPPorts = [
+      # open ssh ports
+      22
+      24
+      200
+      201
+      202
+      443
+      2001
+      2002
+      2022
+
+      # other ports
       32141
       8096
       4533
@@ -74,6 +86,18 @@ in
       48032
     ];
     networking.firewall.allowedUDPPorts = [
+      # open ssh ports
+      22
+      24
+      200
+      201
+      202
+      443
+      2001
+      2002
+      2022
+
+      # other ports
       48000
       48010
       47984
@@ -405,6 +429,12 @@ in
       SystemMaxUse=500G
       Storage=persistent
     '';
+
+    services.vnstat.enable = true;
+    services.ntopng.enable = true;
+    services.ntopng.httpPort = 3123;
+    # programs.atop.enable = true;
+    # programs.atop.netatop.enable = true;
 
     # users = {
     #   jrestivo = {

@@ -422,6 +422,7 @@ in
     security.sudo-rs.enable = true;
     services.eternal-terminal = {
       enable = true;
+      port = 2022;
     };
 
     systemd.services.eternal-terminal.serviceConfig = {
