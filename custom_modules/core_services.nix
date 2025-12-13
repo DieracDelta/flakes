@@ -64,6 +64,41 @@ in
       # package = nixpkgs-stable.legacyPackages.${system}.tailscale;
       enable = true;
     };
+
+    systemd.services.tailscale-optimization = {
+      description = "Optimize ethtool settings for Tailscale";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${lib.getExe pkgs.ethtool} -K enp6s0 rx-udp-gro-forwarding on rx-gro-list off";
+      };
+    };
+    services.caddy = {
+      enable = true;
+
+      globalConfig = ''
+        https_port 8443
+      '';
+
+      virtualHosts."office-desktop.tail5ca7.ts.net" = {
+        extraConfig = ''
+          bind 127.0.0.1
+
+          route /navidrome* {
+            reverse_proxy 127.0.0.1:4533
+          }
+          handle_path /netdata* {
+            reverse_proxy 127.0.0.1:19999
+          }
+          handle_path /open-webui* {
+            reverse_proxy 127.0.0.1:8085
+          }
+        '';
+      };
+    };
+    services.tailscale.permitCertUid = "caddy";
+
     # create a oneshot job to authenticate to Tailscale
     # systemd.services.tailscale-autoconnect = {
     # description = "Automatic authentication to Tailscale";
@@ -93,6 +128,29 @@ in
     # serviceConfig.SupplementaryGroups = [ config.users.groups.keys.name ];
     # };
 
+    services.sslh = {
+      enable = true;
+      # "listenAddresses" replaces the old "port" setting
+      listenAddresses = [ "0.0.0.0" ];
+
+      settings = {
+        transparent = false;
+        protocols = [
+          {
+            name = "ssh";
+            service = "ssh";
+            host = "127.0.0.1";
+            port = "22";
+          }
+          {
+            name = "tls";
+            host = "127.0.0.1";
+            port = "8443";
+          }
+        ];
+      };
+    };
+
     services.openssh = {
       enable = true;
       settings.PasswordAuthentication = false;
@@ -104,7 +162,6 @@ in
         200
         201
         202
-        443
         2001
         2002
       ];
@@ -179,6 +236,7 @@ in
       3389
       80
       443
+      8443
       444
       9993
       8080

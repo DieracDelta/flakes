@@ -25,13 +25,21 @@ let
 
         def get_data(hours):
             try:
-                df = pd.read_csv(LOG_FILE, parse_dates=['timestamp'])
+                # Read CSV. We don't rely on automatic parsing in read_csv
+                # to ensure we can control the UTC conversion explicitly below.
+                df = pd.read_csv(LOG_FILE)
             except FileNotFoundError:
                 print(f"Error: Log file {LOG_FILE} not found. Wait for the hourly timer to run.")
                 sys.exit(1)
 
-            # Filter by time window
-            start_time = datetime.now() - timedelta(hours=hours)
+            # Convert timestamp column to timezone-aware UTC
+            # This handles the mixed offsets (e.g. -05:00) provided by `date -Iseconds`
+            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+
+            # Generate the start time as timezone-aware UTC
+            start_time = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=hours)
+
+            # Now both sides are TZ-aware (UTC), enabling valid comparison
             df = df[df['timestamp'] >= start_time].copy()
 
             if df.empty:
@@ -45,7 +53,6 @@ let
             df = df.sort_values(['unit', 'timestamp'])
 
             # Calculate the difference between rows (Usage = Current - Previous)
-            # We group by 'unit' so we don't subtract Service A from Service B
             df['down_mb'] = df.groupby('unit')['ingress_bytes'].diff().fillna(0) / 1024 / 1024
             df['up_mb'] = df.groupby('unit')['egress_bytes'].diff().fillna(0) / 1024 / 1024
 
@@ -85,8 +92,12 @@ let
                 print(f"No history found for unit: {unit}")
                 return
 
-            # Resample to hourly chunks to smooth out the table
+            # Resample to hourly chunks.
+            # We set the index to our UTC timestamp for resampling.
             timeline.set_index('timestamp', inplace=True)
+
+            # Convert index to local time for display purposes if desired,
+            # or keep as UTC. Here we keep it simple.
             hourly = timeline[['down_mb', 'up_mb']].resample('1h').sum()
 
             print(f"\n=== Hourly Timeline for {unit} ===")
@@ -109,7 +120,6 @@ let
             else:
                 print_summary(time_window)
       '';
-
 in
 {
   options.custom_modules.network_monitor.enable = lib.mkOption {
@@ -126,6 +136,14 @@ in
     systemd.services.systemd-net-logger = {
       description = "Log Systemd IP Counters to CSV";
       serviceConfig.Type = "oneshot";
+
+      # 1. Provide necessary tools
+      path = with pkgs; [
+        gawk
+        findutils
+        coreutils
+      ];
+
       script = ''
         LOG_FILE="/var/log/network/systemd.csv"
         TIMESTAMP=$(date -Iseconds)
@@ -138,9 +156,27 @@ in
         | awk '{print $1}' \
         | xargs ${pkgs.systemd}/bin/systemctl show -p Id -p IPIngressBytes -p IPEgressBytes \
         | awk -v date="$TIMESTAMP" -F= '
-            /^Id=/ { id=$2 }
-            /^IPIngressBytes=/ { input=$2 }
-            /^IPEgressBytes=/ { output=$2; if (input > 0 || output > 0) printf "%s,%s,%s,%s\n", date, id, input, output }
+            # 2. Reset variables for every new Unit ID to prevent leaking
+            /^Id=/ {
+              id=$2;
+              input=0;
+              output=0;
+              has_input=0;
+              has_output=0;
+            }
+
+            # 3. Filter out "unset" values (UINT64_MAX) and non-numbers
+            /^IPIngressBytes=/ {
+              if ($2 ~ /^[0-9]+$/ && $2 != "18446744073709551615") { input=$2; has_input=1; }
+            }
+            /^IPEgressBytes=/ {
+              if ($2 ~ /^[0-9]+$/ && $2 != "18446744073709551615") { output=$2; has_output=1; }
+
+              # 4. Only log if we actually found valid traffic data
+              if ((has_input || has_output) && (input > 0 || output > 0)) {
+                 printf "%s,%s,%s,%s\n", date, id, input, output
+              }
+            }
           ' >> "$LOG_FILE"
       '';
     };

@@ -386,31 +386,31 @@ in
     #   # ];
     # };
 
-    # services.ollama = {
-    #   # package = tmpnixpkgs.ollama;
-    #   #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
-    #   loadModels = [
-    #     "deepseek-r1:32b"
-    #     "deepseek-r1:14b"
-    #     "SIGJNF/deepseek-r1-671b-1.58bit"
-    #   ];
-    #   enable = true;
-    #   package = pkgs.ollama-cuda;
-    #   # acceleration = "cuda";
-    #   host = "0.0.0.0";
-    #   # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
-    # };
-    # services.open-webui = {
-    #   # package = tmpnixpkgs.open-webui;
-    #   openFirewall = true;
-    #   enable = true;
-    #   host = "0.0.0.0";
-    #   environment = {
-    #     OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
-    #     # Disable authentication
-    #     WEBUI_AUTH = "False";
-    #   };
-    # };
+    services.ollama = {
+      # package = tmpnixpkgs.ollama;
+      #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
+      # loadModels = [
+      #   "deepseek-r1:32b"
+      #   "deepseek-r1:14b"
+      #   "SIGJNF/deepseek-r1-671b-1.58bit"
+      # ];
+      enable = true;
+      # package = pkgs.ollama-cuda;
+      # acceleration = "cuda";
+      host = "0.0.0.0";
+      # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
+    };
+    services.open-webui = {
+      # package = tmpnixpkgs.open-webui;
+      openFirewall = true;
+      enable = true;
+      host = "0.0.0.0";
+      environment = {
+        OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
+        # Disable authentication
+        WEBUI_AUTH = "False";
+      };
+    };
 
     # programs.kdeconnect.enable = true;
 

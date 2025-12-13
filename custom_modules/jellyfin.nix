@@ -38,10 +38,12 @@ in
     services.navidrome.user = "jellyfin";
     services.navidrome.group = "jellyfin";
     services.navidrome.openFirewall = true;
-    services.navidrome.settings.Address = "0.0.0.0";
+    services.navidrome.settings.Address = "127.0.0.1";
     services.navidrome.settings."Scanner.FollowSymlinks" = true;
+    services.navidrome.settings.Port = 4533;
     services.navidrome.settings.MusicFolder = "/jellyfin/MUSIC";
-    services.navidrome.package = nixpkgs-master.legacyPackages.${system}.navidrome;
+    services.navidrome.package = pkgs.navidrome;
+    services.navidrome.settings.BaseUrl = "/navidrome";
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
 
     services.jellyfin.enable = false;
