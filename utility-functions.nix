@@ -41,7 +41,58 @@ in
         warnUndeclaredOptions = true;
         fetchedSourceNameDefault = "full";
         doCheckByDefault = false;
-        # replaceStdenv = ({ pkgs }: pkgs.clangStdenv);
+        replaceStdenv =
+          { pkgs }:
+          let
+            customStdenv =
+              stdenv:
+              stdenv.override (old: {
+                allowedRequisites = null;
+                mkDerivationFromStdenv =
+                  stdenvSelf:
+                  let
+                    defaultMkDerivationFromStdenv =
+                      stdenv:
+                      (import (pkgs.path + "/pkgs/stdenv/generic/make-derivation.nix") {
+                        inherit (pkgs) lib config;
+                      } stdenv).mkDerivation;
+                    mkDerivationSuper = (old.mkDerivationFromStdenv or defaultMkDerivationFromStdenv) stdenvSelf;
+                  in
+                  args:
+                  let
+                    extraCompile = " -pipe";
+                    extraLink = " -Wl,-z,pack-relative-relocs";
+
+                    # Function to apply flags to either env.FLAG or top-level FLAG
+                    applyFlags = currentAttrs: flagName: flagsToAdd:
+                      let
+                        valEnv = if currentAttrs ? env then (currentAttrs.env.${flagName} or "") else "";
+                        valTop = if currentAttrs ? ${flagName} then (currentAttrs.${flagName}) else "";
+                        # Combine existing env + top-level + new flags
+                        combined = toString valEnv + " " + toString valTop + flagsToAdd;
+                      in
+                      # ALWAYS put flags in env and remove from top-level.
+                      # This avoids conflicts if overrideAttrs later introduces env/structured attrs.
+                      # Legacy mkDerivation supports env vars too.
+                      (builtins.removeAttrs currentAttrs [ flagName ]) // {
+                        env = (currentAttrs.env or {}) // {
+                          ${flagName} = combined;
+                        };
+                      };
+
+                    processArgs = attrs:
+                      let
+                        attrsWithCompileFlags = applyFlags attrs "NIX_CFLAGS_COMPILE" extraCompile;
+                      in
+                      applyFlags attrsWithCompileFlags "NIX_CFLAGS_LINK" extraLink;
+                  in
+                  if builtins.isFunction args then
+                    mkDerivationSuper (self: processArgs (args self))
+                  else
+                    mkDerivationSuper (processArgs args);
+              });
+          in
+          customStdenv pkgs.stdenv;
 
         # RUSTFLAGS = "-C target-cpu=znver3 ";
         # permittedInsecurePackages = [ "nix-2.15.3" ];

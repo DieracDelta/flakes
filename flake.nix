@@ -321,6 +321,30 @@
                   hash = "sha256-eAiCtSJUqLASapxnYCyq1UCiGz6QmKQum7Vs3MoU1s8=";
                 };
               });
+              instructor = python-prev.instructor.overridePythonAttrs (old: {
+                src = final.fetchFromGitHub {
+                  owner = "jxnl";
+                  repo = "instructor";
+                  tag = "v1.11.3";
+                  hash = "sha256-VWFrMgfe92bHUK1hueqJLHQ7G7ATCgK7wXr+eqrVWcw=";
+                };
+              });
+              pypng = python-prev.pypng.overridePythonAttrs (old: {
+                src = final.fetchFromGitLab {
+                  owner = "drj11";
+                  repo = "pypng";
+                  tag = "pypng-0.20231004.0";
+                  hash = "sha256-xNUI3yGfwmaccCxgljIZzgJ6YgNxcuOzCXDE7RFJP2I=";
+                };
+              });
+              rank-bm25 = python-prev.rank-bm25.overridePythonAttrs (old: {
+                src = final.fetchFromGitHub {
+                  owner = "dorianbrown";
+                  repo = "rank_bm25"; # Corrected from hyphen to underscore
+                  tag = old.version; # Often tags are prefixed with 'v'
+                  hash = "sha256-+BxQBflMm2AvCLAFFj52Jpkqn+KErwYXU1wztintgOg="; # Updated hash
+                };
+              });
             })
           ];
           haskellPackages = prev.haskellPackages.extend (
