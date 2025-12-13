@@ -86,6 +86,43 @@
       ];
 
       overlays = [
+        # Global overlay to disable doCheck and doInstallCheck for all derivations
+        (final: prev: {
+          stdenv = prev.stdenv // {
+            mkDerivation =
+              fnOrAttrs:
+              let
+                disableChecks = ''
+                  unset doCheck
+                  unset doInstallCheck
+                '';
+                # Prepend disableChecks to a phase, handling string, list, or missing cases
+                prependToPhase = phase:
+                  if builtins.isList phase then [ disableChecks ] ++ phase
+                  else if builtins.isString phase then disableChecks + phase
+                  else disableChecks;
+                addDisablePhase =
+                  attrs:
+                  let
+                    existingPrePhases = attrs.prePhases or [ ];
+                  in
+                  attrs // {
+                    prePhases =
+                      if builtins.elem "disableChecksPhase" existingPrePhases
+                      then existingPrePhases
+                      else existingPrePhases ++ [ "disableChecksPhase" ];
+                    disableChecksPhase = disableChecks;
+                    # Also unset in preCheck and preInstallCheck for builders that set these later
+                    preCheck = prependToPhase (attrs.preCheck or null);
+                    preInstallCheck = prependToPhase (attrs.preInstallCheck or null);
+                  };
+              in
+              if builtins.isFunction fnOrAttrs then
+                prev.stdenv.mkDerivation (attrs: addDisablePhase (fnOrAttrs attrs))
+              else
+                prev.stdenv.mkDerivation (addDisablePhase fnOrAttrs);
+          };
+        })
         (final: prev: {
 
           haskell =
@@ -124,70 +161,23 @@
                 prev.lib.composeExtensions (prev.haskell.packageOverrides or (_: _: { })) (hfinal: hprev: {
                   mkDerivation =
                     args:
-                    let
-                      baseDrv = hprev.mkDerivation (
-                        args
-                        // {
-                          doCheck = false;
-                          configureFlags = (args.configureFlags or [ ]) ++ [
-                            (makeGhcOptions [
-                              # "-fllvm"
-                              "-optc=-march=znver3"
-                              "-optlo=-mcpu=znver3"
-                              "-O2"
-                            ])
-                          ];
-                        }
-                      );
-                    in
-                    baseDrv.overrideAttrs (old: {
-                      doInstallCheck = false;
-                    });
+                    hprev.mkDerivation (
+                      args
+                      // {
+                        configureFlags = (args.configureFlags or [ ]) ++ [
+                          (makeGhcOptions [
+                            # "-fllvm"
+                            "-optc=-march=znver3"
+                            "-optlo=-mcpu=znver3"
+                            "-O2"
+                          ])
+                        ];
+                      }
+                    );
                 }) hfinal hprev;
             };
 
         })
-        (
-          final: prev:
-          let
-            lib = prev.lib;
-
-            disableCheckInScope =
-              scope:
-              if builtins.hasAttr "overrideScope" scope then
-                scope.overrideScope (
-                  self: super:
-                  lib.mapAttrs (
-                    name: drv:
-                    # confirm it has overrideAttrs
-                    if lib.isDerivation drv && drv ? overrideAttrs then
-                      drv.overrideAttrs (_: {
-                        doCheck = false;
-                        doInstallCheck = false;
-                      })
-                    else
-                      drv
-                  ) super
-                )
-              else
-                scope;
-
-            llvmVersions = map (v: "llvmPackages_${toString v}") (lib.range 12 19);
-
-            bigPkgSets = [
-              "llvmPackages"
-              "qt6Packages"
-              "libsForQt5"
-              "kdePackages"
-              "cudaPackages"
-            ]
-            ++ llvmVersions;
-
-            validPkgSets = builtins.filter (name: builtins.hasAttr name prev) bigPkgSets;
-
-          in
-          lib.genAttrs validPkgSets (name: disableCheckInScope prev.${name})
-        )
         (
           final: prev:
           let
@@ -198,8 +188,6 @@
                 myGlobalFlags = [ "-Dcpu=znver3" ] ++ extraFlags;
 
                 finalZig = drv.overrideAttrs (old: {
-                  doCheck = false;
-                  doInstallCheck = false;
                   passthru = old.passthru // {
                     hook = final.callPackage "${prev.path}/pkgs/development/compilers/zig/hook.nix" {
                       zig = finalZig;
@@ -218,52 +206,6 @@
             validZigSets = builtins.filter (name: builtins.hasAttr name prev) zigTargets;
           in
           lib.genAttrs validZigSets (name: customizeZig name prev.${name})
-        )
-        (
-          final: prev:
-          let
-            disableTestsWrapper =
-              originalBuilder:
-              let
-                wrap = original: {
-                  __functor =
-                    self: buildArgs:
-                    (original buildArgs).overrideAttrs (old: {
-                      doCheck = false;
-                      doInstallCheck = false;
-                      # Specific to Node: Remove the hook that triggers tests
-                      npmCheckHook = null;
-                    });
-
-                  override = newArgs: wrap (original.override newArgs);
-                };
-              in
-              wrap originalBuilder;
-
-            disableCheckInScope =
-              scope:
-              if builtins.hasAttr "overrideScope" scope then
-                scope.overrideScope (
-                  self: super:
-                  lib.mapAttrs (
-                    name: drv:
-                    if lib.isDerivation drv && drv ? overrideAttrs then
-                      drv.overrideAttrs (_: {
-                        doCheck = false;
-                        doInstallCheck = false;
-                      })
-                    else
-                      drv
-                  ) super
-                )
-              else
-                scope;
-          in
-          {
-            buildNpmPackage = disableTestsWrapper prev.buildNpmPackage;
-            mkYarnPackage = disableTestsWrapper prev.mkYarnPackage;
-            nodePackages = disableCheckInScope prev.nodePackages;
-          }
         )
         (final: prev: {
           nototools = prev.nototools.overridePythonAttrs (old: {
@@ -306,39 +248,39 @@
           nix = nix.packages.x86_64-linux.default;
           makeRustPlatform =
             args:
-            let
-              platform = prev.callPackage "${prev.path}/pkgs/development/compilers/rust/make-rust-platform.nix" {
-                GLOBAL_RUSTFLAGS = "-C target-cpu=znver3";
-              } args;
-              wrapBuildRustPackage = original: {
-                __functor =
-                  self: buildArgs:
-                  (original buildArgs).overrideAttrs (old: {
-                    doCheck = false;
-                    doInstallCheck = false;
-                  });
-
-                override = newArgs: wrapBuildRustPackage (original.override newArgs);
-              };
-            in
-            platform
-            // {
-              buildRustPackage = wrapBuildRustPackage platform.buildRustPackage;
-            };
+            prev.callPackage "${prev.path}/pkgs/development/compilers/rust/make-rust-platform.nix" {
+              GLOBAL_RUSTFLAGS = "-C target-cpu=znver3";
+            } args;
 
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
-              buildPythonPackage =
+              # Python packages don't go through our stdenv overlay, so add the phase here
+              disableCheckArgs =
                 args:
-                python-prev.buildPythonPackage (
-                  args
-                  // {
-                    doCheck = false;
-                    doInstallCheck = false;
-                  }
-                );
+                let
+                  existingPrePhases = args.prePhases or [ ];
+                in
+                args
+                // {
+                  prePhases =
+                    if builtins.elem "disableChecksPhase" existingPrePhases
+                    then existingPrePhases
+                    else existingPrePhases ++ [ "disableChecksPhase" ];
+                  disableChecksPhase = ''
+                    unset doCheck
+                    unset doInstallCheck
+                    # Override Python-specific check phases to be no-ops
+                    pytestCheckPhase() { :; }
+                    pythonImportsCheckPhase() { :; }
+                  '';
+                };
+              buildPythonPackage = python-prev.buildPythonPackage // {
+                __functor = self: args: python-prev.buildPythonPackage (python-final.disableCheckArgs args);
+              };
+              buildPythonApplication = python-prev.buildPythonApplication // {
+                __functor = self: args: python-prev.buildPythonApplication (python-final.disableCheckArgs args);
+              };
               psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
-                doCheck = false;
                 propagatedBuildInputs = (oldAttrs.propagatedBuildInputs or [ ]) ++ [ python-final.psycopg-pool ];
               });
               mutatormath = python-prev.mutatormath.overridePythonAttrs (old: {
@@ -381,9 +323,6 @@
               });
             })
           ];
-          libsecret = prev.libsecret.overrideAttrs (oldAttrs: {
-            doCheck = false;
-          });
           haskellPackages = prev.haskellPackages.extend (
             hself: hsuper: {
               xmobar = final.haskell.lib.compose.overrideCabal (drv: {
