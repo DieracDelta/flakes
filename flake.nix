@@ -231,6 +231,16 @@
               hash = "sha256-HwDahmjDC+O321Ba7MnHoQdHOFUMpFzaNdLHQeEg11Q=";
             };
           });
+          opencv = prev.opencv.overrideAttrs (old: {
+            postUnpack = builtins.replaceStrings
+              [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+              [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+              old.postUnpack;
+            preConfigure = builtins.replaceStrings
+              [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+              [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+              old.preConfigure;
+          });
           # TODO fix this -- it's very broken and IDK why
           influxdb2 = inputs.nixpkgs-master.legacyPackages.x86_64-linux.influxdb2;
           usbmuxd2 = prev.usbmuxd2.overrideAttrs (oldAttrs: {
@@ -344,6 +354,27 @@
                   tag = old.version; # Often tags are prefixed with 'v'
                   hash = "sha256-+BxQBflMm2AvCLAFFj52Jpkqn+KErwYXU1wztintgOg="; # Updated hash
                 };
+              });
+              # Fix 404 error for 0.42.2 - pin to 0.41.2
+              sqlalchemy-utils = python-prev.sqlalchemy-utils.overridePythonAttrs (old: rec {
+                version = "0.41.2";
+                src = final.fetchFromGitHub {
+                  owner = "kvesteri";
+                  repo = "sqlalchemy-utils";
+                  rev = version;
+                  hash = "sha256-jC8onlCiuzpMlJ3EzpzCnQ128xpkLzrZEuGWQv7pvVE=";
+                };
+              });
+              # Fix opencv source directory name issue (nixpkgs uses "source" but actual name differs)
+              opencv4 = python-prev.opencv4.overrideAttrs (old: {
+                postUnpack = builtins.replaceStrings
+                  [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                  [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                  old.postUnpack;
+                preConfigure = builtins.replaceStrings
+                  [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                  [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                  old.preConfigure;
               });
             })
           ];

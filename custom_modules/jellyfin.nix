@@ -262,7 +262,7 @@ in
     };
 
     services.paperless = {
-      enable = true;
+      enable = false;
       # passwordFile = "/etc/paperless-admin-pass";
       port = 28981;
       # dataDir = "/var/lib/paperless";
@@ -271,10 +271,10 @@ in
       # consumptionDirIsPublic = true;
       address = "0.0.0.0";
     };
-    users.users.paperless = {
-      shell = pkgs.bashInteractive;
-      isSystemUser = true;
-    };
+    # users.users.paperless = {
+    #   shell = pkgs.bashInteractive;
+    #   isSystemUser = true;
+    # };
     services.immich = {
       enable = false;
       port = 2283;

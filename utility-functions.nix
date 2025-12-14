@@ -60,28 +60,56 @@ in
                   in
                   args:
                   let
-                    extraCompile = " -pipe";
-                    extraLink = " -Wl,-z,pack-relative-relocs";
-
                     # Function to apply flags to either env.FLAG or top-level FLAG
-                    applyFlags = currentAttrs: flagName: flagsToAdd:
+                    applyFlags =
+                      currentAttrs: flagName: flagsToAdd:
                       let
                         valEnv = if currentAttrs ? env then (currentAttrs.env.${flagName} or "") else "";
                         valTop = if currentAttrs ? ${flagName} then (currentAttrs.${flagName}) else "";
                         # Combine existing env + top-level + new flags
-                        combined = toString valEnv + " " + toString valTop + flagsToAdd;
+                        combined = lib.concatStringsSep " " (
+                          builtins.filter (x: x != "") [
+                            (toString valEnv)
+                            (toString valTop)
+                            flagsToAdd
+                          ]
+                        );
                       in
                       # ALWAYS put flags in env and remove from top-level.
                       # This avoids conflicts if overrideAttrs later introduces env/structured attrs.
                       # Legacy mkDerivation supports env vars too.
-                      (builtins.removeAttrs currentAttrs [ flagName ]) // {
-                        env = (currentAttrs.env or {}) // {
+                      (builtins.removeAttrs currentAttrs [ flagName ])
+                      // {
+                        env = (currentAttrs.env or { }) // {
                           ${flagName} = combined;
                         };
                       };
 
-                    processArgs = attrs:
+                    processArgs =
+                      attrs:
                       let
+                        extraCompile = "-pipe";
+                        # Check if this is the package that crashes with Linux linker flags (MinGW build)
+                        isHeroicIntegration = (attrs.pname or "") == "heroic-epic-integration" || (builtins.match ".*heroic-epic-integration.*" (attrs.name or "") != null);
+                        isGalaxyDummyService = (attrs.pname or "") == "galaxy-dummy-service" || (builtins.match ".*galaxy-dummy-service.*" (attrs.name or "") != null);
+                        isGhc = (attrs.pname or "") == "ghc" || (builtins.match ".*ghc.*" (attrs.name or "") != null);
+                        isSystemd = (attrs.pname or "") == "systemd" || (builtins.match ".*systemd.*" (attrs.name or "") != null);
+                        isOVMF = (attrs.pname or "") == "OVMF" || (builtins.match ".*OVMF.*" (attrs.name or "") != null);
+                        
+                        # Heuristic: Haskell packages built via generic-builder usually have these attributes
+                        isHaskell = (attrs ? setupHaskellDepends) || (attrs ? libraryHaskellDepends) || (attrs ? executableHaskellDepends);
+                        # Check if GHC is in nativeBuildInputs - these use ld.gold which doesn't support pack-relative-relocs
+                        nativeBuildInputsList = attrs.nativeBuildInputs or [];
+                        hasGhcInBuildInputs = builtins.any (dep:
+                          let depName = dep.pname or dep.name or (builtins.parseDrvName (toString dep)).name or "";
+                          in builtins.match "ghc.*" depName != null
+                        ) (if builtins.isList nativeBuildInputsList then nativeBuildInputsList else []);
+
+                        shouldSkipRelocs = isHeroicIntegration || isGalaxyDummyService || isGhc || isSystemd || isOVMF || isHaskell || hasGhcInBuildInputs;
+                        
+                        extraLink = 
+                          (if (stdenvSelf.hostPlatform.isLinux or false) && !shouldSkipRelocs then "-Wl,-z,pack-relative-relocs" else "");
+
                         attrsWithCompileFlags = applyFlags attrs "NIX_CFLAGS_COMPILE" extraCompile;
                       in
                       applyFlags attrsWithCompileFlags "NIX_CFLAGS_LINK" extraLink;
