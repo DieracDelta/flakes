@@ -96,16 +96,7 @@ in
                         isSystemd = (attrs.pname or "") == "systemd" || (builtins.match ".*systemd.*" (attrs.name or "") != null);
                         isOVMF = (attrs.pname or "") == "OVMF" || (builtins.match ".*OVMF.*" (attrs.name or "") != null);
                         
-                        # Heuristic: Haskell packages built via generic-builder usually have these attributes
-                        isHaskell = (attrs ? setupHaskellDepends) || (attrs ? libraryHaskellDepends) || (attrs ? executableHaskellDepends);
-                        # Check if GHC is in nativeBuildInputs - these use ld.gold which doesn't support pack-relative-relocs
-                        nativeBuildInputsList = attrs.nativeBuildInputs or [];
-                        hasGhcInBuildInputs = builtins.any (dep:
-                          let depName = dep.pname or dep.name or (builtins.parseDrvName (toString dep)).name or "";
-                          in builtins.match "ghc.*" depName != null
-                        ) (if builtins.isList nativeBuildInputsList then nativeBuildInputsList else []);
-
-                        shouldSkipRelocs = isHeroicIntegration || isGalaxyDummyService || isGhc || isSystemd || isOVMF || isHaskell || hasGhcInBuildInputs;
+                        shouldSkipRelocs = isHeroicIntegration || isGalaxyDummyService || isGhc || isSystemd || isOVMF;
                         
                         extraLink = 
                           (if (stdenvSelf.hostPlatform.isLinux or false) && !shouldSkipRelocs then "-Wl,-z,pack-relative-relocs" else "");

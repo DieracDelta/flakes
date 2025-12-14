@@ -172,6 +172,10 @@
                             "-O2"
                           ])
                         ];
+                        # GHC uses ld.gold which doesn't support pack-relative-relocs
+                        preConfigure = (args.preConfigure or "") + ''
+                          export NIX_CFLAGS_LINK="''${NIX_CFLAGS_LINK//-Wl,-z,pack-relative-relocs/}"
+                        '';
                       }
                     );
                 }) hfinal hprev;
