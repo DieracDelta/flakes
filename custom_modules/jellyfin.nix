@@ -382,7 +382,19 @@ in
       settings.server = {
         http_addr = "0.0.0.0";
         http_port = 3000;
+        root_url = "https://office-desktop.tail5ca7.ts.net/grafana/";
+        serve_from_sub_path = true;
       };
+      settings.auth = {
+        disable_login_form = true;
+      };
+
+      settings."auth.anonymous" = {
+        enabled = true;
+        org_role = "Viewer";
+        org_name = "Main Org.";
+      };
+
       # 1) Tell Grafana where to read dashboards from
       provision.dashboards.settings = {
         apiVersion = 1;

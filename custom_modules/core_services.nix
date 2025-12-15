@@ -120,6 +120,10 @@ in
             reverse_proxy localhost:16180
           }
 
+          handle /grafana* {
+            reverse_proxy 127.0.0.1:3000
+          }
+
           handle_path /sunshine* {
             reverse_proxy https://127.0.0.1:48012 {
               transport http {
@@ -164,7 +168,7 @@ in
       # This defines the layout of your dashboard
       services = [
         {
-          "My Services" = [
+          "User Targeted Services" = [
             {
               "Open WebUI" = {
                 icon = "si-openai";
@@ -179,6 +183,43 @@ in
                 description = "Music Streamer";
               };
             }
+            {
+              "SearX" = {
+                icon = "searxng"; # or "searx"
+                href = "/searx/";
+                description = "Private Search Engine";
+              };
+            }
+            {
+              "Paperless" = {
+                icon = "paperless-ngx";
+                href = "/paperless/"; # Browser link
+                description = "Document Manager";
+                widget = {
+                  type = "paperlessngx";
+                  url = "http://127.0.0.1:28981/paperless";
+                  key = "1046ca1ba2c462773d9b630c005f095718f657df";
+                };
+              };
+            }
+            {
+              "Sunshine" = {
+                icon = "sunshine";
+                href = "/sunshine/";
+                description = "Login: username / password";
+              };
+            }
+            {
+              "Spotizerr" = {
+                icon = "box";
+                href = "/spotizerr/";
+                description = "Download from spotify";
+              };
+            }
+          ];
+        }
+        {
+          "System Monitoring Services" = [
             {
               "Netdata" = {
                 icon = "netdata";
@@ -230,29 +271,10 @@ in
               };
             }
             {
-              "SearX" = {
-                icon = "searxng"; # or "searx"
-                href = "/searx/";
-                description = "Private Search Engine";
-              };
-            }
-            {
               "Ntopng" = {
                 icon = "ntopng";
                 href = "/ntopng/";
                 description = "Network Traffic Monitor";
-              };
-            }
-            {
-              "Paperless" = {
-                icon = "paperless-ngx";
-                href = "/paperless/"; # Browser link
-                description = "Document Manager";
-                widget = {
-                  type = "paperlessngx";
-                  url = "http://127.0.0.1:28981/paperless";
-                  key = "1046ca1ba2c462773d9b630c005f095718f657df";
-                };
               };
             }
             {
@@ -264,46 +286,44 @@ in
               };
             }
             {
-              "Sunshine" = {
-                icon = "sunshine";
-                href = "/sunshine/";
-                description = "Login: username / password";
+              "Grafana" = {
+                icon = "grafana";
+                href = "/grafana/";
+                description = "Dashboards & Analytics";
+                # would need to fix login thing
+                # widget = {
+                #   type = "grafana";
+                #   url = "http://127.0.0.1:3000/grafana";
+                # };
+              };
+            }
+          ];
+        }
+        {
+          "Infrastructure" = [
+            {
+              "Tailscale" = {
+                icon = "tailscale";
+                href = "https://login.tailscale.com/admin/machines";
+                description = "VPN Mesh Network";
+                widget = {
+                  type = "tailscale";
+                  key = "tskey-api-kQPWtb565N11CNTRL-wsrbzUVc9cU5Y4dCK4zGkU5pCpacQXAb";
+                  deviceid = "nvD4xX4tfM11CNTRL";
+                };
               };
             }
             {
-              "Spotizerr" = {
-                icon = "box";
-                href = "/spotizerr/";
-                description = "Download from spotify";
+              "Caddy" = {
+                icon = "caddy";
+                href = "/caddy-api/config/";
+                description = "Reverse Proxy";
+                widget = {
+                  type = "caddy";
+                  # Caddy's default admin API port
+                  url = "http://127.0.0.1:2019";
+                };
               };
-            }
-            {
-              "Infrastructure" = [
-                {
-                  "Tailscale" = {
-                    icon = "tailscale";
-                    href = "https://login.tailscale.com/admin/machines";
-                    description = "VPN Mesh Network";
-                    widget = {
-                      type = "tailscale";
-                      key = "tskey-api-kQPWtb565N11CNTRL-wsrbzUVc9cU5Y4dCK4zGkU5pCpacQXAb";
-                      deviceid = "nvD4xX4tfM11CNTRL";
-                    };
-                  };
-                }
-                {
-                  "Caddy" = {
-                    icon = "caddy";
-                    href = "/caddy-api/config/";
-                    description = "Reverse Proxy";
-                    widget = {
-                      type = "caddy";
-                      # Caddy's default admin API port
-                      url = "http://127.0.0.1:2019";
-                    };
-                  };
-                }
-              ];
             }
           ];
         }
