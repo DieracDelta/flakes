@@ -397,17 +397,17 @@ in
       enable = true;
       # package = pkgs.ollama-cuda;
       # acceleration = "cuda";
+      port = 11111;
+      openFirewall = true;
       host = "0.0.0.0";
       # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
     };
     services.open-webui = {
-      # package = tmpnixpkgs.open-webui;
       openFirewall = true;
       enable = true;
       host = "0.0.0.0";
       environment = {
-        OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
-        # Disable authentication
+        OLLAMA_API_BASE_URL = "http://127.0.0.1:11111";
         WEBUI_AUTH = "False";
       };
     };

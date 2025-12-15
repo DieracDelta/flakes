@@ -173,7 +173,8 @@
                           ])
                         ];
                         # GHC uses ld.gold which doesn't support pack-relative-relocs
-                        preConfigure = (args.preConfigure or "") + ''
+                        # Must run before compileBuildDriverPhase which compiles Setup.hs
+                        preCompileBuildDriver = (args.preCompileBuildDriver or "") + ''
                           export NIX_CFLAGS_LINK="''${NIX_CFLAGS_LINK//-Wl,-z,pack-relative-relocs/}"
                         '';
                       }

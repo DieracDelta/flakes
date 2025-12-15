@@ -61,7 +61,6 @@ in
 
     # even more OP ssh between all the devices
     services.tailscale = {
-      # package = nixpkgs-stable.legacyPackages.${system}.tailscale;
       enable = true;
     };
 
@@ -85,19 +84,79 @@ in
         extraConfig = ''
           bind 127.0.0.1
 
-          route /navidrome* {
+          redir /navidrome /navidrome/
+          handle /navidrome* {
             reverse_proxy 127.0.0.1:4533
           }
+
           handle_path /netdata* {
             reverse_proxy 127.0.0.1:19999
           }
-          handle_path /open-webui* {
-            reverse_proxy 127.0.0.1:8085
+
+          handle {
+            reverse_proxy 127.0.0.1:8082
           }
+
         '';
       };
     };
+
+    services.caddy.virtualHosts."office-desktop.tail5ca7.ts.net:8444" = {
+      extraConfig = ''
+        reverse_proxy 127.0.0.1:8080
+      '';
+    };
     services.tailscale.permitCertUid = "caddy";
+
+    services.homepage-dashboard = {
+      enable = true;
+      openFirewall = true;
+      listenPort = 8082; # The internal port (default is 8082 on NixOS)
+      allowedHosts = "office-desktop.tail5ca7.ts.net";
+
+      # This defines the layout of your dashboard
+      services = [
+        {
+          "My Services" = [
+            {
+              "Open WebUI" = {
+                icon = "si-openai";
+                href = "https://office-desktop.tail5ca7.ts.net:8444";
+                description = "AI Chat Interface";
+              };
+            }
+            {
+              "Navidrome" = {
+                icon = "navidrome";
+                href = "/navidrome/";
+                description = "Music Streamer";
+              };
+            }
+            {
+              "Netdata" = {
+                icon = "netdata";
+                href = "/netdata/";
+                description = "System Monitoring";
+                widget = {
+                  type = "netdata";
+                  url = "http://127.0.0.1:19999";
+                };
+              };
+            }
+          ];
+        }
+      ];
+
+      widgets = [
+        {
+          resources = {
+            cpu = true;
+            memory = true;
+            disk = "/";
+          };
+        }
+      ];
+    };
 
     # create a oneshot job to authenticate to Tailscale
     # systemd.services.tailscale-autoconnect = {
