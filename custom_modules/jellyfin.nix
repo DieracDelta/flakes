@@ -276,11 +276,14 @@ in
         PAPERLESS_STATIC_URL = "/paperless/static/";
 
         # 2. Your full public URL (Must include /paperless at the end)
-        PAPERLESS_URL = "https://office-desktop.tail5ca7.ts.net/paperless";
+        PAPERLESS_URL = "https://office-desktop.tail5ca7.ts.net";
 
         # 3. Security settings to allow the connection
         PAPERLESS_CSRF_TRUSTED_ORIGINS = "https://office-desktop.tail5ca7.ts.net";
+        PAPERLESS_CORS_ALLOWED_ORIGINS = "https://office-desktop.tail5ca7.ts.net";
         PAPERLESS_ALLOWED_HOSTS = "office-desktop.tail5ca7.ts.net,localhost,127.0.0.1";
+        PAPERLESS_DISABLE_REGULAR_LOGIN = true;
+        PAPERLESS_ENABLE_HTTP_REMOTE_USER = true;
       };
     };
     users.users.paperless = {

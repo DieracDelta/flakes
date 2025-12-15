@@ -111,7 +111,23 @@ in
           }
 
           handle /paperless* {
-            reverse_proxy localhost:28981
+            reverse_proxy localhost:28981 {
+              header_up Remote-User "admin"
+            }
+          }
+
+          handle_path /nut* {
+            reverse_proxy localhost:16180
+          }
+
+          handle_path /sunshine* {
+            reverse_proxy https://127.0.0.1:48012 {
+              transport http {
+                tls_insecure_skip_verify
+              }
+              header_up X-Forwarded-Proto {scheme}
+              header_up X-Forwarded-Prefix /sunshine
+            }
           }
 
           handle {
@@ -224,10 +240,24 @@ in
                 description = "Document Manager";
                 widget = {
                   type = "paperlessngx";
-                  # Note: We must include /paperless in the internal URL too
                   url = "http://127.0.0.1:28981/paperless";
-                  key = "YOUR_LONG_API_TOKEN_HERE";
+                  key = "1046ca1ba2c462773d9b630c005f095718f657df";
                 };
+              };
+            }
+            {
+              "UPS Status" = {
+                icon = "nut"; # or "battery"
+                # Link to the Prometheus Exporter text page (via Caddy)
+                href = "/nut/metrics";
+                description = "Power Backup";
+              };
+            }
+            {
+              "Sunshine" = {
+                icon = "sunshine";
+                href = "/sunshine/";
+                description = "Login: username / password";
               };
             }
           ];
@@ -321,21 +351,6 @@ in
       capSysAdmin = true;
       openFirewall = true;
       settings.port = 48011;
-      # serviceConfig = {
-      #   IPEgressPriority = 1;
-      #   IPIngressPriority = 1;
-      #   Nice = -10;
-      #   CPUWeight = 1000;
-      #   IOSchedulingPriority = 0;
-      #   IOWeight = 1000;
-      #   # IOSchedulingClass = "best-effort"; # too aggressive imo
-      # };
-      # settings = {
-      #   port = 48011;
-      #   https_port = 48006;
-      #   web_ui_port = 48012;
-      #   rtsp_port = 48032;
-      # };
     };
     systemd.user.services.sunshine.serviceConfig = {
       Nice = -10;
