@@ -130,6 +130,10 @@ in
             }
           }
 
+          handle_path /spotizerr* {
+            reverse_proxy 127.0.0.1:7171
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -259,6 +263,41 @@ in
                 href = "/sunshine/";
                 description = "Login: username / password";
               };
+            }
+            {
+              "Spotizerr" = {
+                icon = "box";
+                href = "/spotizerr/";
+                description = "Download from spotify";
+              };
+            }
+            {
+              "Infrastructure" = [
+                {
+                  "Tailscale" = {
+                    icon = "tailscale";
+                    href = "https://login.tailscale.com/admin/machines";
+                    description = "VPN Mesh Network";
+                    widget = {
+                      type = "tailscale";
+                      key = "tskey-api-kQPWtb565N11CNTRL-wsrbzUVc9cU5Y4dCK4zGkU5pCpacQXAb";
+                      deviceid = "nvD4xX4tfM11CNTRL";
+                    };
+                  };
+                }
+                {
+                  "Caddy" = {
+                    icon = "caddy";
+                    href = "http://127.0.0.1:2019/config/"; # Raw JSON config view
+                    description = "Reverse Proxy";
+                    widget = {
+                      type = "caddy";
+                      # Caddy's default admin API port
+                      url = "http://127.0.0.1:2019";
+                    };
+                  };
+                }
+              ];
             }
           ];
         }
