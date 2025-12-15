@@ -102,6 +102,18 @@ in
             reverse_proxy localhost:5123
           }
 
+          handle_path /searx* {
+            reverse_proxy 127.0.0.1:3838
+          }
+
+          handle /ntopng* {
+            reverse_proxy 100.74.54.40:3123
+          }
+
+          handle /paperless* {
+            reverse_proxy localhost:28981
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -188,6 +200,33 @@ in
                   url = "http://127.0.0.1:5123/scrutiny";
                   # Optional: Force it to update every 60 seconds
                   refreshInterval = 60000;
+                };
+              };
+            }
+            {
+              "SearX" = {
+                icon = "searxng"; # or "searx"
+                href = "/searx/";
+                description = "Private Search Engine";
+              };
+            }
+            {
+              "Ntopng" = {
+                icon = "ntopng";
+                href = "/ntopng/";
+                description = "Network Traffic Monitor";
+              };
+            }
+            {
+              "Paperless" = {
+                icon = "paperless-ngx";
+                href = "/paperless/"; # Browser link
+                description = "Document Manager";
+                widget = {
+                  type = "paperlessngx";
+                  # Note: We must include /paperless in the internal URL too
+                  url = "http://127.0.0.1:28981/paperless";
+                  key = "YOUR_LONG_API_TOKEN_HERE";
                 };
               };
             }

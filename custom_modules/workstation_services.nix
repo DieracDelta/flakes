@@ -355,6 +355,7 @@ in
       enable = true;
       redisCreateLocally = true;
       settings.server = {
+        base_url = "https://office-desktop.tail5ca7.ts.net/searx";
         bind_address = "0.0.0.0";
         port = "3838";
         secret_key = "secret key";

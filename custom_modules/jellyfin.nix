@@ -270,6 +270,18 @@ in
       # consumptionDir = "/var/lib/paperless/in";
       # consumptionDirIsPublic = true;
       address = "0.0.0.0";
+      settings = {
+        # 1. This is the Magic Switch: Tells Paperless "I live in this folder"
+        PAPERLESS_FORCE_SCRIPT_NAME = "/paperless";
+        PAPERLESS_STATIC_URL = "/paperless/static/";
+
+        # 2. Your full public URL (Must include /paperless at the end)
+        PAPERLESS_URL = "https://office-desktop.tail5ca7.ts.net/paperless";
+
+        # 3. Security settings to allow the connection
+        PAPERLESS_CSRF_TRUSTED_ORIGINS = "https://office-desktop.tail5ca7.ts.net";
+        PAPERLESS_ALLOWED_HOSTS = "office-desktop.tail5ca7.ts.net,localhost,127.0.0.1";
+      };
     };
     users.users.paperless = {
       shell = pkgs.bashInteractive;
@@ -435,6 +447,9 @@ in
     services.vnstat.enable = true;
     services.ntopng.enable = true;
     services.ntopng.httpPort = 3123;
+    services.ntopng.extraConfig = ''
+      --http-prefix="/ntopng"
+    '';
 
     services.opensnitch.enable = true;
 
