@@ -93,6 +93,11 @@ in
             reverse_proxy 127.0.0.1:19999
           }
 
+          redir /glances /glances/
+          handle_path /glances* {
+            reverse_proxy 127.0.0.1:5124
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -140,6 +145,32 @@ in
                 widget = {
                   type = "netdata";
                   url = "http://127.0.0.1:19999";
+                };
+              };
+            }
+            {
+              "Glances" = {
+                icon = "glances";
+                href = "/glances/"; # Matches the Caddy path
+                description = "Real-time Monitor";
+                widget = {
+                  type = "customapi";
+                  url = "http://127.0.0.1:5124/api/4/all";
+                  refreshInterval = 3000; # Refresh every 3 seconds
+
+                  # We map the JSON data manually to avoid the parsing bug
+                  mappings = [
+                    {
+                      field = "cpu.total";
+                      label = "CPU";
+                      format = "percent";
+                    }
+                    {
+                      field = "mem.percent";
+                      label = "RAM";
+                      format = "percent";
+                    }
+                  ];
                 };
               };
             }
