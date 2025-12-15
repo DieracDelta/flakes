@@ -134,6 +134,12 @@ in
             reverse_proxy 127.0.0.1:7171
           }
 
+          handle_path /caddy-api* {
+            reverse_proxy 127.0.0.1:2019 {
+              header_up Host {upstream_hostport}
+            }
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -288,7 +294,7 @@ in
                 {
                   "Caddy" = {
                     icon = "caddy";
-                    href = "http://127.0.0.1:2019/config/"; # Raw JSON config view
+                    href = "/caddy-api/config/";
                     description = "Reverse Proxy";
                     widget = {
                       type = "caddy";
