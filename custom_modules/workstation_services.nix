@@ -449,6 +449,7 @@ in
     services.scrutiny.collector.enable = true;
     services.scrutiny.settings.web.listen.port = 5123;
     services.scrutiny.openFirewall = true;
+    services.scrutiny.settings.web.listen.basepath = "/scrutiny";
 
     services.netdata = {
       package = pkgs.netdata.override { withCloudUi = true; };

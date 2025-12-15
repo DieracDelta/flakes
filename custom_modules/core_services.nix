@@ -98,6 +98,10 @@ in
             reverse_proxy 127.0.0.1:5124
           }
 
+          handle /scrutiny* {
+            reverse_proxy localhost:5123
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -171,6 +175,19 @@ in
                       format = "percent";
                     }
                   ];
+                };
+              };
+            }
+            {
+              "Scrutiny" = {
+                icon = "scrutiny";
+                href = "/scrutiny/";
+                description = "Hard Drive Health";
+                widget = {
+                  type = "scrutiny";
+                  url = "http://127.0.0.1:5123/scrutiny";
+                  # Optional: Force it to update every 60 seconds
+                  refreshInterval = 60000;
                 };
               };
             }
