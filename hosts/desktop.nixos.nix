@@ -34,6 +34,9 @@
   custom_modules.bens_config.enable = true;
   custom_modules.network_monitor.enable = true;
   custom_modules.nethog_monitor.enable = true;
+  custom_modules.monitoring.enable = true;
+  custom_modules.monitoring.enableUps = true;
+  custom_modules.monitoring.enableGpu = true;
   programs.noisetorch.enable = false;
 
 }
