@@ -180,17 +180,180 @@ in
       '';
     };
 
-    # NUT dashboard
+    # NUT dashboard - Custom dashboard for Eaton 5SC UPS
     environment.etc."grafana-dashboards/nut/nut-dashboard.json" = lib.mkIf cfg.enableUps {
-      text =
-        let
-          raw = builtins.fetchurl {
-            url = "https://grafana.com/api/dashboards/15406/revisions/1/download";
-            sha256 = "1pvyyxyy6prd0aqkvki04ayr4sw2rfyzx9gc3scyhzjy6rq648ca";
-          };
-          fixed = builtins.replaceStrings [ "\${DS_PROMETHEUS}" ] [ "Prometheus" ] (builtins.readFile raw);
-        in
-        fixed;
+      text = builtins.toJSON {
+        annotations.list = [];
+        editable = true;
+        fiscalYearStartMonth = 0;
+        graphTooltip = 0;
+        links = [];
+        panels = [
+          # Row 1: Status gauges
+          {
+            type = "gauge";
+            title = "Battery Charge";
+            gridPos = { h = 8; w = 6; x = 0; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "red"; value = null; }
+                { color = "orange"; value = 30; }
+                { color = "yellow"; value = 50; }
+                { color = "green"; value = 80; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "network_ups_tools_battery_charge"; refId = "A"; }];
+          }
+          {
+            type = "gauge";
+            title = "UPS Load";
+            gridPos = { h = 8; w = 6; x = 6; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 50; }
+                { color = "orange"; value = 75; }
+                { color = "red"; value = 90; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "network_ups_tools_ups_load"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Runtime Remaining";
+            gridPos = { h = 8; w = 6; x = 12; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "red"; value = null; }
+                { color = "orange"; value = 300; }
+                { color = "yellow"; value = 600; }
+                { color = "green"; value = 1200; }
+              ];
+              unit = "s";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "network_ups_tools_battery_runtime"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Power Draw";
+            gridPos = { h = 8; w = 6; x = 18; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "palette-classic";
+              unit = "watt";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "network_ups_tools_ups_realpower"; legendFormat = "Real Power"; refId = "A"; }];
+          }
+          # Row 2: Voltage and current graphs
+          {
+            type = "timeseries";
+            title = "Input/Output Voltage";
+            gridPos = { h = 8; w = 12; x = 0; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "volt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "network_ups_tools_input_voltage"; legendFormat = "Input"; refId = "A"; }
+              { expr = "network_ups_tools_output_voltage"; legendFormat = "Output"; refId = "B"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Battery Voltage";
+            gridPos = { h = 8; w = 12; x = 12; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "volt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "network_ups_tools_battery_voltage"; legendFormat = "Battery"; refId = "A"; }
+              { expr = "network_ups_tools_battery_voltage_nominal"; legendFormat = "Nominal"; refId = "B"; }
+            ];
+          }
+          # Row 3: Load and runtime over time
+          {
+            type = "timeseries";
+            title = "UPS Load Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [{ expr = "network_ups_tools_ups_load"; legendFormat = "Load %"; refId = "A"; }];
+          }
+          {
+            type = "timeseries";
+            title = "Power Consumption";
+            gridPos = { h = 8; w = 12; x = 12; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "watt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "network_ups_tools_ups_realpower"; legendFormat = "Real Power (W)"; refId = "A"; }
+              { expr = "network_ups_tools_ups_power"; legendFormat = "Apparent Power (VA)"; refId = "B"; }
+            ];
+          }
+          # Row 4: Battery and efficiency
+          {
+            type = "timeseries";
+            title = "Battery Charge Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [{ expr = "network_ups_tools_battery_charge"; legendFormat = "Charge %"; refId = "A"; }];
+          }
+          {
+            type = "timeseries";
+            title = "UPS Efficiency";
+            gridPos = { h = 8; w = 12; x = 12; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [{ expr = "network_ups_tools_ups_efficiency"; legendFormat = "Efficiency %"; refId = "A"; }];
+          }
+          # Row 5: Frequency
+          {
+            type = "timeseries";
+            title = "Input/Output Frequency";
+            gridPos = { h = 8; w = 24; x = 0; y = 32; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "hertz"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "network_ups_tools_input_frequency"; legendFormat = "Input"; refId = "A"; }
+              { expr = "network_ups_tools_output_frequency"; legendFormat = "Output"; refId = "B"; }
+            ];
+          }
+        ];
+        refresh = "30s";
+        schemaVersion = 39;
+        tags = ["ups" "nut" "eaton"];
+        templating.list = [];
+        time = { from = "now-6h"; to = "now"; };
+        timepicker = {};
+        timezone = "browser";
+        title = "Eaton 5SC UPS";
+        uid = "eaton-5sc-ups";
+        version = 1;
+      };
       user = "grafana";
       group = "grafana";
       mode = "0644";
