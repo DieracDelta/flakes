@@ -52,33 +52,33 @@ let
                         up_bytes = int(stats[0] * 1048576)
                         down_bytes = int(stats[1] * 1048576)
                         
-                                                # Clean process name for Prometheus label
-                                                # Nethogs format: path/pid/uid
-                                                username = "unknown"
-                                                try:
-                                                    parts = proc.split('/')
-                                                    if len(parts) >= 3:
-                                                        # Standard case: .../bin/name/pid/uid
-                                                        path = "/".join(parts[:-2])
-                                                        name = os.path.basename(path)
-                                                        if name:
-                                                             safe_proc = name.replace("\"", "\\\"").replace("\n", "")
-                                                        else:
-                                                             safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
-                                                        
-                                                        # Extract UID and resolve to Username
-                                                        try:
-                                                            uid = int(parts[-1])
-                                                            username = pwd.getpwuid(uid).pw_name
-                                                        except:
-                                                            username = parts[-1].strip() # Fallback to UID string
-                                                    else:
-                                                        safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
-                                                except:
-                                                    safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
-                        
-                                                f.write(f'nethogs_process_upload_bytes{{process="{safe_proc}",user="{username}"}} {up_bytes}\n')
-                                                f.write(f'nethogs_process_download_bytes{{process="{safe_proc}",user="{username}"}} {down_bytes}\n')                
+                        # Clean process name for Prometheus label
+                        # Nethogs format: path/pid/uid
+                        username = "unknown"
+                        try:
+                            parts = proc.split('/')
+                            if len(parts) >= 3:
+                                # Standard case: .../bin/name/pid/uid
+                                path = "/".join(parts[:-2])
+                                name = os.path.basename(path)
+                                if name:
+                                     safe_proc = name.replace("\"", "\\\"").replace("\n", "")
+                                else:
+                                     safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
+                                
+                                # Extract UID and resolve to Username
+                                try:
+                                    uid = int(parts[-1])
+                                    username = pwd.getpwuid(uid).pw_name
+                                except:
+                                    username = parts[-1].strip() # Fallback to UID string
+                            else:
+                                safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
+                        except:
+                            safe_proc = proc.replace("\"", "\\\"").replace("\n", "")
+
+                        f.write(f'nethogs_process_upload_bytes{{process="{safe_proc}",user="{username}"}} {up_bytes}\n')
+                        f.write(f'nethogs_process_download_bytes{{process="{safe_proc}",user="{username}"}} {down_bytes}\n')                
                 os.rename(PROM_TMP, PROM_FILE)
             except Exception as e:
                 # Be silent on errors to avoid flooding logs, or print to stderr

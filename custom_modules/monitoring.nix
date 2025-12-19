@@ -1007,11 +1007,23 @@ datasource = "Prometheus";
               { expr = "sum(irate(node_disk_writes_completed_total{device=~\"nvme.*|sd.*\"}[5m]))"; legendFormat = "Writes"; refId = "B"; }
             ];
           }
-          # Row 6: Network
+          # Row 6: NVMe Temperatures
+          {
+            type = "timeseries";
+            title = "NVMe Temperatures";
+            gridPos = { h = 8; w = 24; x = 0; y = 40; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "celsius"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "node_hwmon_temp_celsius{chip=~\"nvme.*\"}"; legendFormat = "{{chip}}"; refId = "A"; }
+            ];
+          }
+          # Row 7: Network
           {
             type = "timeseries";
             title = "Network Traffic";
-            gridPos = { h = 8; w = 12; x = 0; y = 40; };
+            gridPos = { h = 8; w = 12; x = 0; y = 48; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "bps"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -1023,7 +1035,7 @@ datasource = "Prometheus";
           {
             type = "timeseries";
             title = "Network Errors & Drops";
-            gridPos = { h = 8; w = 12; x = 12; y = 40; };
+            gridPos = { h = 8; w = 12; x = 12; y = 48; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "pps"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -1034,11 +1046,11 @@ datasource = "Prometheus";
               { expr = "sum(irate(node_network_transmit_errs_total{device!~\"lo|veth.*\"}[5m]))"; legendFormat = "TX Errors"; refId = "D"; }
             ];
           }
-          # Row 7: Filesystem
+          # Row 8: Filesystem
           {
             type = "bargauge";
             title = "Filesystem Usage";
-            gridPos = { h = 8; w = 24; x = 0; y = 48; };
+            gridPos = { h = 8; w = 24; x = 0; y = 56; };
             datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
@@ -1064,11 +1076,11 @@ datasource = "Prometheus";
               refId = "A";
             }];
           }
-          # Row 8: System Pressure (PSI)
+          # Row 9: System Pressure (PSI)
           {
             type = "timeseries";
             title = "CPU Pressure";
-            gridPos = { h = 6; w = 8; x = 0; y = 56; };
+            gridPos = { h = 6; w = 8; x = 0; y = 64; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -1079,7 +1091,7 @@ datasource = "Prometheus";
           {
             type = "timeseries";
             title = "Memory Pressure";
-            gridPos = { h = 6; w = 8; x = 8; y = 56; };
+            gridPos = { h = 6; w = 8; x = 8; y = 64; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -1090,7 +1102,7 @@ datasource = "Prometheus";
           {
             type = "timeseries";
             title = "I/O Pressure";
-            gridPos = { h = 6; w = 8; x = 16; y = 56; };
+            gridPos = { h = 6; w = 8; x = 16; y = 64; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -1158,7 +1170,7 @@ datasource = "Prometheus";
             fieldConfig.defaults = { unit = "Bps"; };
             options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
             targets = [
-              { expr = "topk(10, rate(nethogs_process_download_bytes[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
+              { expr = "topk(10, rate(nethogs_process_download_bytes{user!=\"\"}[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
             ];
           }
           {
@@ -1169,14 +1181,14 @@ datasource = "Prometheus";
             fieldConfig.defaults = { unit = "Bps"; };
             options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
             targets = [
-              { expr = "topk(10, rate(nethogs_process_upload_bytes[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
+              { expr = "topk(10, rate(nethogs_process_upload_bytes{user!=\"\"}[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
             ];
           }
           # Row 3: Cumulative Usage
           {
             type = "timeseries";
             title = "Total System Data Usage (Cumulative)";
-            gridPos = { h = 10; w = 12; x = 0; y = 20; };
+            gridPos = { h = 10; w = 8; x = 0; y = 20; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "decbytes"; };
             options = { 
@@ -1195,19 +1207,40 @@ datasource = "Prometheus";
             type = "bargauge";
             title = "Top Processes by Data Usage (In Selected Range)";
             description = "Shows the total data (Download + Upload) used by the top processes within the currently selected time window.";
-            gridPos = { h = 10; w = 12; x = 12; y = 20; };
+            gridPos = { h = 10; w = 8; x = 8; y = 20; };
             datasource = "Prometheus";
             fieldConfig.defaults = { unit = "decbytes"; };
             options = {
               displayMode = "gradient";
               orientation = "horizontal";
-              reduceOptions = { calcs = ["max"]; }; # Increase returns a single value per series essentially
+              reduceOptions = { calcs = ["max"]; };
             };
             targets = [
               { 
                 # Sum of download + upload per process
-                expr = "topk(10, increase(nethogs_process_download_bytes[$__range]) + increase(nethogs_process_upload_bytes[$__range]))"; 
+                expr = "topk(10, increase(nethogs_process_download_bytes{user!=\"\"}[$__range]) + increase(nethogs_process_upload_bytes{user!=\"\"}[$__range]))"; 
                 legendFormat = "{{process}} ({{user}})"; 
+                refId = "A"; 
+              }
+            ];
+          }
+          {
+            type = "bargauge";
+            title = "Top Systemd Services by Data Usage (In Selected Range)";
+            description = "Shows the total data (Ingress + Egress) used by the top systemd services within the currently selected time window.";
+            gridPos = { h = 10; w = 8; x = 16; y = 20; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "decbytes"; };
+            options = {
+              displayMode = "gradient";
+              orientation = "horizontal";
+              reduceOptions = { calcs = ["max"]; };
+            };
+            targets = [
+              { 
+                # Sum of ingress + egress per unit
+                expr = "topk(10, increase(systemd_unit_ingress_bytes[$__range]) + increase(systemd_unit_egress_bytes[$__range]))"; 
+                legendFormat = "{{unit}}"; 
                 refId = "A"; 
               }
             ];
