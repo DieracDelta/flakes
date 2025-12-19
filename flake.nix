@@ -213,6 +213,46 @@
           lib.genAttrs validZigSets (name: customizeZig name prev.${name})
         )
         (final: prev: {
+          pam-insults = final.stdenv.mkDerivation {
+            pname = "pam-insults";
+            version = "unstable-2025-12-19";
+
+            src = final.fetchFromGitHub {
+              owner = "cgoesche";
+              repo = "pam-insults";
+              rev = "2d13ef89640eb57b5e6a64eea080e57d9d936738";
+              hash = "sha256-VbEJCO7lvTDKvGpTXQrpgeWEpZE4CMdwaRSuv5shsbw=";
+            };
+
+            nativeBuildInputs = [
+              final.asciidoctor
+              final.gzip
+            ];
+            buildInputs = [ final.pam ];
+
+            buildPhase = ''
+              runHook preBuild
+              $CC -fPIC -Wall -g -O2 -c src/pam_insults.c -o src/pam_insults.o
+              $CC -shared -o pam_insults.so src/pam_insults.o
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out/lib/security
+              cp pam_insults.so $out/lib/security/
+              runHook postInstall
+            '';
+
+            meta = with final.lib; {
+              description = "PAM module to print an insult before denying access";
+              homepage = "https://github.com/cgoesche/pam-insults";
+              license = licenses.gpl3Plus;
+              platforms = platforms.linux;
+            };
+          };
+        })
+        (final: prev: {
           nototools = prev.nototools.overridePythonAttrs (old: {
             dontCheckRuntimeDeps = true;
             catchConflicts = false;

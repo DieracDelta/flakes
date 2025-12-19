@@ -21,6 +21,11 @@ let
   virtualizationPack = with pkgs; [
     eternal-terminal
     nix
+    nix-prefetch-docker
+    nix-prefetch-github
+    nix-prefetch-pijul
+    nix-prefetch-scripts
+    nix-prefetch
     spider
     # lutris
     yq
@@ -33,6 +38,8 @@ let
     lmstudio
     partclone
     gemini-cli
+    crush
+    pam-insults
     scrutiny
     scrutiny-collector
     ethtool
@@ -421,6 +428,17 @@ in
     };
 
     security.sudo-rs.enable = true;
+
+    # Insult users on failed sudo authentication
+    # pam_unix is at 11600 with "sufficient" - on success it skips the rest
+    # pam_deny is at 12400 - this catches failures
+    # We insert at 12300 so insults run only when pam_unix failed (didn't return sufficient)
+    security.pam.services.sudo.rules.auth.insults = {
+      order = 12300;
+      control = "optional";
+      modulePath = "${pkgs.pam-insults}/lib/security/pam_insults.so";
+      args = [ "type=unhinged" ];
+    };
     services.eternal-terminal = {
       enable = true;
       port = 2022;
