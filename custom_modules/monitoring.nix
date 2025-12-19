@@ -189,11 +189,44 @@ in
         graphTooltip = 0;
         links = [];
         panels = [
+          # Row 0: Power Status Timeline
+          {
+            type = "state-timeline";
+            title = "Power Outage History";
+            description = "Shows when the UPS was on battery power (power outage) vs online (AC power)";
+            gridPos = { h = 6; w = 24; x = 0; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "red"; value = 1; }
+              ];
+              mappings = [
+                { type = "value"; options."0" = { text = "Online (AC)"; color = "green"; }; }
+                { type = "value"; options."1" = { text = "On Battery"; color = "red"; }; }
+              ];
+              custom.fillOpacity = 80;
+            };
+            options = {
+              showValue = "auto";
+              alignValue = "center";
+              mergeValues = true;
+              rowHeight = 0.9;
+              legend = { displayMode = "list"; placement = "bottom"; };
+            };
+            targets = [{
+              expr = ''network_ups_tools_ups_status{flag="OB"}'';
+              legendFormat = "Power Status";
+              refId = "A";
+            }];
+          }
           # Row 1: Status gauges
           {
             type = "gauge";
             title = "Battery Charge";
-            gridPos = { h = 8; w = 6; x = 0; y = 0; };
+            gridPos = { h = 8; w = 6; x = 0; y = 6; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = {
               color.mode = "thresholds";
@@ -214,7 +247,7 @@ in
           {
             type = "gauge";
             title = "UPS Load";
-            gridPos = { h = 8; w = 6; x = 6; y = 0; };
+            gridPos = { h = 8; w = 6; x = 6; y = 6; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = {
               color.mode = "thresholds";
@@ -235,7 +268,7 @@ in
           {
             type = "stat";
             title = "Runtime Remaining";
-            gridPos = { h = 8; w = 6; x = 12; y = 0; };
+            gridPos = { h = 8; w = 6; x = 12; y = 6; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = {
               color.mode = "thresholds";
@@ -254,7 +287,7 @@ in
           {
             type = "stat";
             title = "Power Draw";
-            gridPos = { h = 8; w = 6; x = 18; y = 0; };
+            gridPos = { h = 8; w = 6; x = 18; y = 6; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = {
               color.mode = "palette-classic";
@@ -267,7 +300,7 @@ in
           {
             type = "timeseries";
             title = "Input/Output Voltage";
-            gridPos = { h = 8; w = 12; x = 0; y = 8; };
+            gridPos = { h = 8; w = 12; x = 0; y = 14; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "volt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -279,7 +312,7 @@ in
           {
             type = "timeseries";
             title = "Battery Voltage";
-            gridPos = { h = 8; w = 12; x = 12; y = 8; };
+            gridPos = { h = 8; w = 12; x = 12; y = 14; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "volt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -292,7 +325,7 @@ in
           {
             type = "timeseries";
             title = "UPS Load Over Time";
-            gridPos = { h = 8; w = 12; x = 0; y = 16; };
+            gridPos = { h = 8; w = 12; x = 0; y = 22; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -301,7 +334,7 @@ in
           {
             type = "timeseries";
             title = "Power Consumption";
-            gridPos = { h = 8; w = 12; x = 12; y = 16; };
+            gridPos = { h = 8; w = 12; x = 12; y = 22; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "watt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -314,7 +347,7 @@ in
           {
             type = "timeseries";
             title = "Battery Charge Over Time";
-            gridPos = { h = 8; w = 12; x = 0; y = 24; };
+            gridPos = { h = 8; w = 12; x = 0; y = 30; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -323,7 +356,7 @@ in
           {
             type = "timeseries";
             title = "UPS Efficiency";
-            gridPos = { h = 8; w = 12; x = 12; y = 24; };
+            gridPos = { h = 8; w = 12; x = 12; y = 30; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
@@ -333,7 +366,7 @@ in
           {
             type = "timeseries";
             title = "Input/Output Frequency";
-            gridPos = { h = 8; w = 24; x = 0; y = 32; };
+            gridPos = { h = 8; w = 24; x = 0; y = 38; };
             datasource = { type = "prometheus"; uid = "Prometheus"; };
             fieldConfig.defaults = { unit = "hertz"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
