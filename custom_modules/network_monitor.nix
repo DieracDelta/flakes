@@ -146,7 +146,12 @@ in
 
       script = ''
         LOG_FILE="/var/log/network/systemd.csv"
+        PROM_FILE="/var/lib/node_exporter/textfile_collector/systemd.prom"
+        PROM_TMP="/var/lib/node_exporter/textfile_collector/systemd.prom.tmp"
         TIMESTAMP=$(date -Iseconds)
+
+        # Ensure directory exists
+        mkdir -p "$(dirname "$PROM_TMP")"
 
         if [ ! -f "$LOG_FILE" ]; then
           echo "timestamp,unit,ingress_bytes,egress_bytes" > "$LOG_FILE"
@@ -155,7 +160,15 @@ in
         ${pkgs.systemd}/bin/systemctl list-units --type=service --state=running --no-legend --no-pager \
         | awk '{print $1}' \
         | xargs ${pkgs.systemd}/bin/systemctl show -p Id -p IPIngressBytes -p IPEgressBytes \
-        | awk -v date="$TIMESTAMP" -F= '
+        | awk -v date="$TIMESTAMP" -v prom_file="$PROM_TMP" -F= '
+            BEGIN {
+              # Initialize Prometheus file with header
+              print "# HELP systemd_unit_ingress_bytes Total ingress bytes for systemd unit" > prom_file;
+              print "# TYPE systemd_unit_ingress_bytes counter" > prom_file;
+              print "# HELP systemd_unit_egress_bytes Total egress bytes for systemd unit" > prom_file;
+              print "# TYPE systemd_unit_egress_bytes counter" > prom_file;
+            }
+
             # 2. Reset variables for every new Unit ID to prevent leaking
             /^Id=/ {
               id=$2;
@@ -174,10 +187,18 @@ in
 
               # 4. Only log if we actually found valid traffic data
               if ((has_input || has_output) && (input > 0 || output > 0)) {
+                 # CSV Output (to stdout -> LOG_FILE)
                  printf "%s,%s,%s,%s\n", date, id, input, output
+
+                 # Prometheus Output (to prom_file)
+                 print "systemd_unit_ingress_bytes{unit=\"" id "\"} " input > prom_file;
+                 print "systemd_unit_egress_bytes{unit=\"" id "\"} " output > prom_file;
               }
             }
           ' >> "$LOG_FILE"
+
+          # Atomically update the prometheus file
+          mv "$PROM_TMP" "$PROM_FILE"
       '';
     };
 
@@ -185,7 +206,7 @@ in
     systemd.timers.systemd-net-logger = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnCalendar = "hourly";
+        OnCalendar = "*:0/1";
         Persistent = true; # Run immediately if we missed the last hour while off
         Unit = "systemd-net-logger.service";
       };

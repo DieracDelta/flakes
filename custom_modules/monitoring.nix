@@ -37,7 +37,9 @@ in
           "stat"
           "thermal_zone"
           "vmstat"
+          "textfile"
         ];
+        extraFlags = [ "--collector.textfile.directory=/var/lib/node_exporter/textfile_collector" ];
         port = 9100;
       };
       scrapeConfigs =
@@ -75,6 +77,10 @@ in
             }
           ]);
     };
+
+    systemd.tmpfiles.rules = [
+      "d /var/lib/node_exporter/textfile_collector 0777 root root -"
+    ];
 
     # ===================
     # Grafana
@@ -122,6 +128,15 @@ in
               disableDeletion = false;
               editable = true;
               options.path = "/etc/grafana-dashboards/system";
+            }
+            {
+              name = "network-dashboard";
+              orgId = 1;
+              folder = "Network";
+              type = "file";
+              disableDeletion = false;
+              editable = true;
+              options.path = "/etc/grafana-dashboards/network";
             }
           ]
           ++
@@ -236,8 +251,7 @@ in
             type = "state-timeline";
             title = "Power Outage History";
             description = "Shows when the UPS was on battery power (power outage) vs online (AC power)";
-            gridPos = { h = 6; w = 24; x = 0; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -269,7 +283,7 @@ in
             type = "gauge";
             title = "Battery Charge";
             gridPos = { h = 8; w = 6; x = 0; y = 6; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -290,7 +304,7 @@ in
             type = "gauge";
             title = "UPS Load";
             gridPos = { h = 8; w = 6; x = 6; y = 6; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -311,7 +325,7 @@ in
             type = "stat";
             title = "Runtime Remaining";
             gridPos = { h = 8; w = 6; x = 12; y = 6; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -330,7 +344,7 @@ in
             type = "stat";
             title = "Power Draw";
             gridPos = { h = 8; w = 6; x = 18; y = 6; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "palette-classic";
               unit = "watt";
@@ -343,7 +357,7 @@ in
             type = "timeseries";
             title = "Input/Output Voltage";
             gridPos = { h = 8; w = 12; x = 0; y = 14; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "volt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -355,7 +369,7 @@ in
             type = "timeseries";
             title = "Battery Voltage";
             gridPos = { h = 8; w = 12; x = 12; y = 14; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "volt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -368,7 +382,7 @@ in
             type = "timeseries";
             title = "UPS Load Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 22; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [{ expr = "network_ups_tools_ups_load"; legendFormat = "Load %"; refId = "A"; }];
@@ -377,7 +391,7 @@ in
             type = "timeseries";
             title = "Power Consumption";
             gridPos = { h = 8; w = 12; x = 12; y = 22; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "watt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -390,7 +404,7 @@ in
             type = "timeseries";
             title = "Battery Charge Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 30; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [{ expr = "network_ups_tools_battery_charge"; legendFormat = "Charge %"; refId = "A"; }];
@@ -399,7 +413,7 @@ in
             type = "timeseries";
             title = "UPS Efficiency";
             gridPos = { h = 8; w = 12; x = 12; y = 30; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [{ expr = "network_ups_tools_ups_efficiency"; legendFormat = "Efficiency %"; refId = "A"; }];
@@ -409,7 +423,7 @@ in
             type = "timeseries";
             title = "Input/Output Frequency";
             gridPos = { h = 8; w = 24; x = 0; y = 38; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "hertz"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -477,7 +491,7 @@ in
             type = "gauge";
             title = "GPU Temperature";
             gridPos = { h = 8; w = 5; x = 0; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -498,7 +512,7 @@ in
             type = "gauge";
             title = "GPU Utilization";
             gridPos = { h = 8; w = 5; x = 5; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -519,7 +533,7 @@ in
             type = "stat";
             title = "Power Draw";
             gridPos = { h = 8; w = 5; x = 10; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -539,7 +553,7 @@ in
             title = "Total Energy";
             description = "Total energy consumed by GPU since driver load";
             gridPos = { h = 8; w = 5; x = 15; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "palette-classic";
               unit = "kwatth";
@@ -554,7 +568,7 @@ in
             type = "stat";
             title = "VRAM Used";
             gridPos = { h = 8; w = 4; x = 20; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -574,7 +588,7 @@ in
             type = "timeseries";
             title = "GPU Utilization Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 8; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -586,7 +600,7 @@ in
             type = "timeseries";
             title = "Encoder/Decoder Utilization";
             gridPos = { h = 8; w = 12; x = 12; y = 8; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -599,7 +613,7 @@ in
             type = "timeseries";
             title = "Temperature Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 16; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "celsius"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -610,7 +624,7 @@ in
             type = "timeseries";
             title = "Power Consumption Over Time";
             gridPos = { h = 8; w = 12; x = 12; y = 16; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "watt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -622,7 +636,7 @@ in
             type = "timeseries";
             title = "VRAM Usage Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 24; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "decmbytes"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -635,7 +649,7 @@ in
             type = "timeseries";
             title = "Clock Speeds";
             gridPos = { h = 8; w = 12; x = 12; y = 24; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "clockmhz"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -649,7 +663,7 @@ in
             title = "Energy Consumption Rate";
             description = "Rate of energy consumption (derivative of total energy counter)";
             gridPos = { h = 8; w = 24; x = 0; y = 32; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "watt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -661,7 +675,7 @@ in
             type = "stat";
             title = "PCIe Replay Errors";
             gridPos = { h = 4; w = 6; x = 0; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -679,7 +693,7 @@ in
             type = "stat";
             title = "XID Errors";
             gridPos = { h = 4; w = 6; x = 6; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -696,7 +710,7 @@ in
             type = "stat";
             title = "Uncorrectable Row Remaps";
             gridPos = { h = 4; w = 6; x = 12; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -714,7 +728,7 @@ in
             type = "stat";
             title = "Correctable Row Remaps";
             gridPos = { h = 4; w = 6; x = 18; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -761,7 +775,7 @@ in
             type = "gauge";
             title = "CPU Usage";
             gridPos = { h = 8; w = 4; x = 0; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -781,9 +795,9 @@ in
           {
             type = "stat";
             title = "CPU Power";
-            description = "Total CPU package power from RAPL";
+            description = "Total CPU package power from Energy sensors";
             gridPos = { h = 8; w = 4; x = 4; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -796,13 +810,13 @@ in
               unit = "watt";
             };
             options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
-            targets = [{ expr = "sum(irate(node_rapl_package_joules_total[5m]))"; legendFormat = "Package Power"; refId = "A"; }];
+            targets = [{ expr = "rate(node_hwmon_energy_joule_total{chip=\"platform_zenergy_0\", sensor=\"energy17\"}[5m])"; legendFormat = "Package Power"; refId = "A"; }];
           }
           {
             type = "stat";
             title = "CPU Temp";
             gridPos = { h = 8; w = 4; x = 8; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -815,13 +829,13 @@ in
               unit = "celsius";
             };
             options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
-            targets = [{ expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }];
+            targets = [{ expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*|.*thermal_zone.*|.*asus_ec.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }];
           }
           {
             type = "gauge";
             title = "Memory Usage";
             gridPos = { h = 8; w = 4; x = 12; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -842,7 +856,7 @@ in
             type = "stat";
             title = "Memory Used";
             gridPos = { h = 8; w = 4; x = 16; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "palette-classic";
               unit = "bytes";
@@ -854,7 +868,7 @@ in
             type = "stat";
             title = "Load Average (1m)";
             gridPos = { h = 8; w = 4; x = 20; y = 0; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "absolute";
@@ -873,8 +887,8 @@ in
           {
             type = "timeseries";
             title = "CPU Usage Over Time";
-            gridPos = { h = 8; w = 12; x = 0; y = 8; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            gridPos = { h = 8; w = 8; x = 0; y = 8; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -887,34 +901,52 @@ in
           {
             type = "timeseries";
             title = "CPU Power Over Time";
-            gridPos = { h = 8; w = 12; x = 12; y = 8; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            gridPos = { h = 8; w = 8; x = 8; y = 8; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "watt"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
-              { expr = "sum(irate(node_rapl_package_joules_total[5m]))"; legendFormat = "Package Power"; refId = "A"; }
-              { expr = "sum(irate(node_rapl_core_joules_total[5m]))"; legendFormat = "Core Power"; refId = "B"; }
+              { expr = "rate(node_hwmon_energy_joule_total{chip=\"platform_zenergy_0\", sensor=\"energy17\"}[5m])"; legendFormat = "Package Power"; refId = "A"; }
+              { expr = "sum(rate(node_hwmon_energy_joule_total{chip=\"platform_zenergy_0\", sensor!=\"energy17\"}[5m]))"; legendFormat = "Core Power"; refId = "B"; }
             ];
           }
+          {
+            type = "timeseries";
+            title = "Cumulative Energy (kWh)";
+            gridPos = { h = 8; w = 8; x = 16; y = 8; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "kWh"; };
+            options = { 
+              legend = { 
+                displayMode = "table"; 
+                placement = "bottom"; 
+                calcs = ["diff"]; 
+              }; 
+            };
+            targets = [
+              { expr = "node_hwmon_energy_joule_total{chip=\"platform_zenergy_0\", sensor=\"energy17\"} / 3600000"; legendFormat = "Total Energy"; refId = "A"; }
+            ];
+          }
+
           # Row 3: Temperature and Frequency
           {
             type = "timeseries";
             title = "CPU Temperature Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 16; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "celsius"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
-              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }
-              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp3\"}"; legendFormat = "Tccd1"; refId = "B"; }
-              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp4\"}"; legendFormat = "Tccd2"; refId = "C"; }
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*|.*thermal_zone.*|.*asus_ec.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*|.*thermal_zone.*|.*asus_ec.*\", sensor=\"temp3\"}"; legendFormat = "Tccd1"; refId = "B"; }
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*|.*thermal_zone.*|.*asus_ec.*\", sensor=\"temp4\"}"; legendFormat = "Tccd2"; refId = "C"; }
             ];
           }
           {
             type = "timeseries";
             title = "CPU Frequency";
             gridPos = { h = 8; w = 12; x = 12; y = 16; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "hertz"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -928,7 +960,7 @@ in
             type = "timeseries";
             title = "Memory Usage Over Time";
             gridPos = { h = 8; w = 12; x = 0; y = 24; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "bytes"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -942,7 +974,7 @@ in
             type = "timeseries";
             title = "Swap Usage";
             gridPos = { h = 8; w = 12; x = 12; y = 24; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "bytes"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -955,7 +987,7 @@ in
             type = "timeseries";
             title = "Disk I/O Throughput";
             gridPos = { h = 8; w = 12; x = 0; y = 32; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "Bps"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -967,7 +999,7 @@ in
             type = "timeseries";
             title = "Disk I/O Operations";
             gridPos = { h = 8; w = 12; x = 12; y = 32; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "iops"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -980,7 +1012,7 @@ in
             type = "timeseries";
             title = "Network Traffic";
             gridPos = { h = 8; w = 12; x = 0; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "bps"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -992,7 +1024,7 @@ in
             type = "timeseries";
             title = "Network Errors & Drops";
             gridPos = { h = 8; w = 12; x = 12; y = 40; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "pps"; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
@@ -1007,7 +1039,7 @@ in
             type = "bargauge";
             title = "Filesystem Usage";
             gridPos = { h = 8; w = 24; x = 0; y = 48; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = {
               color.mode = "thresholds";
               thresholds.mode = "percentage";
@@ -1037,35 +1069,33 @@ in
             type = "timeseries";
             title = "CPU Pressure";
             gridPos = { h = 6; w = 8; x = 0; y = 56; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
-              { expr = "irate(node_pressure_cpu_waiting_seconds_total[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
+              { expr = "irate(node_pressure_cpu_waiting_seconds_total[5m]) * 100"; legendFormat = "Wait"; refId = "A"; }
             ];
           }
           {
             type = "timeseries";
             title = "Memory Pressure";
             gridPos = { h = 6; w = 8; x = 8; y = 56; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
-              { expr = "irate(node_pressure_memory_waiting_seconds_total{type=\"some\"}[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
-              { expr = "irate(node_pressure_memory_waiting_seconds_total{type=\"full\"}[5m]) * 100"; legendFormat = "Full"; refId = "B"; }
+              { expr = "irate(node_pressure_memory_waiting_seconds_total[5m]) * 100"; legendFormat = "Wait"; refId = "A"; }
             ];
           }
           {
             type = "timeseries";
             title = "I/O Pressure";
             gridPos = { h = 6; w = 8; x = 16; y = 56; };
-            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            datasource = "Prometheus";
             fieldConfig.defaults = { unit = "percent"; min = 0; };
             options = { legend = { displayMode = "list"; placement = "bottom"; }; };
             targets = [
-              { expr = "irate(node_pressure_io_waiting_seconds_total{type=\"some\"}[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
-              { expr = "irate(node_pressure_io_waiting_seconds_total{type=\"full\"}[5m]) * 100"; legendFormat = "Full"; refId = "B"; }
+              { expr = "irate(node_pressure_io_waiting_seconds_total[5m]) * 100"; legendFormat = "Wait"; refId = "A"; }
             ];
           }
         ];
@@ -1078,6 +1108,120 @@ in
         timezone = "browser";
         title = "System Overview";
         uid = "system-overview";
+        version = 1;
+      };
+      user = "grafana";
+      group = "grafana";
+      mode = "0644";
+    };
+
+    # ===================
+    # Network Dashboard
+    # ===================
+    environment.etc."grafana-dashboards/network/network-dashboard.json" = {
+      text = builtins.toJSON {
+        annotations.list = [];
+        editable = true;
+        fiscalYearStartMonth = 0;
+        graphTooltip = 0;
+        links = [];
+        panels = [
+          # Row 1: Systemd Services
+          {
+            type = "timeseries";
+            title = "Top Systemd Services (Download)";
+            gridPos = { h = 10; w = 12; x = 0; y = 0; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "Bps"; };
+            options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
+            targets = [
+              { expr = "topk(10, irate(systemd_unit_ingress_bytes[5m]))"; legendFormat = "{{unit}}"; refId = "A"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Top Systemd Services (Upload)";
+            gridPos = { h = 10; w = 12; x = 12; y = 0; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "Bps"; };
+            options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
+            targets = [
+              { expr = "topk(10, irate(systemd_unit_egress_bytes[5m]))"; legendFormat = "{{unit}}"; refId = "A"; }
+            ];
+          }
+          # Row 2: Nethogs Processes
+          {
+            type = "timeseries";
+            title = "Top Processes (Download)";
+            gridPos = { h = 10; w = 12; x = 0; y = 10; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "Bps"; };
+            options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
+            targets = [
+              { expr = "topk(10, rate(nethogs_process_download_bytes[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Top Processes (Upload)";
+            gridPos = { h = 10; w = 12; x = 12; y = 10; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "Bps"; };
+            options = { legend = { displayMode = "table"; placement = "right"; calcs = ["mean" "max" "last"]; }; };
+            targets = [
+              { expr = "topk(10, rate(nethogs_process_upload_bytes[5m]))"; legendFormat = "{{process}} ({{user}})"; refId = "A"; }
+            ];
+          }
+          # Row 3: Cumulative Usage
+          {
+            type = "timeseries";
+            title = "Total System Data Usage (Cumulative)";
+            gridPos = { h = 10; w = 12; x = 0; y = 20; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "decbytes"; };
+            options = { 
+              legend = { 
+                displayMode = "table"; 
+                placement = "bottom"; 
+                calcs = ["diff"]; 
+              }; 
+            };
+            targets = [
+              { expr = "sum(node_network_receive_bytes_total{device!~\"lo|veth.*|br.*|docker.*\"})"; legendFormat = "Total Download"; refId = "A"; }
+              { expr = "sum(node_network_transmit_bytes_total{device!~\"lo|veth.*|br.*|docker.*\"})"; legendFormat = "Total Upload"; refId = "B"; }
+            ];
+          }
+          {
+            type = "bargauge";
+            title = "Top Processes by Data Usage (In Selected Range)";
+            description = "Shows the total data (Download + Upload) used by the top processes within the currently selected time window.";
+            gridPos = { h = 10; w = 12; x = 12; y = 20; };
+            datasource = "Prometheus";
+            fieldConfig.defaults = { unit = "decbytes"; };
+            options = {
+              displayMode = "gradient";
+              orientation = "horizontal";
+              reduceOptions = { calcs = ["max"]; }; # Increase returns a single value per series essentially
+            };
+            targets = [
+              { 
+                # Sum of download + upload per process
+                expr = "topk(10, increase(nethogs_process_download_bytes[$__range]) + increase(nethogs_process_upload_bytes[$__range]))"; 
+                legendFormat = "{{process}} ({{user}})"; 
+                refId = "A"; 
+              }
+            ];
+          }
+        ];
+        refresh = "30s";
+        schemaVersion = 39;
+        tags = ["network" "systemd" "nethogs"];
+        templating.list = [];
+        time = { from = "now-1h"; to = "now"; };
+        timepicker = {};
+        timezone = "browser";
+        title = "Network Traffic Breakdown";
+        uid = "network-breakdown";
         version = 1;
       };
       user = "grafana";
