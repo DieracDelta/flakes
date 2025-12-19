@@ -97,20 +97,26 @@
                   unset doInstallCheck
                 '';
                 # Prepend disableChecks to a phase, handling string, list, or missing cases
-                prependToPhase = phase:
-                  if builtins.isList phase then [ disableChecks ] ++ phase
-                  else if builtins.isString phase then disableChecks + phase
-                  else disableChecks;
+                prependToPhase =
+                  phase:
+                  if builtins.isList phase then
+                    [ disableChecks ] ++ phase
+                  else if builtins.isString phase then
+                    disableChecks + phase
+                  else
+                    disableChecks;
                 addDisablePhase =
                   attrs:
                   let
                     existingPrePhases = attrs.prePhases or [ ];
                   in
-                  attrs // {
+                  attrs
+                  // {
                     prePhases =
-                      if builtins.elem "disableChecksPhase" existingPrePhases
-                      then existingPrePhases
-                      else existingPrePhases ++ [ "disableChecksPhase" ];
+                      if builtins.elem "disableChecksPhase" existingPrePhases then
+                        existingPrePhases
+                      else
+                        existingPrePhases ++ [ "disableChecksPhase" ];
                     disableChecksPhase = disableChecks;
                     # Also unset in preCheck and preInstallCheck for builders that set these later
                     preCheck = prependToPhase (attrs.preCheck or null);
@@ -228,24 +234,29 @@
               final.asciidoctor
               final.gzip
             ];
-            buildInputs = [ final.pam ];
 
-            buildPhase = ''
-              runHook preBuild
-              $CC -fPIC -Wall -g -O2 -c src/pam_insults.c -o src/pam_insults.o
-              $CC -shared -o pam_insults.so src/pam_insults.o
-              runHook postBuild
+            buildInputs = [
+              final.pam
+              final.gettext
+            ];
+
+            postPatch = ''
+              substituteInPlace Makefile \
+                --replace-fail "sudo " "" \
+                --replace-fail "mandb" ""
             '';
 
-            installPhase = ''
-              runHook preInstall
-              mkdir -p $out/lib/security
-              cp pam_insults.so $out/lib/security/
-              runHook postInstall
+            makeFlags = [
+              "PAM_MODULES_DIR=$(out)/lib/security"
+              "MAN_DATABASE=$(out)/share/man/man8"
+            ];
+
+            preInstall = ''
+              mkdir -p $out/lib/security $out/share/man/man8
             '';
 
             meta = with final.lib; {
-              description = "PAM module to print an insult before denying access";
+              description = "PAM module that will print an insult to stderr";
               homepage = "https://github.com/cgoesche/pam-insults";
               license = licenses.gpl3Plus;
               platforms = platforms.linux;
@@ -277,14 +288,16 @@
             };
           });
           opencv = prev.opencv.overrideAttrs (old: {
-            postUnpack = builtins.replaceStrings
-              [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-              [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-              old.postUnpack;
-            preConfigure = builtins.replaceStrings
-              [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-              [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-              old.preConfigure;
+            postUnpack =
+              builtins.replaceStrings
+                [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                old.postUnpack;
+            preConfigure =
+              builtins.replaceStrings
+                [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                old.preConfigure;
           });
           # TODO fix this -- it's very broken and IDK why
           influxdb2 = inputs.nixpkgs-master.legacyPackages.x86_64-linux.influxdb2;
@@ -318,9 +331,10 @@
                 args
                 // {
                   prePhases =
-                    if builtins.elem "disableChecksPhase" existingPrePhases
-                    then existingPrePhases
-                    else existingPrePhases ++ [ "disableChecksPhase" ];
+                    if builtins.elem "disableChecksPhase" existingPrePhases then
+                      existingPrePhases
+                    else
+                      existingPrePhases ++ [ "disableChecksPhase" ];
                   disableChecksPhase = ''
                     unset doCheck
                     unset doInstallCheck
@@ -412,14 +426,16 @@
               });
               # Fix opencv source directory name issue (nixpkgs uses "source" but actual name differs)
               opencv4 = python-prev.opencv4.overrideAttrs (old: {
-                postUnpack = builtins.replaceStrings
-                  [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-                  [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-                  old.postUnpack;
-                preConfigure = builtins.replaceStrings
-                  [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-                  [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-                  old.preConfigure;
+                postUnpack =
+                  builtins.replaceStrings
+                    [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                    [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                    old.postUnpack;
+                preConfigure =
+                  builtins.replaceStrings
+                    [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
+                    [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
+                    old.preConfigure;
               });
             })
           ];
