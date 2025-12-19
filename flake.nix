@@ -219,6 +219,16 @@
           lib.genAttrs validZigSets (name: customizeZig name prev.${name})
         )
         (final: prev: {
+          prometheus-node-exporter = prev.prometheus-node-exporter.overrideAttrs (oldAttrs: {
+            src = prev.fetchFromGitHub {
+              owner = "prometheus";
+              repo = "node_exporter";
+              tag = "v${oldAttrs.version}";
+              hash = "sha256-UaybbRmcvifXNwTNXg7mIYN9JnonSxwG62KfvU5auIE=";
+            };
+
+          });
+
           pam-insults = final.stdenv.mkDerivation {
             pname = "pam-insults";
             version = "unstable-2025-12-19";

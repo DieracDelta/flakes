@@ -21,7 +21,36 @@ in
     # ===================
     services.prometheus = {
       enable = true;
+      exporters.node = {
+        enable = true;
+        enabledCollectors = [
+          "cpu"
+          "cpufreq"
+          "diskstats"
+          "filesystem"
+          "hwmon"
+          "loadavg"
+          "meminfo"
+          "netdev"
+          "pressure"
+          "rapl"
+          "stat"
+          "thermal_zone"
+          "vmstat"
+        ];
+        port = 9100;
+      };
       scrapeConfigs =
+        # Node exporter scrape config (always enabled)
+        [
+          {
+            job_name = "node";
+            static_configs = [
+              { targets = [ "127.0.0.1:9100" ]; }
+            ];
+          }
+        ]
+        ++
         # NUT scrape config
         (lib.optionals cfg.enableUps [
           {
@@ -83,6 +112,19 @@ in
       provision.dashboards.settings = {
         apiVersion = 1;
         providers =
+          # System dashboard (always enabled)
+          [
+            {
+              name = "system-dashboard";
+              orgId = 1;
+              folder = "System";
+              type = "file";
+              disableDeletion = false;
+              editable = true;
+              options.path = "/etc/grafana-dashboards/system";
+            }
+          ]
+          ++
           # NUT dashboard
           (lib.optionals cfg.enableUps [
             {
@@ -421,18 +463,623 @@ in
       };
     };
 
-    # GPU dashboard - NVIDIA DCGM Exporter Dashboard (ID 12239)
+    # GPU dashboard - Custom NVIDIA RTX 4090 Dashboard
     environment.etc."grafana-dashboards/gpu/dcgm-dashboard.json" = lib.mkIf cfg.enableGpu {
-      text =
-        let
-          raw = builtins.fetchurl {
-            url = "https://grafana.com/api/dashboards/12239/revisions/2/download";
-            sha256 = "1zjd5qgnhz1g9lyvxri3jgibhqgm3ps9a80k85k7fabji27g2r3r";
-          };
-          # Replace datasource placeholder with our Prometheus datasource
-          fixed = builtins.replaceStrings [ "\${DS_PROMETHEUS}" ] [ "Prometheus" ] (builtins.readFile raw);
-        in
-        fixed;
+      text = builtins.toJSON {
+        annotations.list = [];
+        editable = true;
+        fiscalYearStartMonth = 0;
+        graphTooltip = 0;
+        links = [];
+        panels = [
+          # Row 1: Status gauges
+          {
+            type = "gauge";
+            title = "GPU Temperature";
+            gridPos = { h = 8; w = 5; x = 0; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 60; }
+                { color = "orange"; value = 75; }
+                { color = "red"; value = 85; }
+              ];
+              unit = "celsius";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "DCGM_FI_DEV_GPU_TEMP"; refId = "A"; }];
+          }
+          {
+            type = "gauge";
+            title = "GPU Utilization";
+            gridPos = { h = 8; w = 5; x = 5; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 70; }
+                { color = "orange"; value = 85; }
+                { color = "red"; value = 95; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "DCGM_FI_DEV_GPU_UTIL"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Power Draw";
+            gridPos = { h = 8; w = 5; x = 10; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 200; }
+                { color = "orange"; value = 350; }
+                { color = "red"; value = 400; }
+              ];
+              unit = "watt";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_POWER_USAGE"; legendFormat = "Power"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Total Energy";
+            description = "Total energy consumed by GPU since driver load";
+            gridPos = { h = 8; w = 5; x = 15; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "palette-classic";
+              unit = "kwatth";
+              decimals = 2;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            # DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION is in millijoules, convert to kWh
+            # 1 kWh = 3,600,000,000 mJ
+            targets = [{ expr = "DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION / 3600000000"; legendFormat = "Total"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "VRAM Used";
+            gridPos = { h = 8; w = 4; x = 20; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 16000; }
+                { color = "orange"; value = 20000; }
+                { color = "red"; value = 23000; }
+              ];
+              unit = "decmbytes";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_FB_USED"; legendFormat = "Used"; refId = "A"; }];
+          }
+          # Row 2: Utilization over time
+          {
+            type = "timeseries";
+            title = "GPU Utilization Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_GPU_UTIL"; legendFormat = "GPU Core"; refId = "A"; }
+              { expr = "DCGM_FI_DEV_MEM_COPY_UTIL"; legendFormat = "Memory Copy"; refId = "B"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Encoder/Decoder Utilization";
+            gridPos = { h = 8; w = 12; x = 12; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_ENC_UTIL"; legendFormat = "Encoder (NVENC)"; refId = "A"; }
+              { expr = "DCGM_FI_DEV_DEC_UTIL"; legendFormat = "Decoder (NVDEC)"; refId = "B"; }
+            ];
+          }
+          # Row 3: Temperature and Power
+          {
+            type = "timeseries";
+            title = "Temperature Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "celsius"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_GPU_TEMP"; legendFormat = "GPU"; refId = "A"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Power Consumption Over Time";
+            gridPos = { h = 8; w = 12; x = 12; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "watt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_POWER_USAGE"; legendFormat = "Power Draw"; refId = "A"; }
+            ];
+          }
+          # Row 4: Memory
+          {
+            type = "timeseries";
+            title = "VRAM Usage Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "decmbytes"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_FB_USED"; legendFormat = "Used"; refId = "A"; }
+              { expr = "DCGM_FI_DEV_FB_FREE"; legendFormat = "Free"; refId = "B"; }
+              { expr = "DCGM_FI_DEV_FB_RESERVED"; legendFormat = "Reserved"; refId = "C"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Clock Speeds";
+            gridPos = { h = 8; w = 12; x = 12; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "clockmhz"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "DCGM_FI_DEV_SM_CLOCK"; legendFormat = "SM Clock"; refId = "A"; }
+              { expr = "DCGM_FI_DEV_MEM_CLOCK"; legendFormat = "Memory Clock"; refId = "B"; }
+            ];
+          }
+          # Row 5: Energy consumption (counter)
+          {
+            type = "timeseries";
+            title = "Energy Consumption Rate";
+            description = "Rate of energy consumption (derivative of total energy counter)";
+            gridPos = { h = 8; w = 24; x = 0; y = 32; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "watt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "rate(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION[5m]) / 1000"; legendFormat = "Energy Rate (W)"; refId = "A"; }
+            ];
+          }
+          # Row 6: PCIe and Errors
+          {
+            type = "stat";
+            title = "PCIe Replay Errors";
+            gridPos = { h = 4; w = 6; x = 0; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 1; }
+                { color = "red"; value = 100; }
+              ];
+              unit = "none";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_PCIE_REPLAY_COUNTER"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "XID Errors";
+            gridPos = { h = 4; w = 6; x = 6; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "red"; value = 1; }
+              ];
+              unit = "none";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_XID_ERRORS"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Uncorrectable Row Remaps";
+            gridPos = { h = 4; w = 6; x = 12; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 1; }
+                { color = "red"; value = 5; }
+              ];
+              unit = "none";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Correctable Row Remaps";
+            gridPos = { h = 4; w = 6; x = 18; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 1; }
+                { color = "orange"; value = 10; }
+              ];
+              unit = "none";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS"; refId = "A"; }];
+          }
+        ];
+        refresh = "30s";
+        schemaVersion = 39;
+        tags = ["gpu" "nvidia" "dcgm" "rtx4090"];
+        templating.list = [];
+        time = { from = "now-6h"; to = "now"; };
+        timepicker = {};
+        timezone = "browser";
+        title = "NVIDIA RTX 4090";
+        uid = "nvidia-rtx-4090";
+        version = 1;
+      };
+      user = "grafana";
+      group = "grafana";
+      mode = "0644";
+    };
+
+    # ===================
+    # System Dashboard
+    # ===================
+    environment.etc."grafana-dashboards/system/system-dashboard.json" = {
+      text = builtins.toJSON {
+        annotations.list = [];
+        editable = true;
+        fiscalYearStartMonth = 0;
+        graphTooltip = 0;
+        links = [];
+        panels = [
+          # Row 1: CPU Overview
+          {
+            type = "gauge";
+            title = "CPU Usage";
+            gridPos = { h = 8; w = 4; x = 0; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 50; }
+                { color = "orange"; value = 75; }
+                { color = "red"; value = 90; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "CPU Power";
+            description = "Total CPU package power from RAPL";
+            gridPos = { h = 8; w = 4; x = 4; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 65; }
+                { color = "orange"; value = 105; }
+                { color = "red"; value = 142; }
+              ];
+              unit = "watt";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "sum(irate(node_rapl_package_joules_total[5m]))"; legendFormat = "Package Power"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "CPU Temp";
+            gridPos = { h = 8; w = 4; x = 8; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 60; }
+                { color = "orange"; value = 75; }
+                { color = "red"; value = 85; }
+              ];
+              unit = "celsius";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }];
+          }
+          {
+            type = "gauge";
+            title = "Memory Usage";
+            gridPos = { h = 8; w = 4; x = 12; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 60; }
+                { color = "orange"; value = 80; }
+                { color = "red"; value = 90; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; };
+            targets = [{ expr = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Memory Used";
+            gridPos = { h = 8; w = 4; x = 16; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "palette-classic";
+              unit = "bytes";
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes"; legendFormat = "Used"; refId = "A"; }];
+          }
+          {
+            type = "stat";
+            title = "Load Average (1m)";
+            gridPos = { h = 8; w = 4; x = 20; y = 0; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "absolute";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 8; }
+                { color = "orange"; value = 16; }
+                { color = "red"; value = 24; }
+              ];
+              decimals = 2;
+            };
+            options = { reduceOptions = { calcs = ["lastNotNull"]; }; colorMode = "value"; };
+            targets = [{ expr = "node_load1"; refId = "A"; }];
+          }
+          # Row 2: CPU Usage and Power Over Time
+          {
+            type = "timeseries";
+            title = "CPU Usage Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; max = 100; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"; legendFormat = "Total"; refId = "A"; }
+              { expr = "avg(irate(node_cpu_seconds_total{mode=\"user\"}[5m])) * 100"; legendFormat = "User"; refId = "B"; }
+              { expr = "avg(irate(node_cpu_seconds_total{mode=\"system\"}[5m])) * 100"; legendFormat = "System"; refId = "C"; }
+              { expr = "avg(irate(node_cpu_seconds_total{mode=\"iowait\"}[5m])) * 100"; legendFormat = "IOWait"; refId = "D"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "CPU Power Over Time";
+            gridPos = { h = 8; w = 12; x = 12; y = 8; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "watt"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "sum(irate(node_rapl_package_joules_total[5m]))"; legendFormat = "Package Power"; refId = "A"; }
+              { expr = "sum(irate(node_rapl_core_joules_total[5m]))"; legendFormat = "Core Power"; refId = "B"; }
+            ];
+          }
+          # Row 3: Temperature and Frequency
+          {
+            type = "timeseries";
+            title = "CPU Temperature Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "celsius"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp1\"}"; legendFormat = "Tctl"; refId = "A"; }
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp3\"}"; legendFormat = "Tccd1"; refId = "B"; }
+              { expr = "node_hwmon_temp_celsius{chip=~\".*k10temp.*\", sensor=\"temp4\"}"; legendFormat = "Tccd2"; refId = "C"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "CPU Frequency";
+            gridPos = { h = 8; w = 12; x = 12; y = 16; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "hertz"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "avg(node_cpu_scaling_frequency_hertz)"; legendFormat = "Average"; refId = "A"; }
+              { expr = "max(node_cpu_scaling_frequency_hertz)"; legendFormat = "Max"; refId = "B"; }
+              { expr = "min(node_cpu_scaling_frequency_hertz)"; legendFormat = "Min"; refId = "C"; }
+            ];
+          }
+          # Row 4: Memory
+          {
+            type = "timeseries";
+            title = "Memory Usage Over Time";
+            gridPos = { h = 8; w = 12; x = 0; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "bytes"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes"; legendFormat = "Used"; refId = "A"; }
+              { expr = "node_memory_Cached_bytes"; legendFormat = "Cached"; refId = "B"; }
+              { expr = "node_memory_Buffers_bytes"; legendFormat = "Buffers"; refId = "C"; }
+              { expr = "node_memory_MemFree_bytes"; legendFormat = "Free"; refId = "D"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Swap Usage";
+            gridPos = { h = 8; w = 12; x = 12; y = 24; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "bytes"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes"; legendFormat = "Swap Used"; refId = "A"; }
+              { expr = "node_memory_SwapTotal_bytes"; legendFormat = "Swap Total"; refId = "B"; }
+            ];
+          }
+          # Row 5: Disk I/O
+          {
+            type = "timeseries";
+            title = "Disk I/O Throughput";
+            gridPos = { h = 8; w = 12; x = 0; y = 32; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "Bps"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "sum(irate(node_disk_read_bytes_total{device=~\"nvme.*|sd.*\"}[5m]))"; legendFormat = "Read"; refId = "A"; }
+              { expr = "sum(irate(node_disk_written_bytes_total{device=~\"nvme.*|sd.*\"}[5m]))"; legendFormat = "Write"; refId = "B"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Disk I/O Operations";
+            gridPos = { h = 8; w = 12; x = 12; y = 32; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "iops"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "sum(irate(node_disk_reads_completed_total{device=~\"nvme.*|sd.*\"}[5m]))"; legendFormat = "Reads"; refId = "A"; }
+              { expr = "sum(irate(node_disk_writes_completed_total{device=~\"nvme.*|sd.*\"}[5m]))"; legendFormat = "Writes"; refId = "B"; }
+            ];
+          }
+          # Row 6: Network
+          {
+            type = "timeseries";
+            title = "Network Traffic";
+            gridPos = { h = 8; w = 12; x = 0; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "bps"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "sum(irate(node_network_receive_bytes_total{device!~\"lo|veth.*|br.*|docker.*\"}[5m])) * 8"; legendFormat = "Receive"; refId = "A"; }
+              { expr = "sum(irate(node_network_transmit_bytes_total{device!~\"lo|veth.*|br.*|docker.*\"}[5m])) * 8"; legendFormat = "Transmit"; refId = "B"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Network Errors & Drops";
+            gridPos = { h = 8; w = 12; x = 12; y = 40; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "pps"; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "sum(irate(node_network_receive_drop_total{device!~\"lo|veth.*\"}[5m]))"; legendFormat = "RX Drops"; refId = "A"; }
+              { expr = "sum(irate(node_network_transmit_drop_total{device!~\"lo|veth.*\"}[5m]))"; legendFormat = "TX Drops"; refId = "B"; }
+              { expr = "sum(irate(node_network_receive_errs_total{device!~\"lo|veth.*\"}[5m]))"; legendFormat = "RX Errors"; refId = "C"; }
+              { expr = "sum(irate(node_network_transmit_errs_total{device!~\"lo|veth.*\"}[5m]))"; legendFormat = "TX Errors"; refId = "D"; }
+            ];
+          }
+          # Row 7: Filesystem
+          {
+            type = "bargauge";
+            title = "Filesystem Usage";
+            gridPos = { h = 8; w = 24; x = 0; y = 48; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = {
+              color.mode = "thresholds";
+              thresholds.mode = "percentage";
+              thresholds.steps = [
+                { color = "green"; value = null; }
+                { color = "yellow"; value = 70; }
+                { color = "orange"; value = 85; }
+                { color = "red"; value = 95; }
+              ];
+              unit = "percent";
+              min = 0;
+              max = 100;
+            };
+            options = {
+              displayMode = "lcd";
+              orientation = "horizontal";
+              reduceOptions = { calcs = ["lastNotNull"]; };
+            };
+            targets = [{
+              expr = "(1 - (node_filesystem_avail_bytes{fstype=~\"ext4|xfs|btrfs|zfs\",mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes{fstype=~\"ext4|xfs|btrfs|zfs\",mountpoint!~\"/boot.*\"})) * 100";
+              legendFormat = "{{mountpoint}}";
+              refId = "A";
+            }];
+          }
+          # Row 8: System Pressure (PSI)
+          {
+            type = "timeseries";
+            title = "CPU Pressure";
+            gridPos = { h = 6; w = 8; x = 0; y = 56; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "irate(node_pressure_cpu_waiting_seconds_total[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "Memory Pressure";
+            gridPos = { h = 6; w = 8; x = 8; y = 56; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "irate(node_pressure_memory_waiting_seconds_total{type=\"some\"}[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
+              { expr = "irate(node_pressure_memory_waiting_seconds_total{type=\"full\"}[5m]) * 100"; legendFormat = "Full"; refId = "B"; }
+            ];
+          }
+          {
+            type = "timeseries";
+            title = "I/O Pressure";
+            gridPos = { h = 6; w = 8; x = 16; y = 56; };
+            datasource = { type = "prometheus"; uid = "Prometheus"; };
+            fieldConfig.defaults = { unit = "percent"; min = 0; };
+            options = { legend = { displayMode = "list"; placement = "bottom"; }; };
+            targets = [
+              { expr = "irate(node_pressure_io_waiting_seconds_total{type=\"some\"}[5m]) * 100"; legendFormat = "Some"; refId = "A"; }
+              { expr = "irate(node_pressure_io_waiting_seconds_total{type=\"full\"}[5m]) * 100"; legendFormat = "Full"; refId = "B"; }
+            ];
+          }
+        ];
+        refresh = "30s";
+        schemaVersion = 39;
+        tags = ["system" "node" "cpu" "memory" "disk" "network"];
+        templating.list = [];
+        time = { from = "now-6h"; to = "now"; };
+        timepicker = {};
+        timezone = "browser";
+        title = "System Overview";
+        uid = "system-overview";
+        version = 1;
+      };
       user = "grafana";
       group = "grafana";
       mode = "0644";
