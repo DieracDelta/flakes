@@ -325,14 +325,9 @@
           # Also install the default counters CSV files
           prometheus-dcgm-exporter = prev.prometheus-dcgm-exporter.overrideAttrs (oldAttrs: {
             patches = (oldAttrs.patches or [ ]) ++ [ ./patches/dcgm-exporter-fix-ldconfig.patch ];
-            nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ final.makeWrapper ];
             postInstall = (oldAttrs.postInstall or "") + ''
               mkdir -p $out/etc
               cp $src/etc/*.csv $out/etc/
-            '';
-            postFixup = (oldAttrs.postFixup or "") + ''
-              wrapProgram "$out/bin/dcgm-exporter" \
-                --prefix PATH : "${final.glibc.bin}/bin"
             '';
           });
         })
