@@ -89,17 +89,26 @@ in
                       attrs:
                       let
                         extraCompile = "-pipe";
-                        # Check if this is the package that crashes with Linux linker flags (MinGW build)
-                        isHeroicIntegration = (attrs.pname or "") == "heroic-epic-integration" || (builtins.match ".*heroic-epic-integration.*" (attrs.name or "") != null);
-                        isGalaxyDummyService = (attrs.pname or "") == "galaxy-dummy-service" || (builtins.match ".*galaxy-dummy-service.*" (attrs.name or "") != null);
+                        # (MinGW build)
+                        isHeroicIntegration =
+                          (attrs.pname or "") == "heroic-epic-integration"
+                          || (builtins.match ".*heroic-epic-integration.*" (attrs.name or "") != null);
+                        isGalaxyDummyService =
+                          (attrs.pname or "") == "galaxy-dummy-service"
+                          || (builtins.match ".*galaxy-dummy-service.*" (attrs.name or "") != null);
                         isGhc = (attrs.pname or "") == "ghc" || (builtins.match ".*ghc.*" (attrs.name or "") != null);
-                        isSystemd = (attrs.pname or "") == "systemd" || (builtins.match ".*systemd.*" (attrs.name or "") != null);
+                        isSystemd =
+                          (attrs.pname or "") == "systemd" || (builtins.match ".*systemd.*" (attrs.name or "") != null);
                         isOVMF = (attrs.pname or "") == "OVMF" || (builtins.match ".*OVMF.*" (attrs.name or "") != null);
-                        
+
                         shouldSkipRelocs = isHeroicIntegration || isGalaxyDummyService || isGhc || isSystemd || isOVMF;
-                        
-                        extraLink = 
-                          (if (stdenvSelf.hostPlatform.isLinux or false) && !shouldSkipRelocs then "-Wl,-z,pack-relative-relocs" else "");
+
+                        extraLink = (
+                          if (stdenvSelf.hostPlatform.isLinux or false) && !shouldSkipRelocs then
+                            "-Wl,-z,pack-relative-relocs"
+                          else
+                            ""
+                        );
 
                         attrsWithCompileFlags = applyFlags attrs "NIX_CFLAGS_COMPILE" extraCompile;
                       in

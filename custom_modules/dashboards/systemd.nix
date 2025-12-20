@@ -98,7 +98,7 @@
       };
       targets = [
         {
-          expr = "sum(increase(systemd_unit_restarts_total[1h]))";
+          expr = "sum(increase(systemd_service_restart_total[1h])) or vector(0)";
           refId = "A";
         }
       ];
@@ -106,6 +106,7 @@
     {
       type = "stat";
       title = "Total Units";
+      description = "Total number of systemd units (services, mounts, targets, timers, etc.)";
       gridPos = {
         h = 6;
         w = 6;
@@ -121,15 +122,16 @@
       };
       targets = [
         {
-          expr = "sum(systemd_unit_info)";
+          expr = "count(count by (name) (systemd_unit_state))";
           refId = "A";
         }
       ];
     }
     # Row 2: Failed Units List
     {
-      type = "table";
+      type = "stat";
       title = "Failed Units (Current)";
+      description = "List of currently failed systemd units. Empty when all units are healthy.";
       gridPos = {
         h = 8;
         w = 12;
@@ -139,22 +141,35 @@
 
       targets = [
         {
-          expr = "systemd_unit_state{state=\"failed\"} > 0";
+          expr = "systemd_unit_state{state=\"failed\"} == 1";
           legendFormat = "{{name}}";
           refId = "A";
         }
       ];
       fieldConfig.defaults = {
-        custom = {
-          filterable = true;
+        color = {
+          mode = "fixed";
+          fixedColor = "red";
         };
+        noValue = "None - All units healthy";
+      };
+      options = {
+        reduceOptions = {
+          values = true;
+          calcs = [ ];
+          fields = "/^name$/";
+        };
+        colorMode = "background";
+        textMode = "name";
+        justifyMode = "auto";
+        graphMode = "none";
       };
     }
     # Row 3: Restart Loops
     {
       type = "bargauge";
       title = "Top Restarts (Last 1h)";
-      description = "Units restarting frequently indicating crash loops.";
+      description = "Units restarting frequently indicating crash loops. Shows top 10 services by restart count.";
       gridPos = {
         h = 8;
         w = 12;
@@ -164,26 +179,32 @@
 
       fieldConfig.defaults = {
         unit = "short";
+        min = 0;
+        noValue = "No restarts";
       };
       options = {
         displayMode = "gradient";
         orientation = "horizontal";
         reduceOptions = {
-          calcs = [ "max" ];
+          calcs = [ "lastNotNull" ];
         };
+        minVizHeight = 10;
+        minVizWidth = 0;
       };
       targets = [
         {
-          expr = "topk(10, increase(systemd_unit_restarts_total[1h]) > 0)";
+          expr = "topk(10, increase(systemd_service_restart_total[1h]))";
           legendFormat = "{{name}}";
           refId = "A";
+          instant = true;
         }
       ];
     }
     # Row 4: Activation Activity
     {
       type = "timeseries";
-      title = "Unit Activation/Deactivation Rate";
+      title = "Unit State Transitions";
+      description = "Number of units transitioning into active or inactive states over time";
       gridPos = {
         h = 8;
         w = 24;
@@ -191,15 +212,18 @@
         y = 14;
       };
 
+      fieldConfig.defaults = {
+        unit = "short";
+      };
       targets = [
         {
-          expr = "rate(systemd_unit_state{state=\"activating\"}[5m])";
-          legendFormat = "Activating";
+          expr = "sum(changes(systemd_unit_active_enter_time_seconds[5m]))";
+          legendFormat = "Activations";
           refId = "A";
         }
         {
-          expr = "rate(systemd_unit_state{state=\"deactivating\"}[5m])";
-          legendFormat = "Deactivating";
+          expr = "sum(changes(systemd_unit_inactive_enter_time_seconds[5m]))";
+          legendFormat = "Deactivations";
           refId = "B";
         }
       ];

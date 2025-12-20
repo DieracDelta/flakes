@@ -15,6 +15,7 @@ let
     system = import ./dashboards/system.nix;
     systemd = import ./dashboards/systemd.nix;
     network = import ./dashboards/network.nix;
+    smart = import ./dashboards/smart.nix;
   };
 in
 {
@@ -55,6 +56,13 @@ in
         enable = true;
         port = 9558;
         listenAddress = "0.0.0.0";
+        extraFlags = [
+          "--systemd.collector.enable-restart-count"
+        ];
+      };
+      exporters.smartctl = {
+        enable = true;
+        port = 9633;
       };
       scrapeConfigs =
         # Node exporter scrape config (always enabled)
@@ -69,6 +77,12 @@ in
             job_name = "systemd";
             static_configs = [
               { targets = [ "127.0.0.1:9558" ]; }
+            ];
+          }
+          {
+            job_name = "smartctl";
+            static_configs = [
+              { targets = [ "127.0.0.1:9633" ]; }
             ];
           }
         ]
@@ -101,6 +115,12 @@ in
     systemd.tmpfiles.rules = [
       "d /var/lib/node_exporter/textfile_collector 0777 root root -"
     ];
+
+    # Allow smartctl-exporter to access NVMe character devices
+    services.udev.extraRules = ''
+      SUBSYSTEM=="nvme", KERNEL=="nvme[0-9]*", GROUP="disk", MODE="0660"
+    '';
+    users.groups.smartctl-exporter-access = { };
 
     # ===================
     # Grafana
@@ -169,6 +189,16 @@ in
               editable = true;
               allowUIUpdates = true;
               options.path = "/etc/grafana-dashboards/systemd";
+            }
+            {
+              name = "smart-dashboard";
+              orgId = 1;
+              folder = "Storage";
+              type = "file";
+              disableDeletion = false;
+              editable = true;
+              allowUIUpdates = true;
+              options.path = "/etc/grafana-dashboards/smart";
             }
           ]
           ++
@@ -341,6 +371,16 @@ in
     # ===================
     environment.etc."grafana-dashboards/network/network-dashboard.json" = {
       text = builtins.toJSON dashboards.network;
+      user = "grafana";
+      group = "grafana";
+      mode = "0644";
+    };
+
+    # ===================
+    # SMART Dashboard
+    # ===================
+    environment.etc."grafana-dashboards/smart/smart-dashboard.json" = {
+      text = builtins.toJSON dashboards.smart;
       user = "grafana";
       group = "grafana";
       mode = "0644";
