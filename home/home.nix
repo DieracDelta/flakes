@@ -610,6 +610,10 @@
         plugin = tmuxPlugins.gruvbox;
         extraConfig = "set -g @tmux-gruvbox 'dark'";
       }
+      {
+        plugin = tmuxPlugins.search-panes;
+        extraConfig = "set -g @open_search_panes_key 'g'";
+      }
       # {
       #   plugin = tmuxPlugins.tmux-ressurect;
       #
