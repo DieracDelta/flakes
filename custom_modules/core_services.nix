@@ -138,6 +138,10 @@ in
             reverse_proxy 127.0.0.1:7171
           }
 
+          handle_path /comfyui* {
+            reverse_proxy 127.0.0.1:6188
+          }
+
           handle_path /caddy-api* {
             reverse_proxy 127.0.0.1:2019 {
               header_up Host {upstream_hostport}
@@ -214,6 +218,32 @@ in
                 icon = "box";
                 href = "/spotizerr/";
                 description = "Download from spotify";
+              };
+            }
+            {
+              "ComfyUI" = {
+                icon = "comfyui";
+                href = "/comfyui/";
+                description = "Stable Diffusion GUI";
+                widget = {
+                  type = "customapi";
+                  url = "http://127.0.0.1:6188/system_stats";
+                  refreshInterval = 5000;
+                  mappings = [
+                    {
+                      field = "system.system_free_memory";
+                      label = "Free RAM";
+                      format = "size";
+                      scale = 1;
+                    }
+                    {
+                      field = "devices.0.vram_free";
+                      label = "VRAM Free";
+                      format = "size";
+                      scale = 1;
+                    }
+                  ];
+                };
               };
             }
           ];
@@ -704,16 +734,18 @@ in
       # cachix stuffs
       settings.substituters = [
         "https://cache.nixos.org"
-        # "https://cuda-maintainers.cachix.org"
+        "https://cuda-maintainers.cachix.org"
         "https://cachix.cachix.org"
         # "https://jrestivo.cachix.org"
         "http://nix-community.cachix.org/"
+        "https://comfyui.cachix.org"
       ];
       settings.trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        # "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+        "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
         "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "comfyui.cachix.org-1:33mf9VzoIjzVbp0zwj+fT51HG0y31ZTK3nzYZAX0rec="
       ];
       gc = {
         automatic = true;

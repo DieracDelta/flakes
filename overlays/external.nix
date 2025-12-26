@@ -1,6 +1,10 @@
 # External packages from other inputs
 # This overlay requires inputs to be passed in via a factory function
-{ nix, my-nvim, nixpkgs-master }:
+{
+  nix,
+  my-nvim,
+  nixpkgs-master,
+}:
 final: prev: {
   nix = nix.packages.x86_64-linux.default;
   nvim = my-nvim.defaultPackage.x86_64-linux;

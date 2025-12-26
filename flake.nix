@@ -13,7 +13,7 @@
 
     my-nvim.url = "github:DieracDelta/vimconfig";
 
-    nix.url = "github:NixOS/nix/2.32.4";
+    nix.url = "github:NixOS/nix/2.33.0";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -25,6 +25,8 @@
     nixpkgs-unpatched.url = "github:NixOS/nixpkgs/master";
 
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
+
+    comfyui-nix.url = "github:utensils/comfyui-nix";
   };
 
   outputs =
@@ -38,6 +40,7 @@
       my-nvim,
       nix,
       quadlet-nix,
+      comfyui-nix,
       ...
     }:
     let
@@ -86,6 +89,7 @@
           };
         }
         quadlet-nix.nixosModules.quadlet
+        comfyui-nix.nixosModules.default
       ];
     in
     {

@@ -37,6 +37,7 @@
   custom_modules.monitoring.enable = true;
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
+  custom_modules.comfyui.enable = true;
   programs.noisetorch.enable = false;
 
 }

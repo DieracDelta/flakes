@@ -25,4 +25,5 @@ in
   python
   packages
   external
+  inputs.comfyui-nix.overlays.default
 ]
