@@ -222,7 +222,7 @@ in
             }
             {
               "ComfyUI" = {
-                icon = "comfyui";
+                icon = "sh-comfyui";
                 href = "/comfyui/";
                 description = "Stable Diffusion GUI";
                 widget = {
@@ -231,16 +231,14 @@ in
                   refreshInterval = 5000;
                   mappings = [
                     {
-                      field = "system.system_free_memory";
+                      field = "system.ram_free";
                       label = "Free RAM";
-                      format = "size";
-                      scale = 1;
+                      format = "bytes";
                     }
                     {
                       field = "devices.0.vram_free";
                       label = "VRAM Free";
-                      format = "size";
-                      scale = 1;
+                      format = "bytes";
                     }
                   ];
                 };
