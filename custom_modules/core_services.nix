@@ -73,8 +73,16 @@ in
         ExecStart = "${lib.getExe pkgs.ethtool} -K enp6s0 rx-udp-gro-forwarding on rx-gro-list off";
       };
     };
+    users.users.caddy.extraGroups = [ "users" ];
+    systemd.services.caddy.serviceConfig.ProtectHome = lib.mkForce false;
+
     services.caddy = {
       enable = true;
+
+      package = pkgs.caddy.withPlugins {
+        plugins = [ "github.com/mholt/caddy-ratelimit@v0.1.0" ];
+        hash = "sha256-GSg434v/ErZoQTLo9lqRM0MtyQHuRVPCFfrLIo6sgwg=";
+      };
 
       globalConfig = ''
         https_port 8443
@@ -144,6 +152,18 @@ in
 
           handle_path /comfyui* {
             reverse_proxy 127.0.0.1:6188
+          }
+
+          handle_path /srcbot/* {
+            rate_limit {
+              zone srcbot_limit {
+                key {remote_host}
+                events 100
+                window 1m
+              }
+            }
+            root * /home/jrestivo/.cache/srcbot
+            file_server browse
           }
 
           handle_path /caddy-api* {
@@ -229,6 +249,13 @@ in
                 icon = "box";
                 href = "/spotizerr/";
                 description = "Download from spotify";
+              };
+            }
+            {
+              "Srcbot" = {
+                icon = "mdi-file-tree";
+                href = "/srcbot/";
+                description = "srcbot info";
               };
             }
             {
