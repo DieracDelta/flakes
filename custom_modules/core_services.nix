@@ -124,6 +124,10 @@ in
             reverse_proxy 127.0.0.1:3000
           }
 
+          handle_path /gonic* {
+            reverse_proxy 127.0.0.1:4747
+          }
+
           handle_path /sunshine* {
             reverse_proxy https://127.0.0.1:48012 {
               transport http {
@@ -185,6 +189,13 @@ in
                 icon = "navidrome";
                 href = "/navidrome/";
                 description = "Music Streamer";
+              };
+            }
+            {
+              "Gonic" = {
+                icon = "gonic";
+                href = "/gonic/";
+                description = "Subsonic Music Server";
               };
             }
             {

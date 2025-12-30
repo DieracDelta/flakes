@@ -40,6 +40,8 @@ let
     gemini-cli
     crush
     pam-insults
+    nix-eval-jobs
+    nix-diff
     scrutiny
     scrutiny-collector
     ethtool
