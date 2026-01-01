@@ -166,9 +166,31 @@ in
             file_server browse
           }
 
+          handle_path /srcbot-srv/* {
+            rate_limit {
+              zone srcbot_srv_limit {
+                key {remote_host}
+                events 100
+                window 1m
+              }
+            }
+            root * /srv/srcbot
+            file_server browse
+          }
+
           handle_path /caddy-api* {
             reverse_proxy 127.0.0.1:2019 {
               header_up Host {upstream_hostport}
+            }
+          }
+
+          handle_path /epstein* {
+            reverse_proxy 127.0.0.1:5000
+          }
+
+          handle_path /hydra* {
+            reverse_proxy 127.0.0.1:3001 {
+              header_up X-Request-Base /hydra
             }
           }
 
@@ -391,6 +413,13 @@ in
                 };
               };
             }
+            {
+              "Hydra" = {
+                icon = "si-nixos";
+                href = "/hydra/";
+                description = "Login: admin / yourpassword";
+              };
+            }
           ];
         }
       ];
@@ -523,6 +552,7 @@ in
 
     # ollama and webui are 11434 and 8080 respectively
     networking.firewall.allowedTCPPorts = [
+      5000
       19999
       3838
       3389

@@ -143,5 +143,7 @@
       mymaster = nixpkgs-master;
       mything = pkgs;
       mything2 = nixpkgs.outPath;
+
+      hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
     };
 }

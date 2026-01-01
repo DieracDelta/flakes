@@ -1,39 +1,78 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.custom_modules.hydra;
-in {
-  options.custom_modules.hydra.enable =
-    lib.mkOption {
-      description = "Enable Hydra";
-      type = lib.types.bool;
-      default = false;
-    };
+in
+{
+  options.custom_modules.hydra.enable = lib.mkOption {
+    description = "Enable Hydra CI";
+    type = lib.types.bool;
+    default = false;
+  };
+
   config = lib.mkIf cfg.enable {
     services.hydra = {
-      package = pkgs.hydra-unstable;
       enable = true;
-      hydraURL = "https://localhost:3000"; # externally visible URL
-      notificationSender = "hydra@localhost"; # e-mail of hydra service
-      # a standalone hydra will require you to unset the buildMachinesFiles list to avoid using a nonexistant /etc/nix/machines
-      buildMachinesFiles = [];
-      # you will probably also want, otherwise *everything* will be built from scratch
+      hydraURL = "https://office-desktop.tail5ca7.ts.net/hydra";
+      notificationSender = "hydra@localhost";
+      buildMachinesFiles = [ ];
       useSubstitutes = true;
+      listenHost = "127.0.0.1";
+      port = 3001;
+      extraConfig = ''
+        using_frontend_proxy 1
+        allow_import_from_derivation = true
+      '';
     };
-    networking.firewall.allowedUDPPorts = [ 3000 ];
-    networking.firewall.allowedTCPPorts = [ 3000 ];
 
-    services.gitlab = {
-      enable = true;
-      initialRootPasswordFile = "${config.sops.secrets.gitlab_password.path}";
-      secrets = {
-        secretFile = "${config.sops.secrets.gitlab_password.path}";
-        dbFile = "${config.sops.secrets.gitlab_password.path}";
-        otpFile = "${config.sops.secrets.gitlab_password.path}";
-        jwsFile = "${config.sops.secrets.gitlab_password.path}";
-      };
-    };
-    services.gitlab-runner.enable = true;
+    nix.settings.trusted-users = [ "hydra" "hydra-queue-runner" "hydra-www" ];
+    nix.settings.allowed-users = [ "hydra" "hydra-queue-runner" "hydra-www" ];
+    nix.settings.allow-import-from-derivation = true;
 
+    nix.settings.allowed-uris = [
+      # GitHub
+      "github:"
+      "git+https://github.com/"
+      "git+ssh://git@github.com/"
+      "https://github.com/"
 
+      # GitLab
+      "gitlab:"
+      "git+https://gitlab.com/"
+      "git+ssh://git@gitlab.com/"
+      "https://gitlab.com/"
+
+      # Sourcehut
+      "sourcehut:"
+      "git+https://git.sr.ht/"
+      "git+ssh://git@git.sr.ht/"
+      "https://git.sr.ht/"
+
+      # Codeberg
+      "git+https://codeberg.org/"
+      "https://codeberg.org/"
+
+      # NixOS resources
+      "https://nixos.org/"
+      "https://cache.nixos.org/"
+      "https://channels.nixos.org/"
+      "https://releases.nixos.org/"
+
+      # Flake registries
+      "https://api.flakehub.com/"
+
+      # Common source tarballs
+      "https://static.rust-lang.org/"
+      "https://crates.io/"
+      "https://registry.npmjs.org/"
+      "https://pypi.org/"
+      "https://files.pythonhosted.org/"
+    ];
+
+    networking.firewall.allowedTCPPorts = [ 3001 ];
   };
 }

@@ -28,7 +28,7 @@
   custom_modules.core_services.enable = true;
   custom_modules.workstation_services.enable = true;
   custom_modules.rust-filehost.enable = false;
-  custom_modules.hydra.enable = false;
+  custom_modules.hydra.enable = true;
   custom_modules.yubikey.enable = true;
   custom_modules.container_configs.enable = false;
   custom_modules.bens_config.enable = true;
