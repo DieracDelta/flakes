@@ -1,11 +1,9 @@
-# Python package overlays
-# - Disable checks for faster builds
-# - Fix broken packages
 final: prev: {
   pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
     (python-final: python-prev: {
-      # Python packages don't go through our stdenv overlay, so add the phase here
-      disableCheckArgs =
+      # Python stuff is finnicky af
+      # Handle both old style (set) and new style (finalAttrs function)
+      disableCheckArgsSet =
         args:
         let
           existingPrePhases = args.prePhases or [ ];
@@ -25,13 +23,28 @@ final: prev: {
             pythonImportsCheckPhase() { :; }
           '';
         };
+      disableCheckArgs =
+        args:
+        if builtins.isFunction args then
+          # New style: buildPythonPackage (finalAttrs: { ... })
+          finalAttrs: python-final.disableCheckArgsSet (args finalAttrs)
+        else
+          # Old style: buildPythonPackage { ... }
+          python-final.disableCheckArgsSet args;
 
-      buildPythonPackage = python-prev.buildPythonPackage // {
-        __functor = self: args: python-prev.buildPythonPackage (python-final.disableCheckArgs args);
-      };
-      buildPythonApplication = python-prev.buildPythonApplication // {
-        __functor = self: args: python-prev.buildPythonApplication (python-final.disableCheckArgs args);
-      };
+      # Wrap buildPythonPackage to disable checks - use lib.setFunctionArgs to preserve function metadata
+      buildPythonPackage =
+        let
+          orig = python-prev.buildPythonPackage;
+          wrapped = args: orig (python-final.disableCheckArgs args);
+        in
+        final.lib.setFunctionArgs wrapped (final.lib.functionArgs orig) // { inherit (orig) override; };
+      buildPythonApplication =
+        let
+          orig = python-prev.buildPythonApplication;
+          wrapped = args: orig (python-final.disableCheckArgs args);
+        in
+        final.lib.setFunctionArgs wrapped (final.lib.functionArgs orig) // { inherit (orig) override; };
 
       # Package-specific fixes
       psycopg = python-prev.psycopg.overridePythonAttrs (oldAttrs: {
@@ -61,55 +74,6 @@ final: prev: {
         catchConflicts = false;
       });
 
-      img2pdf = python-prev.img2pdf.overridePythonAttrs (old: {
-        src = final.fetchFromGitHub {
-          owner = "josch";
-          repo = "img2pdf";
-          rev = "0.6.1";
-          hash = "sha256-71u6ex+UAEFPDtR9QI8Ezah5zCorn4gMdAnzFz4blsI=";
-        };
-      });
-
-      pyasn = python-prev.pyasn.overridePythonAttrs (old: {
-        datasrc = old.datasrc.override {
-          hash = "sha256-7zpaxDe5qHUy/ekOJLxKawjaPQnByrOVj+m2bsUqfdg=";
-        };
-      });
-
-      debugpy = python-prev.debugpy.overrideAttrs (oldAttrs: {
-        src = oldAttrs.src.override {
-          hash = "sha256-eAiCtSJUqLASapxnYCyq1UCiGz6QmKQum7Vs3MoU1s8=";
-        };
-      });
-
-      instructor = python-prev.instructor.overridePythonAttrs (old: {
-        src = final.fetchFromGitHub {
-          owner = "jxnl";
-          repo = "instructor";
-          tag = "v1.11.3";
-          hash = "sha256-VWFrMgfe92bHUK1hueqJLHQ7G7ATCgK7wXr+eqrVWcw=";
-        };
-      });
-
-      pypng = python-prev.pypng.overridePythonAttrs (old: {
-        src = final.fetchFromGitLab {
-          owner = "drj11";
-          repo = "pypng";
-          tag = "pypng-0.20231004.0";
-          hash = "sha256-xNUI3yGfwmaccCxgljIZzgJ6YgNxcuOzCXDE7RFJP2I=";
-        };
-      });
-
-      rank-bm25 = python-prev.rank-bm25.overridePythonAttrs (old: {
-        src = final.fetchFromGitHub {
-          owner = "dorianbrown";
-          repo = "rank_bm25";
-          tag = old.version;
-          hash = "sha256-+BxQBflMm2AvCLAFFj52Jpkqn+KErwYXU1wztintgOg=";
-        };
-      });
-
-      # Fix 404 error for 0.42.2 - pin to 0.41.2
       sqlalchemy-utils = python-prev.sqlalchemy-utils.overridePythonAttrs (old: rec {
         version = "0.41.2";
         src = final.fetchFromGitHub {
@@ -120,6 +84,7 @@ final: prev: {
         };
       });
 
+      # TODO is this unneeded
       # Fix opencv source directory name issue
       opencv4 = python-prev.opencv4.overrideAttrs (old: {
         postUnpack =

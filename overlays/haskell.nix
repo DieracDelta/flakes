@@ -1,6 +1,3 @@
-# Haskell-related overlays
-# - CPU-specific optimizations for znver3
-# - Package-specific fixes
 final: prev:
 let
   inherit (final) lib;

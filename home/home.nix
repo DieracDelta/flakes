@@ -44,6 +44,7 @@
       # diff.algorithm = "histogram";
 
     };
+    lfs.enable = true;
     # extraConfig = {
     #url = { "ssh://git@github.com" = { insteadOf = "https://github.com"; }; };
     #url = {

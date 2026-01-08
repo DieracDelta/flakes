@@ -1,4 +1,3 @@
-# Zig compiler overlays with znver3 CPU targeting
 final: prev:
 let
   inherit (prev) lib;

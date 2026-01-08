@@ -194,6 +194,10 @@ in
             }
           }
 
+          handle_path /leandocs* {
+            reverse_proxy 127.0.0.1:3428
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -302,6 +306,13 @@ in
                     }
                   ];
                 };
+              };
+            }
+            {
+              "Lean Docs" = {
+                icon = "mdi-book-open-variant";
+                href = "/leandocs/";
+                description = "Lean Documentation";
               };
             }
           ];

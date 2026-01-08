@@ -1,5 +1,4 @@
-# Global stdenv overlay to disable doCheck and doInstallCheck for all derivations
-# This significantly speeds up builds by skipping test suites
+# literally nuke all testphases because we ball
 final: prev: {
   stdenv = prev.stdenv // {
     mkDerivation =
@@ -9,7 +8,6 @@ final: prev: {
           unset doCheck
           unset doInstallCheck
         '';
-        # Prepend disableChecks to a phase, handling string, list, or missing cases
         prependToPhase =
           phase:
           if builtins.isList phase then
@@ -31,7 +29,6 @@ final: prev: {
               else
                 existingPrePhases ++ [ "disableChecksPhase" ];
             disableChecksPhase = disableChecks;
-            # Also unset in preCheck and preInstallCheck for builders that set these later
             preCheck = prependToPhase (attrs.preCheck or null);
             preInstallCheck = prependToPhase (attrs.preInstallCheck or null);
           };

@@ -37,6 +37,7 @@ in
       config = {
         # TODO allowVariants could be interesting
         cudaSupport = true;
+        cudaCapabilities = [ "8.9" ];
         allowUnfree = true;
         warnUndeclaredOptions = true;
         fetchedSourceNameDefault = "full";

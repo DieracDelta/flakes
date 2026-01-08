@@ -192,7 +192,7 @@ let
     vulkan-extension-layer
     vk-bootstrap
     # amdvlk
-    vkmark
+    # vkmark  # broken with vulkan-headers 1.4.335+
     vkdisplayinfo
     vk-bootstrap
     gpu-viewer
@@ -280,8 +280,6 @@ in
       # sha256 = "1ivzgd7iz0i06y36p8m5w48fd8pjqwxhdaavc0pxs7w1g7mcy5si";
       # }'';
     };
-    # TODO add in configuration option for this (like embedded dev enable)
-    programs.adb.enable = true;
     programs.java.enable = true;
     programs.steam.enable = true;
     programs.steam.remotePlay.openFirewall = true;
@@ -307,6 +305,7 @@ in
     services.picom.enable = true;
     services.syncthing.enable = true;
     networking.firewall.allowedTCPPorts = [
+      3428
       8081
       22000
       8384

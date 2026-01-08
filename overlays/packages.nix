@@ -36,15 +36,6 @@ final: prev: {
       };
     };
   };
-  prometheus-node-exporter = prev.prometheus-node-exporter.overrideAttrs (oldAttrs: {
-    src = prev.fetchFromGitHub {
-      owner = "prometheus";
-      repo = "node_exporter";
-      tag = "v${oldAttrs.version}";
-      hash = "sha256-UaybbRmcvifXNwTNXg7mIYN9JnonSxwG62KfvU5auIE=";
-    };
-  });
-
   pam-insults = final.stdenv.mkDerivation {
     pname = "pam-insults";
     version = "unstable-2025-12-19";
@@ -94,46 +85,9 @@ final: prev: {
     catchConflicts = false;
   });
 
-  libp11 = prev.libp11.overrideAttrs (oldAttrs: {
-    src = prev.fetchFromGitHub {
-      owner = "OpenSC";
-      repo = "libp11";
-      rev = "${prev.libp11.pname}-${prev.libp11.version}";
-      sha256 = "sha256-xH5Ic8HpWB5O2MWXf2A9FUiV10VZajDdPqEVF0Hs6u0=";
-    };
-  });
-
-  libkate = prev.libkate.overrideAttrs (old: {
-    src = final.fetchFromGitLab {
-      domain = "gitlab.xiph.org";
-      owner = "xiph";
-      repo = "kate";
-      rev = "kate-0.4.3";
-      hash = "sha256-HwDahmjDC+O321Ba7MnHoQdHOFUMpFzaNdLHQeEg11Q=";
-    };
-  });
-
-  opencv = prev.opencv.overrideAttrs (old: {
-    postUnpack =
-      builtins.replaceStrings
-        [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-        [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-        old.postUnpack;
-    preConfigure =
-      builtins.replaceStrings
-        [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-        [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-        old.preConfigure;
-  });
-
-  usbmuxd2 = prev.usbmuxd2.overrideAttrs (oldAttrs: {
-    src = prev.fetchFromGitHub {
-      owner = "tihmstar";
-      repo = "usbmuxd2";
-      rev = "2ce399ddbacb110bd5a83a6b8232d42c9a9b6e84";
-      hash = "sha256-u7qRKH5y+Q1HnnumjVm3Ce4SlT3YaEVSPUXYOAiFBes=";
-      leaveDotGit = true;
-    };
+  # Fix dcgm compilation with GCC 15 (missing include and typo)
+  dcgm = prev.dcgm.overrideAttrs (oldAttrs: {
+    patches = (oldAttrs.patches or [ ]) ++ [ ../patches/dcgm-fix-gcc15.patch ];
   });
 
   # Fix dcgm-exporter to find ldconfig in PATH instead of hardcoded /sbin/ldconfig
@@ -143,5 +97,25 @@ final: prev: {
       mkdir -p $out/etc
       cp $src/etc/*.csv $out/etc/
     '';
+  });
+
+  # Fix azure-sdk-for-cpp packages with hardcoded sourceRoot
+  # See: https://github.com/NixOS/nixpkgs/issues/... (same issue as influxdb2)
+  azure-sdk-for-cpp = prev.azure-sdk-for-cpp.overrideScope (azureFinal: azurePrev: {
+    core = azurePrev.core.overrideAttrs (finalAttrs: oldAttrs: {
+      sourceRoot = "${finalAttrs.src.name}/sdk/core/azure-core";
+    });
+    identity = azurePrev.identity.overrideAttrs (finalAttrs: oldAttrs: {
+      sourceRoot = "${finalAttrs.src.name}/sdk/identity/azure-identity";
+    });
+    storage-common = azurePrev.storage-common.overrideAttrs (finalAttrs: oldAttrs: {
+      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-common";
+    });
+    storage-blobs = azurePrev.storage-blobs.overrideAttrs (finalAttrs: oldAttrs: {
+      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-blobs";
+    });
+    storage-files-datalake = azurePrev.storage-files-datalake.overrideAttrs (finalAttrs: oldAttrs: {
+      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-files-datalake";
+    });
   });
 }
