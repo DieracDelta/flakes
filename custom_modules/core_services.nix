@@ -154,6 +154,10 @@ in
             reverse_proxy 127.0.0.1:6188
           }
 
+          handle_path /osm* {
+            reverse_proxy 127.0.0.1:8083
+          }
+
           handle_path /srcbot/* {
             rate_limit {
               zone srcbot_limit {
@@ -211,6 +215,7 @@ in
         reverse_proxy 127.0.0.1:8080
       '';
     };
+
     services.tailscale.permitCertUid = "caddy";
 
     services.homepage-dashboard = {
@@ -313,6 +318,20 @@ in
                 icon = "mdi-book-open-variant";
                 href = "/leandocs/";
                 description = "Lean Documentation";
+              };
+            }
+            {
+              "OpenStreetMap" = {
+                icon = "mdi-map";
+                href = "/osm/";
+                description = "Self-hosted Map Tiles";
+              };
+            }
+            {
+              "Trip Planner" = {
+                icon = "mdi-bus";
+                href = "http://100.74.54.40:8084/";
+                description = "OpenTripPlanner Transit Routing";
               };
             }
           ];
@@ -578,6 +597,7 @@ in
       11434
       47990
       47989
+      8083  # openstreetmap
     ];
 
     services.lorri.enable = true;

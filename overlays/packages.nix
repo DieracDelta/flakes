@@ -118,4 +118,25 @@ final: prev: {
       sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-files-datalake";
     });
   });
+
+  # Fix librttopo source URL - OSGeo gitea server returns 404
+  # Use GitHub mirror instead
+  librttopo = prev.librttopo.overrideAttrs (oldAttrs: {
+    src = final.fetchFromGitHub {
+      owner = "CGX-GROUP";
+      repo = "librttopo";
+      rev = "librttopo-1.1.0";
+      hash = "sha256-VxyQr4nBy4PS2IjabBZHvzejFPDNBgSNn528ZCf99EA=";
+    };
+  });
+
+  # osm2pgsql uses opencv which is built with CUDA - need CUDA toolkit for CMake to find nvcc
+  osm2pgsql = prev.osm2pgsql.overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+      final.cudaPackages.cuda_nvcc
+    ];
+    buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
+      final.cudaPackages.cuda_cudart
+    ];
+  });
 }

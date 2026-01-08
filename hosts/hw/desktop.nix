@@ -29,7 +29,7 @@
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;
     # wakes this shit up
-    nvidiaPersistenced = true;
+    nvidiaPersistenced = false; # TODO: re-enable after reboot
     modesetting.enable = true;
     open = false;
   };
