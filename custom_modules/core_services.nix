@@ -519,6 +519,13 @@ in
                 };
               };
             }
+            {
+              "IP KVM" = {
+                icon = "mdi-remote-desktop";
+                href = "https://glkvm.tail5ca7.ts.net/#/";
+                description = "Remote KVM Access";
+              };
+            }
           ];
         }
       ];

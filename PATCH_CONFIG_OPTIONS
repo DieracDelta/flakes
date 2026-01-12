@@ -1,0 +1,50 @@
+diff --git a/pkgs/stdenv/default.nix b/pkgs/stdenv/default.nix
+index 3bc88f59c4bb..37d480116299 100644
+--- a/pkgs/stdenv/default.nix
++++ b/pkgs/stdenv/default.nix
+@@ -43,7 +43,7 @@ in
+ # Select the appropriate stages for the platform `system'.
+ if crossSystem != localSystem || crossOverlays != [ ] then
+   stagesCross
+-else if config ? replaceStdenv then
++else if config.replaceStdenv or null != null then
+   stagesCustom
+ else if localSystem.isLinux then
+   stagesLinux
+diff --git a/pkgs/top-level/config.nix b/pkgs/top-level/config.nix
+index c8e8a3f58590..cc3aa6fc0242 100644
+--- a/pkgs/top-level/config.nix
++++ b/pkgs/top-level/config.nix
+@@ -266,6 +266,32 @@ let
+       feature = "build packages with CUDA support by default";
+     };
+ 
++    cudaCapabilities = mkMassRebuild {
++      type = types.listOf types.str;
++      default = [ ];
++      description = ''
++        List of CUDA capabilities to build for (e.g., `["8.9"]` for RTX 4090).
++        If empty, uses the default capabilities for the CUDA version.
++        See https://developer.nvidia.com/cuda-gpus for capability values.
++      '';
++    };
++
++    cudaForwardCompat = mkMassRebuild {
++      default = true;
++      feature = "build CUDA packages with forward compatibility (PTX)";
++    };
++
++    replaceStdenv = mkOption {
++      type = types.nullOr (types.functionTo types.raw);
++      default = null;
++      description = ''
++        A function to replace the default stdenv.
++        Takes `{ pkgs }` as argument and returns a custom stdenv.
++        When set, nixpkgs will use this stdenv instead of the default.
++      '';
++      example = literalExpression "{ pkgs }: pkgs.ccacheStdenv";
++    };
++
+     replaceBootstrapFiles = mkMassRebuild {
+       type = types.functionTo (types.attrsOf types.package);
+       default = lib.id;
