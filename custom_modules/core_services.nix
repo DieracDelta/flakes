@@ -64,6 +64,30 @@ in
       enable = true;
     };
 
+    # AdGuard Home DNS ad-blocking
+    services.adguardhome = {
+      enable = true;
+      mutableSettings = true;
+      port = 3003;  # Web UI port (3000 is taken by Grafana)
+      settings = {
+        http = {
+          address = "127.0.0.1:3003";
+        };
+        dns = {
+          bind_hosts = [ "0.0.0.0" ];
+          port = 53;
+          upstream_dns = [
+            "https://dns.cloudflare.com/dns-query"
+            "https://dns.google/dns-query"
+          ];
+          bootstrap_dns = [
+            "1.1.1.1"
+            "8.8.8.8"
+          ];
+        };
+      };
+    };
+
     systemd.services.tailscale-optimization = {
       description = "Optimize ethtool settings for Tailscale";
       after = [ "network.target" ];
@@ -223,6 +247,10 @@ in
 
           handle_path /leandocs* {
             reverse_proxy 127.0.0.1:3428
+          }
+
+          handle_path /adguard* {
+            reverse_proxy 127.0.0.1:3003
           }
 
           handle {
@@ -480,6 +508,17 @@ in
                 description = "Login: admin / yourpassword";
               };
             }
+            {
+              "AdGuard Home" = {
+                icon = "adguard-home";
+                href = "/adguard/";
+                description = "DNS Ad-blocking";
+                widget = {
+                  type = "adguard";
+                  url = "http://127.0.0.1:3003";
+                };
+              };
+            }
           ];
         }
       ];
@@ -628,6 +667,11 @@ in
       47990
       47989
       8083  # openstreetmap
+      53    # DNS (AdGuard)
+    ];
+
+    networking.firewall.allowedUDPPorts = [
+      53    # DNS (AdGuard)
     ];
 
     services.lorri.enable = true;
