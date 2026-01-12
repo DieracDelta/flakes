@@ -53,7 +53,7 @@
           ./PATCH_SUNSHINE
           (tmp_pkgs.fetchpatch {
             url = "https://github.com/DieracDelta/nixpkgs/commit/a1d2240eebf50667a42b18c577c6a6f221e23e83.patch";
-            sha256 = "1zazfk9lqb11ll6318c80h3bzl0hdy708pm6ra7bh6hzfkh9gvya";
+            hash = "sha256-mnBr3SXqfU4LekbX8v0Pqg2RsUHVijKbokPkUbArW2k=";
           })
         ];
       };

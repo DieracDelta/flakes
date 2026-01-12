@@ -71,6 +71,27 @@
     ];
   };
 
+  # Digitransit production UI for trip planning
+  services.digitransit = {
+    enable = true;
+    port = 8085;
+    otpUrl = "http://localhost:8084/otp/";
+  };
+
+  # Self-hosted Nominatim geocoding for Digitransit
+  services.nominatim = {
+    enable = true;
+    hostName = "nominatim.local";
+    settings = {
+      NOMINATIM_IMPORT_STYLE = "full";
+    };
+  };
+  services.nginx.virtualHosts."nominatim.local" = {
+    listen = [{ addr = "127.0.0.1"; port = 8088; }];
+    enableACME = false;
+    forceSSL = false;
+  };
+
   programs.noisetorch.enable = false;
 
 }

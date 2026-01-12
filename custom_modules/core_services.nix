@@ -158,6 +158,29 @@ in
             reverse_proxy 127.0.0.1:8083
           }
 
+          handle_path /otp* {
+            reverse_proxy 127.0.0.1:8084
+          }
+
+          handle_path /tripplanner* {
+            reverse_proxy 127.0.0.1:8085
+          }
+
+          # Geocoding proxy for Digitransit - proxies to local Pelias-Nominatim translator
+          handle /geocoding/* {
+            uri strip_prefix /geocoding
+            reverse_proxy 127.0.0.1:3200
+          }
+
+          # Map tiles proxy - translate Digitransit tile requests to local tile server
+          # Digitransit requests: /map/v3/hsl-map-en/{z}/{x}/{y}@2x.png
+          # Local server expects: /hot/{z}/{x}/{y}.png
+          @maptiles path_regexp maptiles ^/map/v3/hsl-map[^/]*/(\d+)/(\d+)/(\d+)(@2x)?\.png$
+          handle @maptiles {
+            rewrite * /hot/{re.maptiles.1}/{re.maptiles.2}/{re.maptiles.3}.png
+            reverse_proxy 127.0.0.1:8083
+          }
+
           handle_path /srcbot/* {
             rate_limit {
               zone srcbot_limit {
@@ -330,8 +353,15 @@ in
             {
               "Trip Planner" = {
                 icon = "mdi-bus";
-                href = "http://100.74.54.40:8084/";
-                description = "OpenTripPlanner Transit Routing";
+                href = "/tripplanner/";
+                description = "Digitransit Transit Routing";
+              };
+            }
+            {
+              "OTP API" = {
+                icon = "mdi-api";
+                href = "/otp/";
+                description = "OpenTripPlanner API";
               };
             }
           ];

@@ -41,7 +41,7 @@ in
     services.navidrome.settings.Address = "127.0.0.1";
     services.navidrome.settings."Scanner.FollowSymlinks" = true;
     services.navidrome.settings.Port = 4533;
-    services.navidrome.settings.MusicFolder = "/jellyfin/MUSIC";
+    services.navidrome.settings.MusicFolder = "/var/lib/musiclibrary";
     services.navidrome.package = pkgs.navidrome;
     services.navidrome.settings.BaseUrl = "/navidrome";
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
@@ -144,7 +144,9 @@ in
     users.groups.spotizerr.gid = spotizerrUid;
 
     systemd.tmpfiles.rules = [
-      "d ${musicLibraryDir} 0775 spotizerr ${mediaGroup} -"
+      # Music library on HDD with symlink from /var/lib/musiclibrary
+      "d /storage/media/musiclibrary 0775 spotizerr ${mediaGroup} -"
+      "L+ ${musicLibraryDir} - - - - /storage/media/musiclibrary"
       "d ${spotizerrLogDir} 0700 spotizerr spotizerr -"
       "d ${spotizerrDataDir} 0700 spotizerr spotizerr -"
       "d ${redisPasswordDir} 0750 redis-spotizerr redis-spotizerr -"

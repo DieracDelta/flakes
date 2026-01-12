@@ -29,7 +29,7 @@
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;
     # wakes this shit up
-    nvidiaPersistenced = false; # TODO: re-enable after reboot
+    nvidiaPersistenced = true; # TODO: re-enable after reboot
     modesetting.enable = true;
     open = false;
   };
@@ -127,23 +127,79 @@
     ];
   };
 
+  # === 12.7TB Storage HDD (LVM) ===
+
+  # Services partition (btrfs with subvolumes)
+  fileSystems."/storage/backups" = {
+    device = "/dev/storage-vg/services";
+    fsType = "btrfs";
+    options = [
+      "subvol=@backups"
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  fileSystems."/storage/media" = {
+    device = "/dev/storage-vg/services";
+    fsType = "btrfs";
+    options = [
+      "subvol=@media"
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  fileSystems."/storage/services" = {
+    device = "/dev/storage-vg/services";
+    fsType = "btrfs";
+    options = [
+      "subvol=@services"
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  # User partitions (btrfs for easy resize + compression)
+  fileSystems."/mnt/siraben-ext" = {
+    device = "/dev/storage-vg/siraben";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  fileSystems."/home/john/storage" = {
+    device = "/dev/storage-vg/john";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+
+  # Bind mounts for service data directories
+  fileSystems."/var/lib/renderd_share" = {
+    device = "/storage/services/renderd_share";
+    fsType = "none";
+    options = [ "bind" ];
+    depends = [ "/storage/services" ];
+  };
+
+  fileSystems."/var/lib/opentripplanner" = {
+    device = "/storage/services/opentripplanner";
+    fsType = "none";
+    options = [ "bind" ];
+    depends = [ "/storage/services" ];
+  };
+
   zramSwap = {
     enable = true;
     algorithm = "zstd";
     memoryPercent = 33;
     priority = 100;
   };
-
-  swapDevices = [
-    {
-      device = "/swap/swapfile";
-      priority = 10;
-      options = [
-        "defaults"
-        "discard"
-      ];
-    }
-  ];
 
   boot.kernel.sysctl = {
     "vm.page-cluster" = 0;
@@ -173,7 +229,9 @@
 
   nix.settings.max-jobs = 4;
   nix.settings.cores = 24;
-  nix.package = (builtins.getFlake "github:nixos/nix/f6ca5dc5cb471b45553f8f464b940b73f0a058dc").packages.${pkgs.stdenv.hostPlatform.system}.default;
+  nix.package =
+    (builtins.getFlake "github:nixos/nix/f6ca5dc5cb471b45553f8f464b940b73f0a058dc")
+    .packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   # end hw file stuff
 

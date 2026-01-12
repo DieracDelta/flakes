@@ -98,6 +98,15 @@ final: prev: {
             [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
             old.preConfigure;
       });
+
+      # PyICU: Use PyPI source instead of GitLab (which returns 502 errors)
+      pyicu = python-prev.pyicu.overridePythonAttrs (old: rec {
+        version = "2.16";
+        src = final.fetchurl {
+          url = "https://files.pythonhosted.org/packages/11/c3/8d558b30deb33eb583c0bcae3e64d6db8316b69461a04bb9db5ff63d3f6e/pyicu-2.16.tar.gz";
+          hash = "sha256-QrOoBi47I+knynJ+a14XMNhscCeYNOSIcVKJXS6wEtk=";
+        };
+      });
     })
   ];
 }

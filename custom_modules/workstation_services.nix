@@ -440,6 +440,18 @@ in
       modulePath = "${pkgs.pam-insults}/lib/security/pam_insults.so";
       args = [ "type=unhinged" ];
     };
+
+    security.pam.services.sudo.rules.auth.skip-insults-siraben = {
+      order = 12299; # Just before insults (at 12300)
+      control = "[success=1 default=ignore]"; # Skip next module if success
+      modulePath = "${pkgs.linux-pam}/lib/security/pam_succeed_if.so";
+      args = [
+        "user"
+        "="
+        "siraben"
+      ];
+    };
+
     services.eternal-terminal = {
       enable = true;
       port = 2022;
@@ -470,6 +482,24 @@ in
     services.scrutiny.settings.web.listen.port = 5123;
     services.scrutiny.openFirewall = true;
     services.scrutiny.settings.web.listen.basepath = "/scrutiny";
+    services.scrutiny.collector.settings.devices = [
+      {
+        device = "/dev/sda";
+        type = "sat";
+      }
+      {
+        device = "/dev/sdc";
+        type = "sat";
+      }
+      {
+        device = "/dev/nvme0";
+        type = "nvme";
+      }
+      {
+        device = "/dev/nvme1";
+        type = "nvme";
+      }
+    ];
 
     services.netdata = {
       package = pkgs.netdata.override { withCloudUi = true; };
