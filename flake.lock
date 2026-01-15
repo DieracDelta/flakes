@@ -1498,11 +1498,11 @@
     "multi-scrobbler-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1768494538,
-        "narHash": "sha256-BPydTP4jlWTIwk/xHJhLaf0XQNTZfgFvZ1qoiP+u3kw=",
+        "lastModified": 1768508761,
+        "narHash": "sha256-GOBOFOqKQq9PMtvZI+0GSHmRn1eDIsgguhWQE6jJTkc=",
         "owner": "DieracDelta",
         "repo": "multi-scrobbler",
-        "rev": "91d62f811d485f479896190faf9cba54f3847f83",
+        "rev": "3be09368bf96ab73dc95d2930cda25609471b4b6",
         "type": "github"
       },
       "original": {
