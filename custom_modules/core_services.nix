@@ -288,33 +288,12 @@ in
       # This defines the layout of your dashboard
       services = [
         {
-          "User Targeted Services" = [
-            {
-              "Open WebUI" = {
-                icon = "si-openai";
-                href = "https://office-desktop.tail5ca7.ts.net:8444";
-                description = "AI Chat Interface";
-              };
-            }
+          "Music" = [
             {
               "Navidrome" = {
                 icon = "navidrome";
                 href = "/navidrome/";
                 description = "Music Streamer";
-              };
-            }
-            {
-              "Koito" = {
-                icon = "mdi-music-box-multiple";
-                href = "/koito/";
-                description = "Music Scrobbler";
-              };
-            }
-            {
-              "Multi-Scrobbler" = {
-                icon = "mdi-music-note-plus";
-                href = "/scrobbler/";
-                description = "Scrobble Proxy";
               };
             }
             {
@@ -325,43 +304,35 @@ in
               };
             }
             {
-              "SearX" = {
-                icon = "searxng"; # or "searx"
-                href = "/searx/";
-                description = "Private Search Engine";
+              "Koito" = {
+                icon = "mdi-music-box-multiple";
+                href = "/koito/";
+                description = "Local Scrobbler";
               };
             }
             {
-              "Paperless" = {
-                icon = "paperless-ngx";
-                href = "/paperless/"; # Browser link
-                description = "Document Manager";
-                widget = {
-                  type = "paperlessngx";
-                  url = "http://127.0.0.1:28981/paperless";
-                  key = "1046ca1ba2c462773d9b630c005f095718f657df";
-                };
-              };
-            }
-            {
-              "Sunshine" = {
-                icon = "sunshine";
-                href = "/sunshine/";
-                description = "Login: username / password";
+              "Multi-Scrobbler" = {
+                icon = "mdi-music-note-plus";
+                href = "/scrobbler/";
+                description = "Scrobble Proxy";
               };
             }
             {
               "Spotizerr" = {
                 icon = "box";
                 href = "/spotizerr/";
-                description = "Download from spotify";
+                description = "Download from Spotify";
               };
             }
+          ];
+        }
+        {
+          "AI" = [
             {
-              "Srcbot" = {
-                icon = "mdi-file-tree";
-                href = "/srcbot/";
-                description = "srcbot info";
+              "Open WebUI" = {
+                icon = "si-openai";
+                href = "https://office-desktop.tail5ca7.ts.net:8444";
+                description = "AI Chat Interface";
               };
             }
             {
@@ -388,13 +359,10 @@ in
                 };
               };
             }
-            {
-              "Lean Docs" = {
-                icon = "mdi-book-open-variant";
-                href = "/leandocs/";
-                description = "Lean Documentation";
-              };
-            }
+          ];
+        }
+        {
+          "Maps" = [
             {
               "OpenStreetMap" = {
                 icon = "mdi-map";
@@ -414,6 +382,65 @@ in
                 icon = "mdi-api";
                 href = "/otp/";
                 description = "OpenTripPlanner API";
+              };
+            }
+          ];
+        }
+        {
+          "Nix" = [
+            {
+              "Srcbot" = {
+                icon = "mdi-file-tree";
+                href = "/srcbot/";
+                description = "srcbot info";
+              };
+            }
+            {
+              "Hydra" = {
+                icon = "si-nixos";
+                href = "/hydra/";
+                description = "CI/CD Build Server";
+              };
+            }
+          ];
+        }
+        {
+          "Projects" = [
+            {
+              "Lean Docs" = {
+                icon = "mdi-book-open-variant";
+                href = "/leandocs/";
+                description = "Lean Documentation";
+              };
+            }
+          ];
+        }
+        {
+          "User Targeted Services" = [
+            {
+              "SearX" = {
+                icon = "searxng"; # or "searx"
+                href = "/searx/";
+                description = "Private Search Engine";
+              };
+            }
+            {
+              "Paperless" = {
+                icon = "paperless-ngx";
+                href = "/paperless/"; # Browser link
+                description = "Document Manager";
+                widget = {
+                  type = "paperlessngx";
+                  url = "http://127.0.0.1:28981/paperless";
+                  key = "1046ca1ba2c462773d9b630c005f095718f657df";
+                };
+              };
+            }
+            {
+              "Sunshine" = {
+                icon = "sunshine";
+                href = "/sunshine/";
+                description = "Login: username / password";
               };
             }
           ];
@@ -523,13 +550,6 @@ in
                   # Caddy's default admin API port
                   url = "http://127.0.0.1:2019";
                 };
-              };
-            }
-            {
-              "Hydra" = {
-                icon = "si-nixos";
-                href = "/hydra/";
-                description = "Login: admin / yourpassword";
               };
             }
             {
