@@ -150,8 +150,8 @@ in
       '';
     };
 
-    # Configure Navidrome to scrobble to Koito
-    services.navidrome.settings = mkIf (cfg.configureNavidrome && config.services.navidrome.enable) {
+    # Configure Navidrome to scrobble to Koito (skip if multi-scrobbler handles it)
+    services.navidrome.settings = mkIf (cfg.configureNavidrome && config.services.navidrome.enable && !config.custom_modules.multi-scrobbler.enable) {
       "ListenBrainz.Enabled" = true;
       "ListenBrainz.BaseURL" = "http://127.0.0.1:${toString cfg.port}/apis/listenbrainz/1";
     };

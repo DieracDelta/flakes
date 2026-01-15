@@ -30,6 +30,9 @@
 
     koito-src.url = "github:DieracDelta/Koito/jr/subpage";
     koito-src.flake = false;
+
+    multi-scrobbler-src.url = "github:DieracDelta/multi-scrobbler/jr/multi-scrobbler";
+    multi-scrobbler-src.flake = false;
   };
 
   outputs =

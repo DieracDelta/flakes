@@ -44,10 +44,17 @@
     enable = true;
     port = 4110;
     allowedHosts = "office-desktop.tail5ca7.ts.net,localhost,127.0.0.1,127.0.0.1:4110";
-    configureNavidrome = true;
+    configureNavidrome = true;  # Will be auto-disabled when multi-scrobbler is enabled
     # Subsonic artwork from Navidrome
     subsonicUrl = "http://127.0.0.1:4533/navidrome";
     subsonicParamsFile = "/var/lib/koito/secrets.env";
+  };
+
+  # Multi-scrobbler - forwards scrobbles from Navidrome to multiple services
+  custom_modules.multi-scrobbler = {
+    enable = true;
+    port = 9078;
+    baseUrl = "https://office-desktop.tail5ca7.ts.net/scrobbler";
   };
 
   services.openstreetmap = {

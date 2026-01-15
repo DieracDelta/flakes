@@ -1495,6 +1495,23 @@
         "type": "github"
       }
     },
+    "multi-scrobbler-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1768494538,
+        "narHash": "sha256-BPydTP4jlWTIwk/xHJhLaf0XQNTZfgFvZ1qoiP+u3kw=",
+        "owner": "DieracDelta",
+        "repo": "multi-scrobbler",
+        "rev": "91d62f811d485f479896190faf9cba54f3847f83",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DieracDelta",
+        "ref": "jr/multi-scrobbler",
+        "repo": "multi-scrobbler",
+        "type": "github"
+      }
+    },
     "my-nvim": {
       "inputs": {
         "blamer-nvim-src": "blamer-nvim-src",
@@ -2634,6 +2651,7 @@
         "hl": "hl",
         "home-manager": "home-manager",
         "koito-src": "koito-src",
+        "multi-scrobbler-src": "multi-scrobbler-src",
         "my-nvim": "my-nvim",
         "nix": "nix",
         "nixified-ai": "nixified-ai",

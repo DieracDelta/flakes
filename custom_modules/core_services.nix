@@ -258,6 +258,11 @@ in
             reverse_proxy 127.0.0.1:4110
           }
 
+          redir /scrobbler /scrobbler/
+          handle_path /scrobbler/* {
+            reverse_proxy 127.0.0.1:9078
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -303,6 +308,13 @@ in
                 icon = "mdi-music-box-multiple";
                 href = "/koito/";
                 description = "Music Scrobbler";
+              };
+            }
+            {
+              "Multi-Scrobbler" = {
+                icon = "mdi-music-note-plus";
+                href = "/scrobbler/";
+                description = "Scrobble Proxy";
               };
             }
             {

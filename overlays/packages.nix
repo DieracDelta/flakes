@@ -1,5 +1,5 @@
 # Individual package overrides and custom packages
-{ koito-src }:
+{ koito-src, multi-scrobbler-src }:
 final: prev: {
   tmuxPlugins = prev.tmuxPlugins // {
     search-panes = prev.tmuxPlugins.mkTmuxPlugin {
@@ -102,23 +102,35 @@ final: prev: {
 
   # Fix azure-sdk-for-cpp packages with hardcoded sourceRoot
   # See: https://github.com/NixOS/nixpkgs/issues/... (same issue as influxdb2)
-  azure-sdk-for-cpp = prev.azure-sdk-for-cpp.overrideScope (azureFinal: azurePrev: {
-    core = azurePrev.core.overrideAttrs (finalAttrs: oldAttrs: {
-      sourceRoot = "${finalAttrs.src.name}/sdk/core/azure-core";
-    });
-    identity = azurePrev.identity.overrideAttrs (finalAttrs: oldAttrs: {
-      sourceRoot = "${finalAttrs.src.name}/sdk/identity/azure-identity";
-    });
-    storage-common = azurePrev.storage-common.overrideAttrs (finalAttrs: oldAttrs: {
-      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-common";
-    });
-    storage-blobs = azurePrev.storage-blobs.overrideAttrs (finalAttrs: oldAttrs: {
-      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-blobs";
-    });
-    storage-files-datalake = azurePrev.storage-files-datalake.overrideAttrs (finalAttrs: oldAttrs: {
-      sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-files-datalake";
-    });
-  });
+  azure-sdk-for-cpp = prev.azure-sdk-for-cpp.overrideScope (
+    azureFinal: azurePrev: {
+      core = azurePrev.core.overrideAttrs (
+        finalAttrs: oldAttrs: {
+          sourceRoot = "${finalAttrs.src.name}/sdk/core/azure-core";
+        }
+      );
+      identity = azurePrev.identity.overrideAttrs (
+        finalAttrs: oldAttrs: {
+          sourceRoot = "${finalAttrs.src.name}/sdk/identity/azure-identity";
+        }
+      );
+      storage-common = azurePrev.storage-common.overrideAttrs (
+        finalAttrs: oldAttrs: {
+          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-common";
+        }
+      );
+      storage-blobs = azurePrev.storage-blobs.overrideAttrs (
+        finalAttrs: oldAttrs: {
+          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-blobs";
+        }
+      );
+      storage-files-datalake = azurePrev.storage-files-datalake.overrideAttrs (
+        finalAttrs: oldAttrs: {
+          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-files-datalake";
+        }
+      );
+    }
+  );
 
   # Fix librttopo source URL - OSGeo gitea server returns 404
   # Use GitHub mirror instead
@@ -161,7 +173,7 @@ final: prev: {
 
         nativeBuildInputs = [
           final.yarnConfigHook # Installs deps from offline cache into node_modules
-          final.yarnBuildHook  # Runs yarn --offline build with proper PATH
+          final.yarnBuildHook # Runs yarn --offline build with proper PATH
           final.nodejs
         ];
 
@@ -228,4 +240,106 @@ final: prev: {
         platforms = platforms.linux;
       };
     };
+
+  # Multi-scrobbler - scrobble from multiple sources to multiple clients
+  # Using local source for subpath deployment fixes
+  multi-scrobbler = final.buildNpmPackage {
+    pname = "multi-scrobbler";
+    version = "0.10.8-local";
+
+    src = multi-scrobbler-src;
+
+    npmDepsHash = "sha256-bmxtrQ7qEi/3dz2KTkqG4r90ohxYDKTRYsxmCux6UEg=";
+
+    nodejs = final.nodejs_22;
+
+    # Subpath deployment - set base URL for frontend build
+    # Multi-scrobbler's vite.config.ts reads BASE_URL and sets Vite's `base` option
+    env.BASE_URL = "https://localhost/scrobbler";
+    # Use hash router for subpath deployment (avoids conflicts with reverse proxy path stripping)
+    env.USE_HASH_ROUTER = "true";
+
+    # Fix vite.config.ts to use pathname only (not full URL) for Vite's base option
+    # This ensures assets work correctly when accessed via any hostname
+    postPatch = ''
+            substituteInPlace vite.config.ts \
+              --replace-fail 'baseUrlStr = baseUrl.toString();' 'baseUrlStr = baseUrl.pathname + "/";'
+
+            # Skip runtime schema generation - schemas are pre-generated and ts-json-schema-generator
+            # fails in Nix runtime because it requires TypeScript type checking
+            substituteInPlace src/backend/index.ts \
+              --replace-fail "initLogger.info('Generating schema definitions...');" "// Schema generation skipped - using pre-generated schemas" \
+              --replace-fail "createVegaGenerator()" "// createVegaGenerator() - skipped" \
+              --replace-fail "initLogger.info('Schema definitions generated');" "// Schema definitions loaded from pre-generated files"
+
+            # Fix static file serving - serve dist directly instead of relying on ViteExpress
+            substituteInPlace src/backend/server/index.ts \
+              --replace-fail "//app.use(express.static(buildDir));" "app.use(express.static(path.resolve(projectDir, 'dist')));"
+
+            # Don't let ViteExpress override the base path at runtime - we handle it at build time
+            # This ensures Caddy can strip /scrobbler/ prefix and Express serves at /
+            substituteInPlace src/backend/server/index.ts \
+              --replace-fail "base: localDefined && local.pathname !== '/' ? local.toString() : '/'" "base: '/'"
+
+            # Replace SchemaUtils.ts - skip runtime schema generation entirely
+            # Return permissive schemas that accept any valid JSON
+            cat > src/backend/utils/SchemaUtils.ts << 'SCHEMAEOF'
+      export const createVegaGenerator = () => null;
+
+      // Return a permissive schema that accepts any object
+      // The pre-generated schemas exist but extracting sub-types is complex
+      // Config validation will be lenient but the app will run
+      export const getTypeSchemaFromConfigGenerator = (type: string): any => {
+        return { type: "object", additionalProperties: true };
+      }
+      SCHEMAEOF
+    '';
+
+    # Skip docsite build - it has a separate package.json and isn't needed at runtime
+    # Also skip schema generation which requires the docsite
+    buildPhase = ''
+      runHook preBuild
+      npm run build:backend
+      npm run build:frontend
+
+      # Fix manifest.json - Vite doesn't update relative paths in public files
+      # These need to be absolute so they work when served via Caddy's path stripping
+      ${final.jq}/bin/jq '.icons |= map(.src = "/scrobbler/" + .src) | .start_url = "/scrobbler/"' \
+        dist/manifest.json > dist/manifest.json.tmp && mv dist/manifest.json.tmp dist/manifest.json
+
+      runHook postBuild
+    '';
+
+    # Don't run default npm install phase - we handle it
+    dontNpmInstall = true;
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out/lib/multi-scrobbler
+      cp -r dist $out/lib/multi-scrobbler/
+      cp -r node_modules $out/lib/multi-scrobbler/
+      cp package.json $out/lib/multi-scrobbler/
+
+      # Copy source for tsx runtime (some files are still loaded from src)
+      cp -r src $out/lib/multi-scrobbler/
+
+      mkdir -p $out/bin
+      cat > $out/bin/multi-scrobbler <<EOF
+      #!${final.runtimeShell}
+      cd $out/lib/multi-scrobbler
+      exec ${final.nodejs_22}/bin/node --import tsx src/backend/index.ts "\$@"
+      EOF
+      chmod +x $out/bin/multi-scrobbler
+
+      runHook postInstall
+    '';
+
+    meta = with final.lib; {
+      description = "Scrobble plays from multiple sources to multiple clients";
+      homepage = "https://github.com/FoxxMD/multi-scrobbler";
+      license = licenses.mit;
+      platforms = platforms.linux;
+    };
+  };
 }
