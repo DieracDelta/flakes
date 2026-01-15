@@ -243,6 +243,31 @@ final: prev: {
 
   # Multi-scrobbler - scrobble from multiple sources to multiple clients
   # Using local source for subpath deployment fixes
+  # claude-tmux - TUI for managing Claude Code tmux sessions
+  claude-tmux = final.rustPlatform.buildRustPackage {
+    pname = "claude-tmux";
+    version = "0.3.0";
+
+    src = final.fetchFromGitHub {
+      owner = "nielsgroen";
+      repo = "claude-tmux";
+      rev = "212a5b55cc88e35feb7fd14b4508959a60a625ca";
+      hash = "sha256-fNBT3DItgTrO0vKhjAAQ6L6/K9SBpvXEnyNUOq1AP4M=";
+    };
+
+    cargoHash = "sha256-AKBNCHx6Ap6HKddwzxs/qfJhJDE7LdZ/tRKO94ugRkA=";
+
+    nativeBuildInputs = [ final.pkg-config ];
+    buildInputs = [ final.openssl ];
+
+    meta = with final.lib; {
+      description = "TUI for managing Claude Code tmux sessions";
+      homepage = "https://github.com/nielsgroen/claude-tmux";
+      license = licenses.agpl3Only;
+      platforms = platforms.linux;
+    };
+  };
+
   multi-scrobbler = final.buildNpmPackage {
     pname = "multi-scrobbler";
     version = "0.10.8-local";

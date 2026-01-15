@@ -35,6 +35,7 @@ let
     ];
   devPack = with pkgs; [
     # openssl curl xxd age
+    claude-tmux
     emacs
     brave
     zellij
