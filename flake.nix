@@ -27,6 +27,9 @@
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
     comfyui-nix.url = "github:utensils/comfyui-nix";
+
+    koito-src.url = "github:DieracDelta/Koito/jr/subpage";
+    koito-src.flake = false;
   };
 
   outputs =

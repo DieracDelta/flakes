@@ -1,4 +1,5 @@
 # Individual package overrides and custom packages
+{ koito-src }:
 final: prev: {
   tmuxPlugins = prev.tmuxPlugins // {
     search-panes = prev.tmuxPlugins.mkTmuxPlugin {
@@ -139,4 +140,92 @@ final: prev: {
       final.cudaPackages.cuda_cudart
     ];
   });
+
+  # Koito - ListenBrainz-compatible scrobbler
+  # Using local source with VITE_BASE_PATH env var for subpath deployment
+  koito =
+    let
+      version = "1.0.0-local";
+      src = koito-src;
+
+      # Frontend build using Yarn v1 hooks (recommended approach per nixpkgs docs)
+      frontend = final.stdenv.mkDerivation {
+        pname = "koito-frontend";
+        inherit version;
+        src = "${src}/client";
+
+        yarnOfflineCache = final.fetchYarnDeps {
+          yarnLock = "${src}/client/yarn.lock";
+          hash = "sha256-mkA24dhMfm36q/8upplDqSQD8wklz/ndaYQzv9ycyeA=";
+        };
+
+        nativeBuildInputs = [
+          final.yarnConfigHook # Installs deps from offline cache into node_modules
+          final.yarnBuildHook  # Runs yarn --offline build with proper PATH
+          final.nodejs
+        ];
+
+        env.VITE_KOITO_VERSION = version;
+        # Subpath deployment - set base path via env var (cleaner than patching)
+        env.VITE_BASE_PATH = "/koito/";
+
+        # Don't run yarnInstallHook - we just want the build output
+        dontYarnInstall = true;
+
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out
+          cp -r build/client/* $out/
+          runHook postInstall
+        '';
+      };
+    in
+    final.buildGoModule {
+      pname = "koito";
+      inherit version src;
+
+      # Will compute on first build
+      vendorHash = "sha256-e/gU29rPQUY+eugQxnjbb8UCJ3K4KCtRqJzBl5eFNxg=";
+
+      env.CGO_ENABLED = "1";
+
+      nativeBuildInputs = [ final.pkg-config ];
+      buildInputs = [ final.vips ];
+
+      ldflags = [
+        "-s"
+        "-w"
+        "-X main.Version=${version}"
+      ];
+
+      subPackages = [ "cmd/api" ];
+
+      # Bundle frontend and assets
+      postInstall = ''
+        mkdir -p $out/share/koito/client/build/client
+        mkdir -p $out/share/koito/client/public
+
+        # Copy frontend build to client/build/client/ (where Koito expects it)
+        cp -r ${frontend}/* $out/share/koito/client/build/client/
+
+        # Copy public assets to client/public/
+        cp -r $src/client/public/* $out/share/koito/client/public/
+
+        # Copy database migrations
+        cp -r $src/db $out/share/koito/
+
+        # Copy assets (default images, fonts for rewind generation)
+        cp -r $src/assets $out/share/koito/
+
+        # Rename binary
+        mv $out/bin/api $out/bin/koito
+      '';
+
+      meta = with final.lib; {
+        description = "ListenBrainz-compatible scrobbler";
+        homepage = "https://github.com/gabehf/koito";
+        license = licenses.agpl3Plus;
+        platforms = platforms.linux;
+      };
+    };
 }

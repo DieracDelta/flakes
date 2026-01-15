@@ -9,7 +9,7 @@ let
   zig = import ./zig.nix;
   rust = import ./rust.nix;
   python = import ./python.nix;
-  packages = import ./packages.nix;
+  packages = import ./packages.nix { inherit (inputs) koito-src; };
 
   # Overlays that need flake inputs
   external = import ./external.nix {

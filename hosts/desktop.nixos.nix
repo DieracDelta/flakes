@@ -39,6 +39,17 @@
   custom_modules.monitoring.enableGpu = true;
   custom_modules.comfyui.enable = true;
 
+  # Koito scrobbler - integrates with Navidrome
+  custom_modules.koito = {
+    enable = true;
+    port = 4110;
+    allowedHosts = "office-desktop.tail5ca7.ts.net,localhost,127.0.0.1,127.0.0.1:4110";
+    configureNavidrome = true;
+    # Subsonic artwork from Navidrome
+    subsonicUrl = "http://127.0.0.1:4533/navidrome";
+    subsonicParamsFile = "/var/lib/koito/secrets.env";
+  };
+
   services.openstreetmap = {
     enable = true;
     totalRamGb = 16;

@@ -1312,6 +1312,23 @@
         "type": "github"
       }
     },
+    "koito-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1768480418,
+        "narHash": "sha256-uxmaLL3z/novKrRG4ZRB2/dfhOmuSfRqo8sdJJzc75w=",
+        "owner": "DieracDelta",
+        "repo": "Koito",
+        "rev": "1a8e727c64f71538dd7bc8da751a0137cf689596",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DieracDelta",
+        "ref": "jr/subpage",
+        "repo": "Koito",
+        "type": "github"
+      }
+    },
     "leap-src": {
       "flake": false,
       "locked": {
@@ -2616,6 +2633,7 @@
         "flake-utils": "flake-utils_2",
         "hl": "hl",
         "home-manager": "home-manager",
+        "koito-src": "koito-src",
         "my-nvim": "my-nvim",
         "nix": "nix",
         "nixified-ai": "nixified-ai",

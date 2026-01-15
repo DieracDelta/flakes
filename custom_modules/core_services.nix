@@ -253,6 +253,11 @@ in
             reverse_proxy 127.0.0.1:3003
           }
 
+          redir /koito /koito/
+          handle_path /koito/* {
+            reverse_proxy 127.0.0.1:4110
+          }
+
           handle {
             reverse_proxy 127.0.0.1:8082
           }
@@ -291,6 +296,13 @@ in
                 icon = "navidrome";
                 href = "/navidrome/";
                 description = "Music Streamer";
+              };
+            }
+            {
+              "Koito" = {
+                icon = "mdi-music-box-multiple";
+                href = "/koito/";
+                description = "Music Scrobbler";
               };
             }
             {
