@@ -1,5 +1,5 @@
 # Individual package overrides and custom packages
-{ koito-src, multi-scrobbler-src }:
+_:
 final: prev: {
   tmuxPlugins = prev.tmuxPlugins // {
     search-panes = prev.tmuxPlugins.mkTmuxPlugin {
@@ -157,8 +157,13 @@ final: prev: {
   # Using local source with VITE_BASE_PATH env var for subpath deployment
   koito =
     let
-      version = "1.0.0-local";
-      src = koito-src;
+      version = "1.0.0-subpath";
+      src = final.fetchFromGitHub {
+        owner = "DieracDelta";
+        repo = "Koito";
+        rev = "jr/subpage";
+        hash = "sha256-uxmaLL3z/novKrRG4ZRB2/dfhOmuSfRqo8sdJJzc75w=";
+      };
 
       # Frontend build using Yarn v1 hooks (recommended approach per nixpkgs docs)
       frontend = final.stdenv.mkDerivation {
@@ -270,9 +275,14 @@ final: prev: {
 
   multi-scrobbler = final.buildNpmPackage {
     pname = "multi-scrobbler";
-    version = "0.10.8-local";
+    version = "0.10.8-subpath";
 
-    src = multi-scrobbler-src;
+    src = final.fetchFromGitHub {
+      owner = "DieracDelta";
+      repo = "multi-scrobbler";
+      rev = "jr/multi-scrobbler";
+      hash = "sha256-GOBOFOqKQq9PMtvZI+0GSHmRn1eDIsgguhWQE6jJTkc=";
+    };
 
     npmDepsHash = "sha256-bmxtrQ7qEi/3dz2KTkqG4r90ohxYDKTRYsxmCux6UEg=";
 
