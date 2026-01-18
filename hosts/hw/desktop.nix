@@ -234,6 +234,7 @@
     .packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   # end hw file stuff
+  #
 
   hardware.cpu.amd.updateMicrocode = true;
   systemd.services.NetworkManager-wait-online.enable = lib.mkForce false;

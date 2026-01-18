@@ -310,7 +310,7 @@ in
       --http-prefix="/ntopng"
     '';
 
-    services.opensnitch.enable = true;
+    services.opensnitch.enable = false;
 
     # programs.atop.enable = true;
     # programs.atop.netatop.enable = true;

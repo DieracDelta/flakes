@@ -39,13 +39,14 @@
   custom_modules.monitoring.enableGpu = true;
   custom_modules.comfyui.enable = true;
   custom_modules.actual.enable = true;
+  custom_modules.dns.enable = true;
 
   # Koito scrobbler - integrates with Navidrome
   custom_modules.koito = {
     enable = true;
     port = 4110;
     allowedHosts = "office-desktop.tail5ca7.ts.net,localhost,127.0.0.1,127.0.0.1:4110";
-    configureNavidrome = true;  # Will be auto-disabled when multi-scrobbler is enabled
+    configureNavidrome = true; # Will be auto-disabled when multi-scrobbler is enabled
     # Subsonic artwork from Navidrome
     subsonicUrl = "http://127.0.0.1:4533/navidrome";
     subsonicParamsFile = "/var/lib/koito/secrets.env";
@@ -106,7 +107,12 @@
     };
   };
   services.nginx.virtualHosts."nominatim.local" = {
-    listen = [{ addr = "127.0.0.1"; port = 8088; }];
+    listen = [
+      {
+        addr = "127.0.0.1";
+        port = 8088;
+      }
+    ];
     enableACME = false;
     forceSSL = false;
   };

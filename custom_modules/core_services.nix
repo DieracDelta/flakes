@@ -64,29 +64,7 @@ in
       enable = true;
     };
 
-    # AdGuard Home DNS ad-blocking
-    services.adguardhome = {
-      enable = true;
-      mutableSettings = true;
-      port = 3003;  # Web UI port (3000 is taken by Grafana)
-      settings = {
-        http = {
-          address = "127.0.0.1:3003";
-        };
-        dns = {
-          bind_hosts = [ "0.0.0.0" ];
-          port = 53;
-          upstream_dns = [
-            "https://dns.cloudflare.com/dns-query"
-            "https://dns.google/dns-query"
-          ];
-          bootstrap_dns = [
-            "1.1.1.1"
-            "8.8.8.8"
-          ];
-        };
-      };
-    };
+    # DNS (AdGuard + Unbound) moved to custom_modules/dns.nix
 
     systemd.services.tailscale-optimization = {
       description = "Optimize ethtool settings for Tailscale";
@@ -718,11 +696,7 @@ in
       47990
       47989
       8083  # openstreetmap
-      53    # DNS (AdGuard)
-    ];
-
-    networking.firewall.allowedUDPPorts = [
-      53    # DNS (AdGuard)
+      # Port 53 moved to custom_modules/dns.nix
     ];
 
     services.lorri.enable = true;
