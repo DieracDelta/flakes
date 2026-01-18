@@ -15,6 +15,11 @@ let
   external = import ./external.nix {
     inherit (inputs) nix my-nvim nixpkgs-master;
   };
+
+  # Actual Budget with base path support
+  actual = import ./actual.nix {
+    actual-src = inputs.actual-src;
+  };
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -25,5 +30,6 @@ in
   python
   packages
   external
+  actual
   inputs.comfyui-nix.overlays.default
 ]

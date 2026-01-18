@@ -34,6 +34,7 @@ let
     heroic
     croc
     claude-code
+    claude-chill
     opencode
     lmstudio
     partclone

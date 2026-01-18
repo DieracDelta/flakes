@@ -38,6 +38,7 @@
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
   custom_modules.comfyui.enable = true;
+  custom_modules.actual.enable = true;
 
   # Koito scrobbler - integrates with Navidrome
   custom_modules.koito = {

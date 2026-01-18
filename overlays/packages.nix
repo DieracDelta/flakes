@@ -273,6 +273,27 @@ final: prev: {
     };
   };
 
+  claude-chill = final.rustPlatform.buildRustPackage {
+    pname = "claude-chill";
+    version = "0.1.0";
+
+    src = final.fetchFromGitHub {
+      owner = "davidbeesley";
+      repo = "claude-chill";
+      rev = "e9f2b0368486ca1a4909b80acc83c13221fcd893";
+      hash = "sha256-EFGWHQX6Etji74s4yNBT5luunnu/260o41YGiWcKkiU=";
+    };
+
+    cargoHash = "sha256-nxzO5sjzzGNDwrI18T8jSYhk8cyISIYIBuYUcH2rPX8=";
+
+    meta = with final.lib; {
+      description = "PTY proxy to reduce terminal flicker for Claude CLI";
+      homepage = "https://github.com/davidbeesley/claude-chill";
+      license = licenses.mit;
+      platforms = platforms.linux;
+    };
+  };
+
   multi-scrobbler = final.buildNpmPackage {
     pname = "multi-scrobbler";
     version = "0.10.8-subpath";
