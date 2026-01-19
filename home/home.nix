@@ -19,11 +19,7 @@
   programs.atuin.enableFishIntegration = true;
   programs.atuin.enable = true;
 
-  programs.zoxide = {
-    enable = true;
-    # enableFishIntegration = true;
-    enableBashIntegration = true;
-  };
+  # zoxide config is now in ./zoxide.nix
   programs.carapace = {
     enable = true;
     enableFishIntegration = true;
@@ -600,27 +596,9 @@
     ./xmonad/default.nix
     ./emacs.nix
     ./home_apps.nix
+    ./tmux.nix
+    ./zoxide.nix
   ];
-
-  programs.tmux = {
-    enable = true;
-    historyLimit = 1000000;
-    extraConfig = builtins.readFile ./tmux.conf;
-    plugins = with pkgs; [
-      {
-        plugin = tmuxPlugins.gruvbox;
-        extraConfig = "set -g @tmux-gruvbox 'dark'";
-      }
-      {
-        plugin = tmuxPlugins.search-panes;
-        extraConfig = "set -g @open_search_panes_key 'g'";
-      }
-      # {
-      #   plugin = tmuxPlugins.tmux-ressurect;
-      #
-      # }
-    ];
-  };
 
   # programs.mbsync.enable = true;
   # programs.notmuch = {

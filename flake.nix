@@ -116,7 +116,60 @@
           ) (builtins.readDir ./hosts);
           fullyQualifiedDirs = lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs;
         in
-        utils.buildNixosConfigurations fullyQualifiedDirs;
+        utils.buildNixosConfigurations fullyQualifiedDirs
+        // {
+          # ARM OCI instance - separate from x86 infrastructure (no znver3/CUDA/overlays)
+          nixos-arm = nixpkgs-unpatched.lib.nixosSystem {
+            system = "aarch64-linux";
+            modules = [
+              ./hosts/hw/oci_arm.nix
+              ./custom_modules/sudo.nix
+              home-manager.nixosModules.home-manager
+              (
+                { pkgs, lib, ... }:
+                {
+                  system.stateVersion = "25.11";
+                  networking.hostName = "nixos-arm";
+
+                  nixpkgs.config.allowUnfree = true;
+
+                  documentation.enable = false;
+
+                  nix.settings.experimental-features = [
+                    "nix-command"
+                    "flakes"
+                  ];
+
+                  environment.systemPackages = with pkgs; [
+                    vim
+                    git
+                    htop
+                  ];
+
+                  users.users.jrestivo = {
+                    isNormalUser = true;
+                    extraGroups = [ "wheel" ];
+                    openssh.authorizedKeys.keys = [
+                      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5qlN93RBt99GVy6YDP3OMb7Yu4zwELvT5kvdTRnPzE9txmdxKiMM8eHGw4vBwcbmwY7y1wa+ijXwiT0PbwDUOQvVu8CzWHxBF0pz8LVy7XsBuQr9UtxXVV6D9KBKJJEQjpKgF0LTGOC3LSdHKqlH/4zUaUpE2ZPOaoS01S8YwNfRbr30XDeilMDD5rY0AVlydKFRZIbf/96fdo4HURKcjRMapTdYrdkj++FINCl4IDOId3UQR7Z8qDmx2IC6rOikMNMGwEFvgueCDHDuieqNfHn9LVv8gzCPZ0QtX5Ap+6FPNiUfBXuG1IK7RzeDicGUSXWfKFQImwo6pppArqvtqizEFY6WDBSso5XTveg3Z/gH5/jfMigElVAh8xob/NAW2lv6lHEjXtFVmk3N2Fz425SfXQp2qyaYOPGYohWt1ZwlMdkHYfYGtskaoUd9XCM3GC+aSSLkMPuaXtLS3aJ9R7jcz4sfXdU0s3Vd+jQl7c9n3lGYlZ59aKruUj50QtAs= jrestivo@jrestivo.local"
+                    ];
+                  };
+
+                  security.sudo.wheelNeedsPassword = false;
+
+                  # Disable networkd wait-online (not needed, interfaces are unmanaged)
+                  systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
+
+                  # Home-manager with minimal config
+                  home-manager.useGlobalPkgs = true;
+                  home-manager.useUserPackages = true;
+                  home-manager.users.jrestivo = {
+                    imports = [ ./home/minimal.nix ];
+                  };
+                }
+              )
+            ];
+          };
+        };
 
       darwinConfigurations."jrestivo-4" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";

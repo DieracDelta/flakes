@@ -242,25 +242,7 @@ in
 
     # programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
 
-    security.sudo-rs.extraRules = [
-      {
-        users = [ "jrestivo" ];
-        commands = [
-          {
-            command = "${pkgs.coreutils-full}/bin/nice";
-            options = [ "NOPASSWD" ];
-          }
-          {
-            command = "${pkgs.util-linux}/bin/ionice";
-            options = [ "NOPASSWD" ];
-          }
-          {
-            command = "${pkgs.util-linux}/bin/renice";
-            options = [ "NOPASSWD" ];
-          }
-        ];
-      }
-    ];
+    # sudo-rs config is now in ./sudo.nix (auto-imported)
     services.xrdp.enable = true;
     virtualisation.docker = {
       rootless.enable = true;
@@ -429,7 +411,7 @@ in
       package = pkgs.usbmuxd2;
     };
 
-    security.sudo-rs.enable = true;
+    # security.sudo-rs.enable is now in ./sudo.nix (auto-imported)
 
     # Insult users on failed sudo authentication
     # pam_unix is at 11600 with "sufficient" - on success it skips the rest
