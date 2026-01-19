@@ -186,7 +186,7 @@
                   # Tailscale Funnel handles HTTPS termination, Caddy listens locally
                   services.caddy = {
                     enable = true;
-                    virtualHosts."localhost:8080" = {
+                    virtualHosts."http://localhost:8080" = {
                       extraConfig = ''
                         # Gonic music server
                         handle /gonic/* {

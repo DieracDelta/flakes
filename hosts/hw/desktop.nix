@@ -201,14 +201,6 @@
     priority = 100;
   };
 
-  swapDevices = [
-    {
-      device = "/swapfile";
-      size = 100 * 1024; # 100 GB in MB
-      priority = 50; # Lower priority than zram (100)
-    }
-  ];
-
   boot.kernel.sysctl = {
     "vm.page-cluster" = 0;
     "vm.swappiness" = 60;
