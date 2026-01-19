@@ -16,10 +16,8 @@ let
     inherit (inputs) nix my-nvim nixpkgs-master;
   };
 
-  # Actual Budget with base path support
-  actual = import ./actual.nix {
-    actual-src = inputs.actual-src;
-  };
+  # Actual Budget with base path support (fetches from DieracDelta/actual fork)
+  actual = import ./actual.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it

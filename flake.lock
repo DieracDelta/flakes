@@ -1,18 +1,5 @@
 {
   "nodes": {
-    "actual-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1768746552,
-        "narHash": "sha256-15IwtimL43JTmDIlqxAE9EjMGonuF4qx5NqDvWTvjNs=",
-        "path": "/home/jrestivo/dev/actual",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/jrestivo/dev/actual",
-        "type": "path"
-      }
-    },
     "blamer-nvim-src": {
       "flake": false,
       "locked": {
@@ -2624,7 +2611,6 @@
     },
     "root": {
       "inputs": {
-        "actual-src": "actual-src",
         "comfyui-nix": "comfyui-nix",
         "darwin": "darwin",
         "flake-utils": "flake-utils_2",

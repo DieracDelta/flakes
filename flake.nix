@@ -2,11 +2,6 @@
   description = "A highly awesome system configuration.";
 
   inputs = {
-    actual-src = {
-      url = "path:/home/jrestivo/dev/actual";
-      flake = false;
-    };
-
     hl.url = "github:pamburus/hl";
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs-unpatched";

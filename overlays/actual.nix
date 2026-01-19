@@ -1,7 +1,15 @@
-# Actual Budget overlay - builds from local source with base path support
-{ actual-src }:
+# Actual Budget overlay - builds from fork with base path support
 final: prev:
 let
+  # Fetch from DieracDelta fork with subpath support
+  actualSrc = prev.fetchFromGitHub {
+    name = "actual-src";
+    owner = "DieracDelta";
+    repo = "actual";
+    rev = "cc52121957ce4916855588c7e495bb4249a2bdbe";
+    hash = "sha256-+QH6fW0rqucSApNiNUK2PDMgz1P/e7hB73oD87XDu8c=";
+  };
+
   # Fetch translations separately (same as upstream)
   translations = prev.fetchFromGitHub {
     name = "actualbudget-translations-source";
@@ -13,12 +21,6 @@ let
 
   nodejs = prev.nodejs_22;
   yarn-berry = prev.yarn-berry_4.override { inherit nodejs; };
-
-  # Copy local source to store with a known name
-  actualSrc = prev.runCommand "actual-src" { } ''
-    cp -r ${actual-src} $out
-    chmod -R u+w $out
-  '';
 in
 {
   actual-server = prev.actual-server.overrideAttrs (oldAttrs: {
