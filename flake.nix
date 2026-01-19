@@ -220,9 +220,8 @@
                     script = ''
                       # Wait for tailscale to be ready
                       sleep 5
-                      # Configure serve in background mode
-                      tailscale serve --bg --https=443 http://localhost:8080
-                      tailscale funnel 443 on
+                      # Configure serve with funnel in background mode
+                      tailscale funnel --bg --https=443 http://localhost:8080
                     '';
                     serviceConfig = {
                       Type = "oneshot";
