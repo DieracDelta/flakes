@@ -182,6 +182,53 @@
                     port = 2022;
                   };
 
+                  # Caddy reverse proxy to desktop services via Tailscale
+                  # Tailscale Funnel handles HTTPS termination, Caddy listens locally
+                  services.caddy = {
+                    enable = true;
+                    virtualHosts."localhost:8080" = {
+                      extraConfig = ''
+                        # Gonic music server
+                        handle_path /gonic/* {
+                          reverse_proxy https://office-desktop.tail5ca7.ts.net/gonic {
+                            header_up Host {upstream_hostport}
+                          }
+                        }
+
+                        # Srcbot static files
+                        handle_path /srcbot/* {
+                          reverse_proxy https://office-desktop.tail5ca7.ts.net/srcbot {
+                            header_up Host {upstream_hostport}
+                          }
+                        }
+
+                        handle {
+                          respond "nixos-arm" 200
+                        }
+                      '';
+                    };
+                  };
+
+                  # Tailscale Funnel to expose Caddy publicly
+                  services.tailscale.useRoutingFeatures = "both";
+                  systemd.services.tailscale-funnel = {
+                    description = "Tailscale Funnel for public HTTPS";
+                    after = [ "tailscaled.service" "caddy.service" "network-online.target" ];
+                    wants = [ "tailscaled.service" "caddy.service" ];
+                    wantedBy = [ "multi-user.target" ];
+                    path = [ pkgs.tailscale ];
+                    script = ''
+                      # Wait for tailscale to be ready
+                      sleep 5
+                      tailscale serve --https=443 http://localhost:8080
+                      tailscale funnel 443 on
+                    '';
+                    serviceConfig = {
+                      Type = "oneshot";
+                      RemainAfterExit = true;
+                    };
+                  };
+
                   # Disable networkd wait-online (not needed, interfaces are unmanaged)
                   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 
