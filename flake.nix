@@ -220,7 +220,8 @@
                     script = ''
                       # Wait for tailscale to be ready
                       sleep 5
-                      tailscale serve --https=443 http://localhost:8080
+                      # Use 'set' subcommand for persistent config (doesn't block)
+                      tailscale serve set --https=443 http://localhost:8080
                       tailscale funnel 443 on
                     '';
                     serviceConfig = {
