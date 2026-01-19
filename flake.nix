@@ -132,6 +132,7 @@
                   networking.hostName = "nixos-arm";
 
                   nixpkgs.config.allowUnfree = true;
+                  nixpkgs.overlays = [ (import ./overlays/tmux-search-panes.nix { }) ];
 
                   documentation.enable = false;
 
