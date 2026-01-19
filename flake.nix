@@ -214,7 +214,7 @@
                   systemd.services.tailscale-funnel = {
                     description = "Tailscale Funnel for public HTTPS";
                     after = [ "tailscaled.service" "caddy.service" "network-online.target" ];
-                    wants = [ "tailscaled.service" "caddy.service" ];
+                    wants = [ "tailscaled.service" "caddy.service" "network-online.target" ];
                     wantedBy = [ "multi-user.target" ];
                     path = [ pkgs.tailscale ];
                     script = ''
