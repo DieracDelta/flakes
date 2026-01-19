@@ -189,15 +189,15 @@
                     virtualHosts."localhost:8080" = {
                       extraConfig = ''
                         # Gonic music server
-                        handle_path /gonic/* {
-                          reverse_proxy https://office-desktop.tail5ca7.ts.net/gonic {
+                        handle /gonic/* {
+                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
                             header_up Host {upstream_hostport}
                           }
                         }
 
                         # Srcbot static files
-                        handle_path /srcbot/* {
-                          reverse_proxy https://office-desktop.tail5ca7.ts.net/srcbot {
+                        handle /srcbot/* {
+                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
                             header_up Host {upstream_hostport}
                           }
                         }
@@ -220,8 +220,8 @@
                     script = ''
                       # Wait for tailscale to be ready
                       sleep 5
-                      # Use 'set' subcommand for persistent config (doesn't block)
-                      tailscale serve set --https=443 http://localhost:8080
+                      # Configure serve in background mode
+                      tailscale serve --bg --https=443 http://localhost:8080
                       tailscale funnel 443 on
                     '';
                     serviceConfig = {
