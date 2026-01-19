@@ -148,11 +148,20 @@
                     vim
                     git
                     htop
+                    ghostty.terminfo
+                    eza
+                    fd
+                    ripgrep
+                    fish
                   ];
+
+                  # Fish as default shell
+                  programs.fish.enable = true;
 
                   users.users.jrestivo = {
                     isNormalUser = true;
                     extraGroups = [ "wheel" ];
+                    shell = pkgs.fish;
                     openssh.authorizedKeys.keys = [
                       "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5qlN93RBt99GVy6YDP3OMb7Yu4zwELvT5kvdTRnPzE9txmdxKiMM8eHGw4vBwcbmwY7y1wa+ijXwiT0PbwDUOQvVu8CzWHxBF0pz8LVy7XsBuQr9UtxXVV6D9KBKJJEQjpKgF0LTGOC3LSdHKqlH/4zUaUpE2ZPOaoS01S8YwNfRbr30XDeilMDD5rY0AVlydKFRZIbf/96fdo4HURKcjRMapTdYrdkj++FINCl4IDOId3UQR7Z8qDmx2IC6rOikMNMGwEFvgueCDHDuieqNfHn9LVv8gzCPZ0QtX5Ap+6FPNiUfBXuG1IK7RzeDicGUSXWfKFQImwo6pppArqvtqizEFY6WDBSso5XTveg3Z/gH5/jfMigElVAh8xob/NAW2lv6lHEjXtFVmk3N2Fz425SfXQp2qyaYOPGYohWt1ZwlMdkHYfYGtskaoUd9XCM3GC+aSSLkMPuaXtLS3aJ9R7jcz4sfXdU0s3Vd+jQl7c9n3lGYlZ59aKruUj50QtAs= jrestivo@jrestivo.local"
                     ];
@@ -168,19 +177,6 @@
                     enable = true;
                     port = 2022;
                   };
-
-                  # Ghostty terminfo + CLI tools
-                  environment.systemPackages = with pkgs; [
-                    ghostty.terminfo
-                    eza
-                    fd
-                    ripgrep
-                    fish
-                  ];
-
-                  # Fish as default shell
-                  programs.fish.enable = true;
-                  users.users.jrestivo.shell = pkgs.fish;
 
                   # Disable networkd wait-online (not needed, interfaces are unmanaged)
                   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
