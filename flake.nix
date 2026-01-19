@@ -163,6 +163,25 @@
                   # Tailscale VPN
                   services.tailscale.enable = true;
 
+                  # Eternal Terminal for better SSH experience
+                  services.eternal-terminal = {
+                    enable = true;
+                    port = 2022;
+                  };
+
+                  # Ghostty terminfo + CLI tools
+                  environment.systemPackages = with pkgs; [
+                    ghostty.terminfo
+                    eza
+                    fd
+                    ripgrep
+                    fish
+                  ];
+
+                  # Fish as default shell
+                  programs.fish.enable = true;
+                  users.users.jrestivo.shell = pkgs.fish;
+
                   # Disable networkd wait-online (not needed, interfaces are unmanaged)
                   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 
