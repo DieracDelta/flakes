@@ -156,6 +156,9 @@
 
                   security.sudo.wheelNeedsPassword = false;
 
+                  # Tailscale VPN
+                  services.tailscale.enable = true;
+
                   # Disable networkd wait-online (not needed, interfaces are unmanaged)
                   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 

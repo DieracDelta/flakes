@@ -35,10 +35,4 @@
     userEmail = "justin@restivo.me";
     lfs.enable = true;
   };
-
-  # Disable unused profiles
-  profiles.emacs.enable = lib.mkDefault false;
-  profiles.dev.enable = lib.mkDefault false;
-  profiles.vim.enable = lib.mkDefault false;
-  profiles.xmonad.enable = lib.mkDefault false;
 }
