@@ -122,6 +122,9 @@
           nixos-arm = nixpkgs-unpatched.lib.nixosSystem {
             system = "aarch64-linux";
             modules = [
+              # OCI image modules (provide fileSystems, boot.loader, etc.)
+              "${nixpkgs-unpatched}/nixos/modules/virtualisation/oci-image.nix"
+              "${nixpkgs-unpatched}/nixos/modules/virtualisation/oci-options.nix"
               ./hosts/hw/oci_arm.nix
               ./custom_modules/sudo.nix
               home-manager.nixosModules.home-manager
