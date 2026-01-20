@@ -33,6 +33,7 @@ let
     # wine
     heroic
     croc
+    nixpkgs-hammering
     claude-code
     claude-chill
     opencode
@@ -210,6 +211,18 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Completely disable system sleep/suspend - this is a desktop running services
+    systemd.targets.sleep.enable = false;
+    systemd.targets.suspend.enable = false;
+    systemd.targets.hibernate.enable = false;
+    systemd.targets.hybrid-sleep.enable = false;
+
+    # Also tell logind to ignore idle actions (belt and suspenders)
+    services.logind.settings.Login = {
+      IdleAction = "ignore";
+      IdleActionSec = 0;
+    };
+
     environment.plasma6.excludePackages = [
       pkgs.kdePackages.baloo
       pkgs.kdePackages.spectacle
@@ -218,6 +231,9 @@ in
     services.desktopManager.plasma6.enable = true;
     services.libinput.enable = true;
     services.displayManager.sddm.enable = true;
+    services.xserver.displayManager.sessionCommands = ''
+      systemctl --user start graphical-session.target
+    '';
     # weird bug. Need this in order to get xmonad to work in home-manager.
     services.xserver = {
       enable = true;
