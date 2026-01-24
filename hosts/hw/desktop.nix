@@ -217,6 +217,7 @@
     "gccarch-znver1"
     "gccarch-alderlake"
     "gccarch-x86_64-v3"
+    "gccarch-armv7-a"
   ];
 
   # nixpkgs.hostPlatform = "";
@@ -227,8 +228,8 @@
   #     gcc.tune = "gccarch-znver3";
   #   };
 
-  nix.settings.max-jobs = 4;
-  nix.settings.cores = 24;
+  nix.settings.max-jobs = 6;
+  nix.settings.cores = 4;
   nix.package =
     (builtins.getFlake "github:nixos/nix/f6ca5dc5cb471b45553f8f464b940b73f0a058dc")
     .packages.${pkgs.stdenv.hostPlatform.system}.default;
