@@ -328,6 +328,7 @@
                 nix = inputs.nix.packages.aarch64-darwin.default;
                 hl = inputs.hl.packages."aarch64-darwin".default;
               })
+              (import ./overlays/tmux-search-panes.nix { })
               (import ./overlays/tmux-gruvbox-themes.nix)
             ];
           }
