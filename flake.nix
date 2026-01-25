@@ -131,13 +131,51 @@
               (
                 { pkgs, lib, ... }:
                 {
+                  # TODOs
+                  # mitigations against too much ram usage
+                  # store GC
                   system.stateVersion = "25.11";
                   networking.hostName = "nixos-arm";
 
                   nixpkgs.config.allowUnfree = true;
-                  nixpkgs.overlays = [ (import ./overlays/tmux-search-panes.nix { }) ];
+                  nixpkgs.overlays = [
+                    (import ./overlays/tmux-search-panes.nix { })
+                    (import ./overlays/tmux-gruvbox-themes.nix)
+                  ];
 
                   documentation.enable = false;
+
+                  # Enable LVM support for ~195GB combined storage (boot partition 3 + block volume)
+                  oci.hardware.enableLVM = true;
+
+                  # Mount /nix and /home from LVM btrfs volume
+                  fileSystems."/nix" = {
+                    device = "/dev/datavg/datalv";
+                    fsType = "btrfs";
+                    options = [
+                      "subvol=@nix"
+                      "compress=zstd"
+                      "noatime"
+                    ];
+                  };
+                  fileSystems."/home" = {
+                    device = "/dev/datavg/datalv";
+                    fsType = "btrfs";
+                    options = [
+                      "subvol=@home"
+                      "compress=zstd"
+                      "noatime"
+                    ];
+                  };
+
+                  # LVM activation in preLVMCommands (runs after oci-hardware.nix device settling)
+                  boot.initrd.preLVMCommands = lib.mkAfter ''
+                    echo "Activating LVM volume groups..."
+                    lvm vgscan --mknodes
+                    lvm vgchange -ay
+                    lvm lvscan
+                    sleep 1
+                  '';
 
                   nix.settings.experimental-features = [
                     "nix-command"
@@ -145,6 +183,10 @@
                   ];
 
                   environment.systemPackages = with pkgs; [
+                    gh
+                    bat
+                    claude-code
+                    gemini-cli
                     vim
                     git
                     htop
@@ -182,6 +224,9 @@
                     port = 2022;
                   };
 
+                  # Open firewall for ET (not opened automatically by the service module)
+                  networking.firewall.allowedTCPPorts = [ 2022 ];
+
                   # Caddy reverse proxy to desktop services via Tailscale
                   # Tailscale Funnel handles HTTPS termination, Caddy listens locally
                   services.caddy = {
@@ -189,14 +234,24 @@
                     virtualHosts.":8080" = {
                       extraConfig = ''
                         # Gonic music server
-                        handle /gonic/* {
+                        @gonic path /gonic /gonic/*
+                        handle @gonic {
                           reverse_proxy https://office-desktop.tail5ca7.ts.net {
                             header_up Host {upstream_hostport}
                           }
                         }
 
                         # Srcbot static files
-                        handle /srcbot/* {
+                        @srcbot path /srcbot /srcbot/*
+                        handle @srcbot {
+                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
+                            header_up Host {upstream_hostport}
+                          }
+                        }
+
+                        # Srcbot-srv static files
+                        @srcbot-srv path /srcbot-srv /srcbot-srv/*
+                        handle @srcbot-srv {
                           reverse_proxy https://office-desktop.tail5ca7.ts.net {
                             header_up Host {upstream_hostport}
                           }
@@ -213,8 +268,16 @@
                   services.tailscale.useRoutingFeatures = "both";
                   systemd.services.tailscale-funnel = {
                     description = "Tailscale Funnel for public HTTPS";
-                    after = [ "tailscaled.service" "caddy.service" "network-online.target" ];
-                    wants = [ "tailscaled.service" "caddy.service" "network-online.target" ];
+                    after = [
+                      "tailscaled.service"
+                      "caddy.service"
+                      "network-online.target"
+                    ];
+                    wants = [
+                      "tailscaled.service"
+                      "caddy.service"
+                      "network-online.target"
+                    ];
                     wantedBy = [ "multi-user.target" ];
                     path = [ pkgs.tailscale ];
                     script = ''
@@ -265,6 +328,7 @@
                 nix = inputs.nix.packages.aarch64-darwin.default;
                 hl = inputs.hl.packages."aarch64-darwin".default;
               })
+              (import ./overlays/tmux-gruvbox-themes.nix)
             ];
           }
         ];

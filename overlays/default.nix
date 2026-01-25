@@ -16,6 +16,9 @@ let
     inherit (inputs) nix my-nvim nixpkgs-master;
   };
 
+  # Custom tmux gruvbox themes (darwin=green, arm=red, x86=gruvbox)
+  tmux-gruvbox-themes = import ./tmux-gruvbox-themes.nix;
+
   # Actual Budget with base path support (fetches from DieracDelta/actual fork)
   actual = import ./actual.nix;
 in
@@ -28,6 +31,7 @@ in
   python
   packages
   external
+  tmux-gruvbox-themes
   actual
   inputs.comfyui-nix.overlays.default
 ]

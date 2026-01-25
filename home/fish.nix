@@ -7,6 +7,36 @@
 }:
 let
   cfg = config.profiles.zsh;
+
+  # Host-specific prompt colors matching tmux themes
+  promptColors =
+    if pkgs.stdenv.isDarwin then {
+      # Darwin - Forest Green theme
+      primary = "#7ec47e";      # Green accent
+      secondary = "#5f9e5f";    # Darker green
+      directory = "#7ec47e";
+      git = "#c4c47e";          # Yellow-green
+      error = "#c47e7e";        # Muted red
+      hostname = "#9cb398";
+    }
+    else if pkgs.stdenv.hostPlatform.isAarch64 then {
+      # NixOS ARM - Crimson theme
+      primary = "#c47070";      # Red accent
+      secondary = "#9e4f4f";    # Darker red
+      directory = "#c47070";
+      git = "#c4a07e";          # Orange-ish
+      error = "#c48060";        # Orange for errors (since red is primary)
+      hostname = "#b39c98";
+    }
+    else {
+      # x86_64 - Original gruvbox
+      primary = "#fabd2f";      # Gruvbox yellow
+      secondary = "#d79921";    # Darker yellow
+      directory = "#83a598";    # Gruvbox blue
+      git = "#b8bb26";          # Gruvbox green
+      error = "#fb4934";        # Gruvbox red
+      hostname = "#bdae93";
+    };
 in
 {
   # TODO rename to shell. It's not zsh anymore
@@ -22,6 +52,20 @@ in
         git_branch.disabled = false;
         directory.fish_style_pwd_dir_length = 1; # turn on fish directory truncation
         directory.truncation_length = 2; # number of directories not to truncate
+
+        # Host-specific colors
+        directory.style = "bold ${promptColors.directory}";
+        git_branch.style = "bold ${promptColors.git}";
+        git_status.style = "${promptColors.git}";
+        character = {
+          success_symbol = "[❯](bold ${promptColors.primary})";
+          error_symbol = "[❯](bold ${promptColors.error})";
+        };
+        hostname = {
+          style = "bold ${promptColors.hostname}";
+          ssh_only = false;
+        };
+        username.style_user = "bold ${promptColors.primary}";
       };
       enable = true;
       enableBashIntegration = true;

@@ -1,4 +1,14 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
+let
+  # Auto-detect theme based on platform
+  # darwin = green forest theme
+  # aarch64-linux = red crimson theme
+  # x86_64-linux = original gruvbox
+  themeName =
+    if pkgs.stdenv.isDarwin then "darwin"
+    else if pkgs.stdenv.hostPlatform.isAarch64 then "nixos-arm"
+    else "dark";
+in
 {
   programs.tmux = {
     enable = true;
@@ -6,8 +16,8 @@
     extraConfig = builtins.readFile ./tmux.conf;
     plugins = with pkgs; [
       {
-        plugin = tmuxPlugins.gruvbox;
-        extraConfig = "set -g @tmux-gruvbox 'dark'";
+        plugin = tmuxPlugins.gruvbox-themes;
+        extraConfig = "set -g @tmux-gruvbox '${themeName}'";
       }
       {
         plugin = tmuxPlugins.search-panes;

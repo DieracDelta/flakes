@@ -5,6 +5,8 @@
 # - iSCSI boot via iBFT (iSCSI Boot Firmware Table)
 # - Mellanox ConnectX-6 network driver
 # - Required kernel modules and initrd configuration
+# - LVM support for multi-volume setups
+# - Optional initrd SSH for emergency access
 #
 # This is a pure hardware module - no application-specific configuration.
 # Use this as a base for any NixOS deployment on OCI ARM.
@@ -16,7 +18,47 @@
   ...
 }:
 
+let
+  cfg = config.oci.hardware;
+in
 {
+  options.oci.hardware = {
+    enableLVM = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable LVM support in the initrd. Required for setups using LVM
+        to combine boot volume and block volumes.
+      '';
+    };
+
+    initrdSSH = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Enable SSH access in the initrd for emergency debugging.
+          Useful when LVM or other early-boot services fail.
+        '';
+      };
+
+      authorizedKeys = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "SSH public keys authorized to access initrd SSH";
+      };
+
+      hostKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to the SSH host key file for initrd SSH.
+          This should be generated once and stored securely.
+        '';
+      };
+    };
+  };
+
   config = {
     # OCI NATIVE mode uses iSCSI boot via iBFT (iSCSI Boot Firmware Table)
     # The firmware (iPXE) provides iSCSI target info in iBFT, we need to:
@@ -50,6 +92,11 @@
       "mlx5_core"
       # Fallback virtio network (in case different instance type)
       "virtio_net"
+    ] ++ lib.optionals cfg.enableLVM [
+      # LVM / device-mapper modules
+      "dm-mod"
+      "dm-snapshot"
+      "dm-mirror"
     ];
 
     # Scripted initrd required for iSCSI (systemd stage1 doesn't support it yet)
@@ -59,18 +106,31 @@
     boot.kernelParams = [ "boot.shell_on_fail" ];
 
     # Add iSCSI tools and debug utilities to initrd
-    boot.initrd.extraUtilsCommands = ''
-      copy_bin_and_libs ${pkgs.openiscsi}/bin/iscsid
-      copy_bin_and_libs ${pkgs.openiscsi}/bin/iscsiadm
-      copy_bin_and_libs ${pkgs.util-linux}/bin/lsblk
+    boot.initrd.extraUtilsCommands = lib.mkMerge [
+      ''
+        copy_bin_and_libs ${pkgs.openiscsi}/bin/iscsid
+        copy_bin_and_libs ${pkgs.openiscsi}/bin/iscsiadm
+        copy_bin_and_libs ${pkgs.util-linux}/bin/lsblk
 
-      # Copy required config
-      mkdir -p $out/etc/iscsi
-      cp ${pkgs.openiscsi}/etc/iscsi/iscsid.conf $out/etc/iscsi/iscsid.conf
+        # Copy required config
+        mkdir -p $out/etc/iscsi
+        cp ${pkgs.openiscsi}/etc/iscsi/iscsid.conf $out/etc/iscsi/iscsid.conf
 
-      # NSS files for network
-      cp -pv ${pkgs.glibc.out}/lib/libnss_files.so.* $out/lib
-    '';
+        # NSS files for network
+        cp -pv ${pkgs.glibc.out}/lib/libnss_files.so.* $out/lib
+      ''
+      # Add LVM tools when LVM is enabled
+      # Note: lvm2 package has binaries in the .bin output, not the default output
+      (lib.mkIf cfg.enableLVM ''
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/lvm
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/pvcreate
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/vgcreate
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/vgchange
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/vgscan
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/lvchange
+        copy_bin_and_libs ${pkgs.lvm2.bin}/bin/lvscan
+      '')
+    ];
 
     boot.initrd.extraUtilsCommandsTest = ''
       $out/bin/iscsiadm --version
@@ -123,5 +183,16 @@
       # Kill iscsid - it will be restarted properly in stage 2
       pkill -9 iscsid || true
     '';
+
+    # LVM support
+    services.lvm.enable = cfg.enableLVM;
+
+    # initrd SSH for emergency access
+    boot.initrd.network.ssh = lib.mkIf cfg.initrdSSH.enable {
+      enable = true;
+      port = 22;
+      authorizedKeys = cfg.initrdSSH.authorizedKeys;
+      hostKeys = lib.optional (cfg.initrdSSH.hostKeyFile != null) cfg.initrdSSH.hostKeyFile;
+    };
   };
 }
