@@ -37,8 +37,8 @@
     extraConfig = builtins.readFile ../tmux.conf;
     plugins = with pkgs; [
       {
-        plugin = tmuxPlugins.gruvbox;
-        extraConfig = "set -g @tmux-gruvbox 'dark'";
+        plugin = tmuxPlugins.gruvbox-themes;
+        extraConfig = "set -g @tmux-gruvbox 'darwin'";
       }
       {
         plugin = tmuxPlugins.search-panes;
