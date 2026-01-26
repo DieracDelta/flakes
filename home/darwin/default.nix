@@ -27,6 +27,9 @@
   # morally speaking should automate this in the same way im doing modules
   imports = [
     ../fish.nix
+    ../htop.nix
+    ../fzf.nix
+    ../atuin.nix
   ];
 
   programs.emacs.enable = true;
@@ -51,9 +54,7 @@
     enable = true;
     enableFishIntegration = true;
   };
-  programs.atuin.enable = true;
-  programs.atuin.enableFishIntegration = true;
-  programs.atuin.enableZshIntegration = true;
+  # Atuin config moved to ../atuin.nix
 
   programs.carapace = {
     enable = true;

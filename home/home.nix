@@ -16,8 +16,6 @@
 
   programs.fish.enable = true;
   programs.fish.generateCompletions = false;
-  programs.atuin.enableFishIntegration = true;
-  programs.atuin.enable = true;
 
   # zoxide config is now in ./zoxide.nix
   programs.carapace = {
@@ -598,6 +596,9 @@
     ./home_apps.nix
     ./tmux.nix
     ./zoxide.nix
+    ./htop.nix
+    ./fzf.nix
+    ./atuin.nix
   ];
 
   # programs.mbsync.enable = true;

@@ -6,8 +6,8 @@ final: prev: {
       src = final.fetchFromGitHub {
         owner = "DieracDelta";
         repo = "tmux-gruvbox";
-        rev = "d4c9ceb38eee806b9ce13340e56a5ec6c74b4cc8";
-        hash = "sha256-psEDGV/670u1TapOLAsIzGq5zfoJtYNnRrJmfeDtPiU=";
+        rev = "1ddc909d16708e0d5ffbb33022ff32574ea70d00";
+        hash = "sha256-LeYE5X3pa0cc0pRvu2OfodB1v7rPDenomz0vPnPlZSo=";
       };
       rtpFilePath = "gruvbox-tpm.tmux";
     };

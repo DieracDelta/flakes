@@ -11,6 +11,9 @@
     ./fish.nix
     ./zoxide.nix
     ./tmux.nix
+    ./htop.nix
+    ./fzf.nix
+    ./atuin.nix
   ];
 
   programs.home-manager.enable = true;
@@ -24,9 +27,7 @@
   # fish.nix has a profile option - enable it
   profiles.zsh.enable = true;
 
-  # Atuin - shell history sync
-  programs.atuin.enable = true;
-  programs.atuin.enableFishIntegration = true;
+  # Atuin config moved to ./atuin.nix
 
   # Git - basic config
   programs.git = {
