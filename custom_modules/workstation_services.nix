@@ -263,7 +263,7 @@ in
     virtualisation.docker = {
       rootless.enable = true;
       rootless.setSocketVariable = true;
-      # enable = true;
+      enable = true;
       # autoPrune.enable = true;
       enableOnBoot = true;
       # storageDriver = "btrfs";

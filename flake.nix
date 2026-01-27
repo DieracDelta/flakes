@@ -208,7 +208,7 @@
 
                   users.users.jrestivo = {
                     isNormalUser = true;
-                    extraGroups = [ "wheel" ];
+                    extraGroups = [ "wheel" "docker" ];
                     shell = pkgs.fish;
                     openssh.authorizedKeys.keys = [
                       # root's ssh key for srcbot

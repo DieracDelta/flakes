@@ -255,6 +255,12 @@ in
       '';
     };
 
+    services.caddy.virtualHosts."office-desktop.tail5ca7.ts.net:9444" = {
+      extraConfig = ''
+        reverse_proxy 127.0.0.1:9080
+      '';
+    };
+
     services.tailscale.permitCertUid = "caddy";
 
     services.homepage-dashboard = {
@@ -389,6 +395,13 @@ in
                 icon = "mdi-book-open-variant";
                 href = "/leandocs/";
                 description = "Lean Documentation";
+              };
+            }
+            {
+              "CTF Dojo" = {
+                icon = "mdi-flag";
+                href = "https://office-desktop.tail5ca7.ts.net:9444";
+                description = "CPSC 4130/5130 CTF Platform";
               };
             }
           ];

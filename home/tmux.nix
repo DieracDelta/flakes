@@ -23,6 +23,21 @@ in
         plugin = tmuxPlugins.search-panes;
         extraConfig = "set -g @open_search_panes_key 'g'";
       }
+      {
+        plugin = tmuxPlugins.resurrect;
+        extraConfig = ''
+          set -g @resurrect-save 'e'
+          set -g @resurrect-restore 'v'
+          set -g @resurrect-capture-pane-contents 'on'
+        '';
+      }
+      {
+        plugin = tmuxPlugins.continuum;
+        extraConfig = ''
+          set -g @continuum-restore 'on'
+          set -g @continuum-save-interval '15'
+        '';
+      }
     ];
   };
 }

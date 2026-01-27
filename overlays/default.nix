@@ -24,6 +24,9 @@ let
 
   # Taskwarrior Web UI (from GitHub)
   taskwarrior-web = import ./taskwarrior-web.nix;
+
+  # Tmux resurrect and continuum (latest versions)
+  tmux-resurrect-continuum = import ./tmux-resurrect-continuum.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -37,5 +40,6 @@ in
   tmux-gruvbox-themes
   actual
   taskwarrior-web
+  tmux-resurrect-continuum
   inputs.comfyui-nix.overlays.default
 ]
