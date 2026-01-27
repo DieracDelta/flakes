@@ -40,6 +40,7 @@
   custom_modules.comfyui.enable = true;
   custom_modules.actual.enable = true;
   custom_modules.dns.enable = true;
+  custom_modules.taskwarrior.enable = true;
 
   # Koito scrobbler - integrates with Navidrome
   custom_modules.koito = {

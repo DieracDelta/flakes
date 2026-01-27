@@ -21,6 +21,9 @@ let
 
   # Actual Budget with base path support (fetches from DieracDelta/actual fork)
   actual = import ./actual.nix;
+
+  # Taskwarrior Web UI (from GitHub)
+  taskwarrior-web = import ./taskwarrior-web.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -33,5 +36,6 @@ in
   external
   tmux-gruvbox-themes
   actual
+  taskwarrior-web
   inputs.comfyui-nix.overlays.default
 ]
