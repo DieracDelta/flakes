@@ -1,3 +1,5 @@
+# Workstation services
+# Meta-module that enables desktop workstation functionality
 {
   config,
   pkgs,
@@ -10,322 +12,44 @@
   ...
 }:
 let
-  tmpnixpkgs = import nixpkgs-master {
-    inherit system;
-    config = {
-      allowUnfree = true;
-    };
-  };
   cfg = config.custom_modules.workstation_services;
-  # system
-  virtualizationPack = with pkgs; [
-    eternal-terminal
-    nix
-    nix-prefetch-docker
-    nix-prefetch-github
-    nix-prefetch-pijul
-    nix-prefetch-scripts
-    nix-prefetch
-    spider
-    # lutris
-    yq
-    spicetify-cli
-    # wine
-    heroic
-    croc
-    nixpkgs-hammering
-    claude-code
-    claude-chill
-    opencode
-    lmstudio
-    partclone
-    gemini-cli
-    crush
-    pam-insults
-    nix-eval-jobs
-    nix-diff
-    scrutiny
-    scrutiny-collector
-    ethtool
-    # qt5.wrapQtAppsHook
-    # libsForQt5.qt5.qtconnectivity
-    sqlite
-    goose-cli
-    bingrep
-    qwen-code
-    # aider-chat-full
-    streamrip
-    # libsForQt5.qt5.qtgui
-    # libsForQt5.qt5.qtgamepad
-    # libsForQt5.qt5.qtgraphicaleffects
-    # libsForQt5.qt5.qtlocation
-    # libsForQt5.qt5.qtquickcontrols2
-    # libsForQt5.qt5.qtserialport
-
-    nix-inspect
-    btop
-    # xboxdrv
-    nethogs
-    difftastic
-    cachix
-    nix-btm
-    docker-compose
-    nix-search
-    smartmontools
-    oxker # docker shit
-    magic-wormhole-rs # file transfer
-    spotdl
-    kitty
-    vorbis-tools
-    fio
-    # virt-manager
-    # looking-glass-client
-    cdrkit
-    qemu
-    OVMF
-    bandwhich
-    binsider
-    dua
-    fzf-make
-    oxker
-    rainfrog
-    trippy
-    elfx86exts
-    magic-wormhole
-    gitoxide
-    pax-utils
-    fselect
-    kmon
-    # chromium
-    # libvirt
-    # ghc
-    # cabal-install
-    # stack
-    #firefox
-  ];
-  # system
-  gamingPack = with pkgs; [
-    # rustdesk
-    nix-output-monitor
-    # nix-janitor
-    # ollama
-    xbanish
-    cudaPackages.cudatoolkit
-    # cudaPackages.cudnn_8_9
-    # wine
-    # winetricks
-    # protontricks
-    cowsay
-    kdePackages.wacomtablet
-    (steam.override {
-      extraPkgs =
-        p: with p; [
-          xorg.libXcursor
-          xorg.libXi
-          xorg.libXinerama
-          xorg.libXScrnSaver
-          libpng
-          libpulseaudio
-          libvorbis
-          stdenv.cc.cc.lib
-          libkrb5
-          keyutils
-
-        ];
-    })
-    steamcmd
-    # steam-run
-    mesa
-    gnuchess
-    angband
-    cabextract
-    m4
-  ];
-  xPack = with pkgs; [
-    asciinema
-    tdf
-    libimobiledevice
-    ifuse
-    # kdePackages.kdeconnect-kde
-    yazi
-    ghostty
-    # cachix
-    discord
-    noisetorch
-    syncthing
-    # gnome.cheese
-    # kdeconnect
-    # trezor-suite
-    redshift
-    xorg.xwininfo
-    brightnessctl
-    imagemagick
-    #deepfry
-    arandr
-    playerctl
-    gtk3
-    shared-mime-info
-    maim
-    xclip
-    xmobar
-    libGL
-    # trickle // TODO currently broken
-    libGLU
-    # obsidian
-  ];
-  yubikeyPack = with pkgs; [
-    lsr
-    zig
-    gnupg
-    # pinentry-qt
-    paperkey
-    wget
-    rng-tools
-    clinfo
-    vulkan-loader # vulkan-volk
-    powertop
-    vulkan-tools
-    vulkan-utility-libraries
-    vulkan-validation-layers
-    id3v2
-    vulkan-helper
-    vulkan-headers
-    vulkan-caps-viewer
-    vulkan-extension-layer
-    vk-bootstrap
-    # amdvlk
-    # vkmark  # broken with vulkan-headers 1.4.335+
-    vkdisplayinfo
-    vk-bootstrap
-    gpu-viewer
-    cntr
-  ];
 in
 {
   options.custom_modules.workstation_services.enable = lib.mkOption {
     description = ''
-      Extraneous services to be enabled only when X server is used (e.g. not on servers).
+      Enable workstation services (desktop environment, gaming, AI, etc.)
+      This is a meta-module that enables various sub-modules.
     '';
     type = lib.types.bool;
     default = false;
   };
 
   config = lib.mkIf cfg.enable {
-    # Completely disable system sleep/suspend - this is a desktop running services
+    # Enable sub-modules
+    custom_modules.desktop.enable = true;
+    custom_modules.docker.enable = true;
+    custom_modules.gaming.enable = true;
+    custom_modules.ollama.enable = true;
+    custom_modules.sunshine.enable = true;
+    custom_modules.homepage.enable = true;
+
+    # Disable system sleep/suspend - this is a desktop running services
     systemd.targets.sleep.enable = false;
     systemd.targets.suspend.enable = false;
     systemd.targets.hibernate.enable = false;
     systemd.targets.hybrid-sleep.enable = false;
 
-    # Also tell logind to ignore idle actions (belt and suspenders)
     services.logind.settings.Login = {
       IdleAction = "ignore";
       IdleActionSec = 0;
     };
 
-    environment.plasma6.excludePackages = [
-      pkgs.kdePackages.baloo
-      pkgs.kdePackages.spectacle
-      pkgs.kdePackages.kate
-    ];
-    services.desktopManager.plasma6.enable = true;
-    services.libinput.enable = true;
-    services.displayManager.sddm.enable = true;
-    services.xserver.displayManager.sessionCommands = ''
-      systemctl --user start graphical-session.target
-    '';
-    # weird bug. Need this in order to get xmonad to work in home-manager.
-    services.xserver = {
-      enable = true;
-      xkb.layout = "us";
-      # displayManager = { lightdm.enable = true; };
-      windowManager.i3 = {
-        enable = true;
-        package = pkgs.i3;
-        extraPackages = with pkgs; [ rofi ];
-      };
-
-      # desktopManager.gnome.enable = true;
-      # .gdm.enable = true;
-      # desktopManager.gnome.enable = true;
-      # displayManager.gdm.enable = true;
-      # windowManager.bspwm.enable = true;
-    };
-
-    # services.rustdesk-server.enable = true;
-    # services.rustdesk-server.openFirewall = true;
-    # services.rustdesk-server.relayIP = "100.74.54.40";
-
-    # programs.ssh.askPassword = lib.mkForce "${pkgs.plasma5Packages.ksshaskpass}/bin/ksshaskpass";
-
-    # sudo-rs config is now in ./sudo.nix (auto-imported)
-    services.xrdp.enable = true;
-    virtualisation.docker = {
-      rootless.enable = true;
-      rootless.setSocketVariable = true;
-      enable = true;
-      # autoPrune.enable = true;
-      enableOnBoot = true;
-      # storageDriver = "btrfs";
-    };
-    hardware.nvidia-container-toolkit.enable = true;
-
-    boot.plymouth = {
-      # TODO add in custom boot icons
-      enable = true;
-      # logo = ''
-      # pkgs.fetchurl {
-      # url = "https://nixos.org/logo/nixos-hires.png";
-      # sha256 = "1ivzgd7iz0i06y36p8m5w48fd8pjqwxhdaavc0pxs7w1g7mcy5si";
-      # }'';
-    };
-    programs.java.enable = true;
-    programs.steam.enable = true;
-    programs.steam.remotePlay.openFirewall = true;
-    programs.steam.dedicatedServer.openFirewall = true;
-
-    environment.systemPackages = builtins.concatLists [
-      yubikeyPack
-      gamingPack
-      xPack
-      virtualizationPack
-    ];
-
-    fonts.packages = with pkgs; [
-      d2coding
-      # iosevka
-      # aileron
-      nerd-fonts.fira-code
-      fira-code
-      fira-code-symbols
-      # fira-mono
-    ];
-
-    services.picom.enable = true;
+    # Syncthing
     services.syncthing.enable = true;
-    networking.firewall.allowedTCPPorts = [
-      3428
-      8081
-      22000
-      8384
-      8080
-      2022
-      8188
-      11434
-    ];
-    # networking.firewall = {
-    #   enable = true;
-    #   allowedTCPPortRanges = [
-    #     { from = 1714; to = 1764; } # KDE Connect
-    #   ];
-    #   allowedUDPPortRanges = [
-    #     { from = 1714; to = 1764; } # KDE Connect
-    #   ];
-    # };
-    programs.dconf.enable = true;
+
+    # Atuin shell history sync
     systemd.user.services.atuind = {
       enable = true;
-
       environment = {
         ATUIN_LOG = "warn";
       };
@@ -335,7 +59,7 @@ in
       after = [ "network.target" ];
       wantedBy = [ "default.target" ];
     };
-    #
+
     services.atuin = {
       openRegistration = true;
       enable = true;
@@ -345,19 +69,7 @@ in
       maxHistoryLength = 10000000;
     };
 
-    #services.atd.enable = true;
-
-    #services.udev.packages = [ pkgs.yubikey-personalization ];
-    #environment.shellInit = ''
-    #  export GPG_TTY="$(tty)"
-    #  gpg-connect-agent /bye
-    #  export SSH_AUTH_SOCK="/run/user/$UID/gnupg/S.gpg-agent.ssh"
-    #'';
-    #programs.ssh.startAgent = false;
-    #programs.gnupg.agent = {
-    #  enable = true;
-    #  enableSSHSupport = true;
-    #};
+    # SearX private search
     services.searx = {
       enable = true;
       redisCreateLocally = true;
@@ -373,84 +85,41 @@ in
           "json"
         ];
       };
-
     };
 
-    # services.comfyui = {
-    #   enable = true;
-    #   home = "/var/lib/comfyui";
-    #   acceleration = "cuda";
-    #   host = "0.0.0.0";
-    #   openFirewall = true;
-    #   # withModels = [
-    #   #   pkgs.fetchResource
-    #   #   {
-    #   #     url = "https://civitai.com/api/download/models/1026423?type=Model&format=SafeTensor";
-    #   #     sha256 = "B1C4DDF95671E6B51817B4F3802865E544040C232C467E76B1CB0C251BD6B634";
-    #   #     passthru = {
-    #   #       comfyui.installPaths = [ "loras" ];
-    #   #     };
-    #   #   }
-    #   # ];
-    # };
+    # Scrutiny disk health monitoring
+    services.scrutiny.enable = true;
+    services.scrutiny.collector.enable = true;
+    services.scrutiny.settings.web.listen.port = 5123;
+    services.scrutiny.openFirewall = true;
+    services.scrutiny.settings.web.listen.basepath = "/scrutiny";
+    services.scrutiny.collector.settings.devices = [
+      { device = "/dev/sda"; type = "sat"; }
+      { device = "/dev/sdc"; type = "sat"; }
+      { device = "/dev/nvme0"; type = "nvme"; }
+      { device = "/dev/nvme1"; type = "nvme"; }
+    ];
 
-    services.ollama = {
-      # package = tmpnixpkgs.ollama;
-      #package = (import nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; }).ollama;
-      # loadModels = [
-      #   "deepseek-r1:32b"
-      #   "deepseek-r1:14b"
-      #   "SIGJNF/deepseek-r1-671b-1.58bit"
-      # ];
+    # Netdata monitoring
+    services.netdata = {
+      package = pkgs.netdata.override { withCloudUi = true; };
       enable = true;
-      # package = pkgs.ollama-cuda;
-      # acceleration = "cuda";
-      port = 11111;
-      openFirewall = true;
-      host = "0.0.0.0";
-      # environmentVariables = {"OLLAMA_KV_CACHE_TYPE" = "q4_0"; };
-    };
-    services.open-webui = {
-      openFirewall = true;
-      enable = true;
-      host = "0.0.0.0";
-      environment = {
-        OLLAMA_API_BASE_URL = "http://127.0.0.1:11111";
-        WEBUI_AUTH = "False";
+      config.global = {
+        "memory mode" = "ram";
+        "debug log" = "none";
+        "access log" = "none";
+        "error log" = "syslog";
       };
     };
 
-    # programs.kdeconnect.enable = true;
-
-    services.usbmuxd = {
+    # Glances monitoring
+    services.glances = {
       enable = true;
-      package = pkgs.usbmuxd2;
+      openFirewall = true;
+      port = 5124;
     };
 
-    # security.sudo-rs.enable is now in ./sudo.nix (auto-imported)
-
-    # Insult users on failed sudo authentication
-    # pam_unix is at 11600 with "sufficient" - on success it skips the rest
-    # pam_deny is at 12400 - this catches failures
-    # We insert at 12300 so insults run only when pam_unix failed (didn't return sufficient)
-    security.pam.services.sudo.rules.auth.insults = {
-      order = 12300;
-      control = "optional";
-      modulePath = "${pkgs.pam-insults}/lib/security/pam_insults.so";
-      args = [ "type=unhinged" ];
-    };
-
-    security.pam.services.sudo.rules.auth.skip-insults-siraben = {
-      order = 12299; # Just before insults (at 12300)
-      control = "[success=1 default=ignore]"; # Skip next module if success
-      modulePath = "${pkgs.linux-pam}/lib/security/pam_succeed_if.so";
-      args = [
-        "user"
-        "="
-        "siraben"
-      ];
-    };
-
+    # Eternal Terminal priority
     services.eternal-terminal = {
       enable = true;
       port = 2022;
@@ -465,70 +134,173 @@ in
       IOWeight = 1000;
     };
 
+    # Lower priority for nix-daemon during builds
     systemd.services.nix-daemon.serviceConfig = {
       Nice = lib.mkForce 15;
       IOSchedulingClass = lib.mkForce "idle";
       IOSchedulingPriority = lib.mkForce 7;
       IPEgressPriority = 7;
       IPIngressPriority = 7;
-      # NOTE we could add these if we really wanted to limit under contention
-      # CPUWeight = 10;
-      # IOWeight = 10;
     };
 
-    services.scrutiny.enable = true;
-    services.scrutiny.collector.enable = true;
-    services.scrutiny.settings.web.listen.port = 5123;
-    services.scrutiny.openFirewall = true;
-    services.scrutiny.settings.web.listen.basepath = "/scrutiny";
-    services.scrutiny.collector.settings.devices = [
-      {
-        device = "/dev/sda";
-        type = "sat";
-      }
-      {
-        device = "/dev/sdc";
-        type = "sat";
-      }
-      {
-        device = "/dev/nvme0";
-        type = "nvme";
-      }
-      {
-        device = "/dev/nvme1";
-        type = "nvme";
-      }
-    ];
-
-    services.netdata = {
-      package = pkgs.netdata.override { withCloudUi = true; };
+    # USB multiplexer for iOS devices
+    services.usbmuxd = {
       enable = true;
-      config.global = {
-        "memory mode" = "ram";
-        "debug log" = "none";
-        "access log" = "none";
-        "error log" = "syslog";
-      };
-      # configDir."python.d.conf" = pkgs.writeText "python.d.conf" ''
-      #   nvidia_smi: yes
-      # '';
-    };
-    # systemd.services.netdata.path = [ config.hardware.nvidia.package ];
-
-    services.glances = {
-      enable = true;
-      openFirewall = true;
-      port = 5124;
-
+      package = pkgs.usbmuxd2;
     };
 
-    # retain a significant amount of logs
+    # PAM insults for failed sudo
+    security.pam.services.sudo.rules.auth.insults = {
+      order = 12300;
+      control = "optional";
+      modulePath = "${pkgs.pam-insults}/lib/security/pam_insults.so";
+      args = [ "type=unhinged" ];
+    };
+
+    security.pam.services.sudo.rules.auth.skip-insults-siraben = {
+      order = 12299;
+      control = "[success=1 default=ignore]";
+      modulePath = "${pkgs.linux-pam}/lib/security/pam_succeed_if.so";
+      args = [ "user" "=" "siraben" ];
+    };
+
+    # Journal retention
     services.journald.extraConfig = ''
       SystemMaxUse=500G
       MaxRetentionSec=6month
       MaxFileSec=1week
     '';
 
-  };
+    # Firewall ports
+    networking.firewall.allowedTCPPorts = [
+      3428
+      8081
+      22000
+      8384
+      8080
+      2022
+      8188
+    ];
 
+    # Flattened system packages (no fake categories)
+    environment.systemPackages = with pkgs; [
+      # CLI tools
+      eternal-terminal
+      nix
+      nix-prefetch-docker
+      nix-prefetch-github
+      nix-prefetch-pijul
+      nix-prefetch-scripts
+      nix-prefetch
+      yq
+      croc
+      nixpkgs-hammering
+      nix-eval-jobs
+      nix-diff
+      scrutiny
+      scrutiny-collector
+      ethtool
+      sqlite
+      difftastic
+      cachix
+      nix-btm
+      nix-search
+      smartmontools
+      magic-wormhole-rs
+      vorbis-tools
+      fio
+      bandwhich
+      binsider
+      dua
+      fzf-make
+      trippy
+      elfx86exts
+      magic-wormhole
+      gitoxide
+      pax-utils
+      fselect
+      kmon
+
+      # AI/LLM tools
+      claude-code
+      claude-chill
+      opencode
+      lmstudio
+      gemini-cli
+      goose-cli
+      bingrep
+      qwen-code
+
+      # Multimedia
+      spicetify-cli
+      spotdl
+      streamrip
+
+      # System tools
+      partclone
+      crush
+      pam-insults
+      btop
+      nethogs
+      qemu
+      OVMF
+      cdrkit
+
+      # GUI apps
+      asciinema
+      tdf
+      libimobiledevice
+      ifuse
+      yazi
+      ghostty
+      kitty
+      discord
+      noisetorch
+      syncthing
+      redshift
+      xorg.xwininfo
+      brightnessctl
+      imagemagick
+      arandr
+      playerctl
+      gtk3
+      shared-mime-info
+      maim
+      xclip
+      xmobar
+      libGL
+      libGLU
+      nix-output-monitor
+      xbanish
+      cudaPackages.cudatoolkit
+      cowsay
+      kdePackages.wacomtablet
+      m4
+
+      # Vulkan/GPU tools
+      lsr
+      zig
+      gnupg
+      paperkey
+      wget
+      rng-tools
+      clinfo
+      vulkan-loader
+      powertop
+      vulkan-tools
+      vulkan-utility-libraries
+      vulkan-validation-layers
+      id3v2
+      vulkan-helper
+      vulkan-headers
+      vulkan-caps-viewer
+      vulkan-extension-layer
+      vk-bootstrap
+      vkdisplayinfo
+      gpu-viewer
+      cntr
+      rainfrog
+      oxker
+    ];
+  };
 }

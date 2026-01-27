@@ -27,26 +27,17 @@
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
     comfyui-nix.url = "github:utensils/comfyui-nix";
-
   };
 
   outputs =
     inputs@{
       self,
       nixpkgs-unpatched,
-      nixpkgs-stable,
-      nixpkgs-master,
-      home-manager,
-      darwin,
-      my-nvim,
-      nix,
-      quadlet-nix,
-      comfyui-nix,
       ...
     }:
     let
-      system = "x86_64-linux";
-      tmp_pkgs = import nixpkgs-unpatched { localSystem = system; };
+      # Apply patches to nixpkgs
+      tmp_pkgs = import nixpkgs-unpatched { localSystem = "x86_64-linux"; };
       nixpkgs = tmp_pkgs.applyPatches {
         name = "nixpkgs";
         src = nixpkgs-unpatched;
@@ -59,296 +50,55 @@
           })
         ];
       };
-      inherit (nixpkgs-unpatched) lib;
 
-      # Import modular overlays from ./overlays
-      overlays = import ./overlays { inherit inputs; };
-
-      utils = import ./utility-functions.nix {
-        inherit
-          lib
-          system
-          pkgs
-          inputs
-          self
-          nixpkgs-stable
-          nixpkgs-master
-          ;
-        nixosModules = nixosModules;
+      # Import platform-specific builders
+      myLib = import ./lib {
+        inputs = inputs // { inherit nixpkgs; };
       };
-      pkgs = (utils.pkgImport nixpkgs overlays);
 
-      hmImports = [
-        ./home/home.nix
-      ];
-      nixosModules = hostname: [
-        (import ./custom_modules)
-        nixpkgs-unpatched.nixosModules.notDetected
-        home-manager.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "hm-bak";
-          home-manager.users.jrestivo = {
-            imports = hmImports ++ [ (./. + "/hosts/${hostname}.hm.nix") ];
-          };
-        }
-        quadlet-nix.nixosModules.quadlet
-        comfyui-nix.nixosModules.default
-      ];
+      inherit (nixpkgs-unpatched) lib;
     in
     {
-      homeConfigurations.jrestivo = home-manager.lib.homeManagerConfiguration {
-        inherit system;
+      # x86_64-linux NixOS configurations (auto-discovered from hosts/*.nixos.nix)
+      nixosConfigurations =
+        let
+          # Auto-discover x86_64 hosts (excluding nixos-arm)
+          x86Dirs = lib.filterAttrs (
+            name: fileType:
+            (fileType == "regular")
+            && (lib.hasSuffix ".nixos.nix" name)
+            && (name != "nixos-arm.nixos.nix")
+          ) (builtins.readDir ./hosts);
+          x86Paths = lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") x86Dirs;
+        in
+        myLib.x86_64-linux.buildNixosConfigurations x86Paths
+        // {
+          # ARM NixOS (separate builder, no znver3/CUDA)
+          nixos-arm = myLib.aarch64-linux.buildNixosConfiguration "nixos-arm" (import ./hosts/nixos-arm.nixos.nix);
+        };
+
+      # Darwin (macOS) configurations
+      darwinConfigurations."jrestivo-4" = myLib.aarch64-darwin.buildDarwinConfiguration "jrestivo-4";
+
+      # Legacy home-manager configuration (standalone)
+      homeConfigurations.jrestivo = inputs.home-manager.lib.homeManagerConfiguration {
+        system = "x86_64-linux";
         homeDirectory = /home/jrestivo;
         username = "jrestivo";
         configuration =
           { pkgs, ... }:
           {
-            imports = hmImports;
-            nixpkgs.overlays = overlays;
+            imports = [ ./home/home.nix ];
+            nixpkgs.overlays = import ./overlays { inherit inputs; };
           };
       };
 
-      nixosConfigurations =
-        let
-          dirs = lib.filterAttrs (
-            name: fileType: (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name)
-          ) (builtins.readDir ./hosts);
-          fullyQualifiedDirs = lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") dirs;
-        in
-        utils.buildNixosConfigurations fullyQualifiedDirs
-        // {
-          # ARM OCI instance - separate from x86 infrastructure (no znver3/CUDA/overlays)
-          nixos-arm = nixpkgs-unpatched.lib.nixosSystem {
-            system = "aarch64-linux";
-            modules = [
-              # OCI image modules (provide fileSystems, boot.loader, etc.)
-              "${nixpkgs-unpatched}/nixos/modules/virtualisation/oci-image.nix"
-              "${nixpkgs-unpatched}/nixos/modules/virtualisation/oci-options.nix"
-              ./hosts/hw/oci_arm.nix
-              ./custom_modules/sudo.nix
-              home-manager.nixosModules.home-manager
-              (
-                { pkgs, lib, ... }:
-                {
-                  # TODOs
-                  # mitigations against too much ram usage
-                  # store GC
-                  system.stateVersion = "25.11";
-                  networking.hostName = "nixos-arm";
-
-                  nixpkgs.config.allowUnfree = true;
-                  nixpkgs.overlays = [
-                    (import ./overlays/tmux-search-panes.nix { })
-                    (import ./overlays/tmux-gruvbox-themes.nix)
-                  ];
-
-                  documentation.enable = false;
-
-                  # Enable LVM support for ~195GB combined storage (boot partition 3 + block volume)
-                  oci.hardware.enableLVM = true;
-
-                  # Mount /nix and /home from LVM btrfs volume
-                  fileSystems."/nix" = {
-                    device = "/dev/datavg/datalv";
-                    fsType = "btrfs";
-                    options = [
-                      "subvol=@nix"
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-                  fileSystems."/home" = {
-                    device = "/dev/datavg/datalv";
-                    fsType = "btrfs";
-                    options = [
-                      "subvol=@home"
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                  };
-
-                  # LVM activation in preLVMCommands (runs after oci-hardware.nix device settling)
-                  boot.initrd.preLVMCommands = lib.mkAfter ''
-                    echo "Activating LVM volume groups..."
-                    lvm vgscan --mknodes
-                    lvm vgchange -ay
-                    lvm lvscan
-                    sleep 1
-                  '';
-
-                  nix.settings.require-sigs = false;
-                  nix.settings.trusted-users = [
-                    "root"
-                    "jrestivo"
-                  ];
-                  nix.settings.experimental-features = [
-                    "nix-command"
-                    "flakes"
-                  ];
-
-                  environment.systemPackages = with pkgs; [
-                    gh
-                    bat
-                    claude-code
-                    gemini-cli
-                    vim
-                    git
-                    htop
-                    ghostty.terminfo
-                    eza
-                    fd
-                    ripgrep
-                    fish
-                  ];
-
-                  # Fish as default shell
-                  programs.fish.enable = true;
-
-                  users.users.jrestivo = {
-                    isNormalUser = true;
-                    extraGroups = [ "wheel" "docker" ];
-                    shell = pkgs.fish;
-                    openssh.authorizedKeys.keys = [
-                      # root's ssh key for srcbot
-                      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP4vzMVS1qxgu+4bMSb3TBNiK9ot+G9DqGDw3dAdhogr root@desktop"
-                      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5qlN93RBt99GVy6YDP3OMb7Yu4zwELvT5kvdTRnPzE9txmdxKiMM8eHGw4vBwcbmwY7y1wa+ijXwiT0PbwDUOQvVu8CzWHxBF0pz8LVy7XsBuQr9UtxXVV6D9KBKJJEQjpKgF0LTGOC3LSdHKqlH/4zUaUpE2ZPOaoS01S8YwNfRbr30XDeilMDD5rY0AVlydKFRZIbf/96fdo4HURKcjRMapTdYrdkj++FINCl4IDOId3UQR7Z8qDmx2IC6rOikMNMGwEFvgueCDHDuieqNfHn9LVv8gzCPZ0QtX5Ap+6FPNiUfBXuG1IK7RzeDicGUSXWfKFQImwo6pppArqvtqizEFY6WDBSso5XTveg3Z/gH5/jfMigElVAh8xob/NAW2lv6lHEjXtFVmk3N2Fz425SfXQp2qyaYOPGYohWt1ZwlMdkHYfYGtskaoUd9XCM3GC+aSSLkMPuaXtLS3aJ9R7jcz4sfXdU0s3Vd+jQl7c9n3lGYlZ59aKruUj50QtAs= jrestivo@jrestivo.local"
-                      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINE5i3Uv3queOM3VfOCYOU/gnUAU+kZ8GFyn+C5dGcCc justin@restivo.me"
-                    ];
-                  };
-
-                  # Disable password SSH authentication
-                  services.openssh.settings.PasswordAuthentication = false;
-
-                  security.sudo.wheelNeedsPassword = false;
-
-                  # Tailscale VPN
-                  services.tailscale.enable = true;
-
-                  # Eternal Terminal for better SSH experience
-                  services.eternal-terminal = {
-                    enable = true;
-                    port = 2022;
-                  };
-
-                  # Open firewall for ET (not opened automatically by the service module)
-                  networking.firewall.allowedTCPPorts = [ 2022 ];
-
-                  # Caddy reverse proxy to desktop services via Tailscale
-                  # Tailscale Funnel handles HTTPS termination, Caddy listens locally
-                  services.caddy = {
-                    enable = true;
-                    virtualHosts.":8080" = {
-                      extraConfig = ''
-                        # Gonic music server
-                        @gonic path /gonic /gonic/*
-                        handle @gonic {
-                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
-                            header_up Host {upstream_hostport}
-                          }
-                        }
-
-                        # Srcbot static files
-                        @srcbot path /srcbot /srcbot/*
-                        handle @srcbot {
-                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
-                            header_up Host {upstream_hostport}
-                          }
-                        }
-
-                        # Srcbot-srv static files
-                        @srcbot-srv path /srcbot-srv /srcbot-srv/*
-                        handle @srcbot-srv {
-                          reverse_proxy https://office-desktop.tail5ca7.ts.net {
-                            header_up Host {upstream_hostport}
-                          }
-                        }
-
-                        handle {
-                          respond "nixos-arm" 200
-                        }
-                      '';
-                    };
-                  };
-
-                  # Tailscale Funnel to expose Caddy publicly
-                  services.tailscale.useRoutingFeatures = "both";
-                  systemd.services.tailscale-funnel = {
-                    description = "Tailscale Funnel for public HTTPS";
-                    after = [
-                      "tailscaled.service"
-                      "caddy.service"
-                      "network-online.target"
-                    ];
-                    wants = [
-                      "tailscaled.service"
-                      "caddy.service"
-                      "network-online.target"
-                    ];
-                    wantedBy = [ "multi-user.target" ];
-                    path = [ pkgs.tailscale ];
-                    script = ''
-                      # Wait for tailscale to be ready
-                      sleep 5
-                      # Configure serve with funnel in background mode
-                      tailscale funnel --bg --https=443 http://localhost:8080
-                    '';
-                    serviceConfig = {
-                      Type = "oneshot";
-                      RemainAfterExit = true;
-                    };
-                  };
-
-                  # Disable networkd wait-online (not needed, interfaces are unmanaged)
-                  systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
-
-                  # Home-manager with minimal config
-                  home-manager.useGlobalPkgs = true;
-                  home-manager.useUserPackages = true;
-                  home-manager.backupFileExtension = "hm-bak";
-                  home-manager.users.jrestivo = {
-                    imports = [ ./home/minimal.nix ];
-                  };
-                }
-              )
-            ];
-          };
-        };
-
-      darwinConfigurations."jrestivo-4" = darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        modules = [
-          home-manager.darwinModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = "hm-bak";
-            home-manager.users.jrestivo = {
-              imports = [ ./home/darwin ];
-            };
-          }
-          ./darwin/config.nix
-          {
-            nixpkgs.config.allowUnfree = true;
-            nixpkgs.overlays = [
-              (final: prev: {
-                strace-macos = inputs.strace_macos.packages.aarch64-darwin.default;
-                # nvim = my-nvim.defaultPackage.aarch64-darwin;
-                nix = inputs.nix.packages.aarch64-darwin.default;
-                hl = inputs.hl.packages."aarch64-darwin".default;
-              })
-              (import ./overlays/tmux-search-panes.nix { })
-              (import ./overlays/tmux-gruvbox-themes.nix)
-            ];
-          }
-        ];
-      };
-
-      mymaster = nixpkgs-master;
-      mything = pkgs;
-      mything2 = nixpkgs.outPath;
-
+      # Hydra CI jobs
       hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
+
+      # Debug outputs
+      mymaster = inputs.nixpkgs-master;
+      mything = myLib.x86_64-linux.pkgs;
+      mything2 = nixpkgs.outPath;
     };
 }

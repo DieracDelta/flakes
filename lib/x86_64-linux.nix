@@ -1,26 +1,30 @@
+# x86_64-linux specific utilities
+# Optimized for AMD Ryzen (znver3) with CUDA support
 {
   lib,
-  self,
   inputs,
-  system,
-  pkgs,
-  nixosModules,
+  self,
+  nixpkgs,
   nixpkgs-stable,
   nixpkgs-master,
-  ...
+  overlays,
+  home-manager,
+  quadlet-nix,
+  comfyui-nix,
 }:
 let
+  system = "x86_64-linux";
   inherit (lib) removeSuffix;
   inherit (builtins) listToAttrs;
   genAttrs' = values: f: listToAttrs (map f values);
 
-in
-{
+  pkgs = pkgImport nixpkgs overlays;
+
   pkgImport =
-    pkgs: overlays:
-    import pkgs {
+    nixpkgsSrc: overlays:
+    import nixpkgsSrc {
       inherit overlays;
-      localSystem = "x86_64-linux";
+      localSystem = system;
 
       hostPlatform = {
         system = "x86_64-linux";
@@ -35,7 +39,6 @@ in
         gcc.abi = "64";
       };
       config = {
-        # TODO allowVariants could be interesting
         cudaSupport = true;
         cudaCapabilities = [ "8.9" ];
         allowUnfree = true;
@@ -61,13 +64,11 @@ in
                   in
                   args:
                   let
-                    # Function to apply flags to either env.FLAG or top-level FLAG
                     applyFlags =
                       currentAttrs: flagName: flagsToAdd:
                       let
                         valEnv = if currentAttrs ? env then (currentAttrs.env.${flagName} or "") else "";
                         valTop = if currentAttrs ? ${flagName} then (currentAttrs.${flagName}) else "";
-                        # Combine existing env + top-level + new flags
                         combined = lib.concatStringsSep " " (
                           builtins.filter (x: x != "") [
                             (toString valEnv)
@@ -76,9 +77,6 @@ in
                           ]
                         );
                       in
-                      # ALWAYS put flags in env and remove from top-level.
-                      # This avoids conflicts if overrideAttrs later introduces env/structured attrs.
-                      # Legacy mkDerivation supports env vars too.
                       (builtins.removeAttrs currentAttrs [ flagName ])
                       // {
                         env = (currentAttrs.env or { }) // {
@@ -90,7 +88,6 @@ in
                       attrs:
                       let
                         extraCompile = "-pipe";
-                        # (MinGW build)
                         isHeroicIntegration =
                           (attrs.pname or "") == "heroic-epic-integration"
                           || (builtins.match ".*heroic-epic-integration.*" (attrs.name or "") != null);
@@ -122,13 +119,27 @@ in
               });
           in
           customStdenv pkgs.stdenv;
-
-        # RUSTFLAGS = "-C target-cpu=znver3 ";
-        # permittedInsecurePackages = [ "nix-2.15.3" ];
-
-        # allowUnsupportedSystem = true;
       };
     };
+
+  nixosModules = hostname: [
+    (import ../custom_modules)
+    inputs.nixpkgs-unpatched.nixosModules.notDetected
+    home-manager.nixosModules.home-manager
+    {
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
+      home-manager.backupFileExtension = "hm-bak";
+      home-manager.users.jrestivo = {
+        imports = [
+          ../home/home.nix
+          (../. + "/hosts/${hostname}.hm.nix")
+        ];
+      };
+    }
+    quadlet-nix.nixosModules.quadlet
+    comfyui-nix.nixosModules.default
+  ];
 
   buildNixosConfigurations =
     paths:
@@ -150,23 +161,21 @@ in
                 system.configurationRevision = lib.mkIf (self ? rev) self.rev;
 
                 nix = {
-                  # package = pkgs.nixUnstable;
                   nixPath =
                     let
-                      path = toString ./.;
+                      path = toString ../.;
                     in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
-                  registry =
-                    (lib.mapAttrs' (name: _v: lib.nameValuePair name ({ flake = inputs.${name}; })) inputs)
-                    // {
-                      ${hostName}.flake = self;
-                    };
+                  # Disable default nixpkgs registry to avoid conflicts with patched nixpkgs
+                  registry.nixpkgs.to = lib.mkForce {
+                    type = "path";
+                    path = inputs.nixpkgs.outPath;
+                  };
                 };
               };
 
             in
             [
-              # this actually imports the specific host file
               (import path)
               global
             ]
@@ -184,4 +193,7 @@ in
         };
       }
     );
+in
+{
+  inherit pkgImport pkgs buildNixosConfigurations system;
 }
