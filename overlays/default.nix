@@ -49,4 +49,5 @@ in
   tmux-resurrect-continuum
   wger
   inputs.comfyui-nix.overlays.default
+  inputs.caldav-calendar-web.overlays.default
 ]

@@ -35,6 +35,9 @@
     wger-react.flake = false;
     wger-flutter.url = "path:/home/jrestivo/dev/wger-flutter";
     wger-flutter.flake = false;
+
+    # CalDAV calendar web frontend
+    caldav-calendar-web.url = "path:/home/jrestivo/dev/webdav_calendar_view";
   };
 
   outputs =

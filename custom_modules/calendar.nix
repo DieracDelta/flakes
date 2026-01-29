@@ -160,7 +160,7 @@ in
       firstweekday = 0
 
       [default]
-      default_calendar = calendar
+      default_calendar = calendar1
       highlight_event_days = True
     '';
 
@@ -173,6 +173,14 @@ in
         reverse_proxy 127.0.0.1:${toString radicalePort} {
           header_up X-Script-Name /caldav
         }
+      }
+
+      # CalDAV Calendar Web UI
+      redir /calendar /calendar/ permanent
+
+      handle_path /calendar/* {
+        root * ${pkgs.caldav-calendar-web}
+        file_server
       }
     '';
   };

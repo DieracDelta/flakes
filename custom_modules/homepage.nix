@@ -273,8 +273,15 @@ in
             {
               "Calendar" = {
                 icon = "mdi-calendar";
-                href = "/caldav/";
-                description = "CalDAV Calendar (Radicale)";
+                href = "/calendar/";
+                description = "CalDAV Calendar Web UI";
+              };
+            }
+            {
+              "Radicale" = {
+                icon = "mdi-calendar-edit";
+                href = "/caldav/.web/";
+                description = "Manage Calendar Collections";
               };
             }
           ];
