@@ -2623,7 +2623,10 @@
         "nixpkgs-stable": "nixpkgs-stable_3",
         "nixpkgs-unpatched": "nixpkgs-unpatched",
         "quadlet-nix": "quadlet-nix",
-        "strace_macos": "strace_macos"
+        "strace_macos": "strace_macos",
+        "wger": "wger",
+        "wger-flutter": "wger-flutter",
+        "wger-react": "wger-react"
       }
     },
     "rust-overlay": {
@@ -3009,6 +3012,45 @@
         "owner": "RRethy",
         "repo": "vim-illuminate",
         "type": "github"
+      }
+    },
+    "wger": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769694338,
+        "narHash": "sha256-SB5HZiORKnippX6RA0lJif70r95zJaqP1Ewq+EHusFA=",
+        "path": "/home/jrestivo/dev/wger",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/jrestivo/dev/wger",
+        "type": "path"
+      }
+    },
+    "wger-flutter": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769625786,
+        "narHash": "sha256-jeFGM05WigTF56c+V08XshXKhDzW78W2XHBH536byd8=",
+        "path": "/home/jrestivo/dev/wger-flutter",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/jrestivo/dev/wger-flutter",
+        "type": "path"
+      }
+    },
+    "wger-react": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769676705,
+        "narHash": "sha256-MOPMdNsFa7osXgi1gCeOtRa58FFWIswyUdMBNCGFo2o=",
+        "path": "/home/jrestivo/dev/wger-react",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/jrestivo/dev/wger-react",
+        "type": "path"
       }
     },
     "which-key-src": {

@@ -42,6 +42,17 @@
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
 
+  # wger workout/nutrition tracker with micronutrient support
+  custom_modules.wger = {
+    enable = true;
+    allowedHosts = [ "localhost" "127.0.0.1" "office-desktop.tail5ca7.ts.net" ];
+    trustedOrigins = [ "https://office-desktop.tail5ca7.ts.net" ];
+    siteUrl = "https://office-desktop.tail5ca7.ts.net/wger";
+    adminUser = "admin";
+    adminEmail = "admin@localhost";
+    adminPasswordFile = "/var/lib/wger/admin-password";
+  };
+
   # Koito scrobbler - integrates with Navidrome
   custom_modules.koito = {
     enable = true;

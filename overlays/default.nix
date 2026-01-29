@@ -16,6 +16,12 @@ let
     inherit (inputs) nix my-nvim nixpkgs-master;
   };
 
+  # wger workout/nutrition tracker (local development)
+  wger = import ./wger.nix {
+    wger-src = inputs.wger;
+    wger-react-src = inputs.wger-react;
+  };
+
   # Custom tmux gruvbox themes (darwin=green, arm=red, x86=gruvbox)
   tmux-gruvbox-themes = import ./tmux-gruvbox-themes.nix;
 
@@ -41,5 +47,6 @@ in
   actual
   taskwarrior-web
   tmux-resurrect-continuum
+  wger
   inputs.comfyui-nix.overlays.default
 ]

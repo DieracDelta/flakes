@@ -27,6 +27,14 @@
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
     comfyui-nix.url = "github:utensils/comfyui-nix";
+
+    # wger workout/nutrition tracker (local development)
+    wger.url = "path:/home/jrestivo/dev/wger";
+    wger.flake = false;
+    wger-react.url = "path:/home/jrestivo/dev/wger-react";
+    wger-react.flake = false;
+    wger-flutter.url = "path:/home/jrestivo/dev/wger-flutter";
+    wger-flutter.flake = false;
   };
 
   outputs =
