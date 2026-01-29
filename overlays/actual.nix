@@ -21,6 +21,13 @@ let
 
   nodejs = prev.nodejs_22;
   yarn-berry = prev.yarn-berry_4.override { inherit nodejs; };
+
+  # Shared offline cache for both server and API builds
+  offlineCache = yarn-berry.fetchYarnBerryDeps {
+    src = actualSrc;
+    missingHashes = ./actual-missing-hashes.json;
+    hash = "sha256-ce4/hhdE0OjBFbALYqpxUFD9XDz0tC3G9xdCjPDa7mM=";
+  };
 in
 {
   actual-server = prev.actual-server.overrideAttrs (oldAttrs: {
@@ -76,12 +83,74 @@ in
     '';
 
     # Fetch yarn dependencies from local source
-    # Using upstream missing-hashes.json as base - may need updates if deps changed significantly
     missingHashes = ./actual-missing-hashes.json;
-    offlineCache = yarn-berry.fetchYarnBerryDeps {
-      src = actualSrc;
-      missingHashes = ./actual-missing-hashes.json;
-      hash = "sha256-ce4/hhdE0OjBFbALYqpxUFD9XDz0tC3G9xdCjPDa7mM=";
-    };
+    inherit offlineCache;
+  });
+
+  # Build @actual-app/api from the same fork for headless bank sync
+  actual-api = prev.actual-server.overrideAttrs (oldAttrs: {
+    pname = "actual-api";
+    version = "local-basepath";
+
+    src = actualSrc;
+    srcs = [ actualSrc ];
+    sourceRoot = "actual-src/";
+
+    # Need build tools for better-sqlite3 native compilation
+    # stdenv already provides a working compiler, just need python for node-gyp
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+      prev.python3
+    ];
+
+    postPatch = ''
+      patchShebangs --build ./bin ./packages/*/bin
+
+      # Disable the postinstall script for `protoc-gen-js`
+      cat <<< $(${prev.lib.getExe prev.jq} '.dependenciesMeta."protoc-gen-js".built = false' ./package.json) > ./package.json
+
+      # Disable building @swc/core from source
+      cat <<< $(${prev.lib.getExe prev.jq} '.dependenciesMeta."@swc/core".built = false' ./package.json) > ./package.json
+
+      # Disable the install script for sharp
+      cat <<< $(${prev.lib.getExe prev.jq} '.dependenciesMeta."sharp".built = false' ./package.json) > ./package.json
+    '';
+
+    buildPhase = ''
+      runHook preBuild
+
+      export HOME=$(mktemp -d)
+
+      # Build the API package (this also builds loot-core as a dependency)
+      # better-sqlite3 is built during yarn install phase
+      yarn workspace @actual-app/api build
+
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+
+      # Create node_modules structure for the API
+      mkdir -p $out/lib/node_modules/@actual-app/api
+
+      # Copy the built API
+      cp -r packages/api/dist $out/lib/node_modules/@actual-app/api/
+      cp packages/api/package.json $out/lib/node_modules/@actual-app/api/
+
+      # Copy runtime dependencies from the workspace
+      # better-sqlite3 is built during yarn install against nodejs_22
+      mkdir -p $out/lib/node_modules
+      cp -r node_modules/better-sqlite3 $out/lib/node_modules/ || true
+      cp -r node_modules/bindings $out/lib/node_modules/ || true
+      cp -r node_modules/file-uri-to-path $out/lib/node_modules/ || true
+      cp -r node_modules/google-protobuf $out/lib/node_modules/ || true
+      cp -r node_modules/compare-versions $out/lib/node_modules/ || true
+      cp -r node_modules/uuid $out/lib/node_modules/ || true
+
+      runHook postInstall
+    '';
+
+    inherit offlineCache;
+    missingHashes = ./actual-missing-hashes.json;
   });
 }

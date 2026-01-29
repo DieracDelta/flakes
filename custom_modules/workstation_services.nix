@@ -94,10 +94,22 @@ in
     services.scrutiny.openFirewall = true;
     services.scrutiny.settings.web.listen.basepath = "/scrutiny";
     services.scrutiny.collector.settings.devices = [
-      { device = "/dev/sda"; type = "sat"; }
-      { device = "/dev/sdc"; type = "sat"; }
-      { device = "/dev/nvme0"; type = "nvme"; }
-      { device = "/dev/nvme1"; type = "nvme"; }
+      {
+        device = "/dev/sda";
+        type = "sat";
+      }
+      {
+        device = "/dev/sdc";
+        type = "sat";
+      }
+      {
+        device = "/dev/nvme0";
+        type = "nvme";
+      }
+      {
+        device = "/dev/nvme1";
+        type = "nvme";
+      }
     ];
 
     # Netdata monitoring
@@ -161,7 +173,11 @@ in
       order = 12299;
       control = "[success=1 default=ignore]";
       modulePath = "${pkgs.linux-pam}/lib/security/pam_succeed_if.so";
-      args = [ "user" "=" "siraben" ];
+      args = [
+        "user"
+        "="
+        "siraben"
+      ];
     };
 
     # Journal retention
@@ -185,6 +201,7 @@ in
     # Flattened system packages (no fake categories)
     environment.systemPackages = with pkgs; [
       # CLI tools
+      poppler-utils
       eternal-terminal
       nix
       nix-prefetch-docker
