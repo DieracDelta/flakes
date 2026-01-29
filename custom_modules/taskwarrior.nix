@@ -103,19 +103,5 @@ in
       redir /taskwarrior /taskwarrior/ permanent
     '';
 
-    # Homepage dashboard entry
-    services.homepage-dashboard.services = mkAfter [
-      {
-        "Productivity" = [
-          {
-            "Taskwarrior" = {
-              icon = "mdi-checkbox-marked-outline";
-              href = "/taskwarrior/";
-              description = "Task Management";
-            };
-          }
-        ];
-      }
-    ];
   };
 }

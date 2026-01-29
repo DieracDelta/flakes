@@ -41,6 +41,7 @@
   custom_modules.actual.enable = true;
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
+  custom_modules.calendar.enable = true;
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {

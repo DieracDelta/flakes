@@ -262,6 +262,24 @@ in
           ];
         }
         {
+          "Productivity" = [
+            {
+              "Taskwarrior" = {
+                icon = "mdi-checkbox-marked-outline";
+                href = "/taskwarrior/";
+                description = "Task Management";
+              };
+            }
+            {
+              "Calendar" = {
+                icon = "mdi-calendar";
+                href = "/caldav/";
+                description = "CalDAV Calendar (Radicale)";
+              };
+            }
+          ];
+        }
+        {
           "Infrastructure" = [
             {
               "Tailscale" = {
