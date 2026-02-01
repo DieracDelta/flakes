@@ -530,14 +530,18 @@ in
       ''
     ];
 
-    users.users.john.openssh.authorizedKeys.keys = [
-      ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK
-      ''
-      ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsUDBfzag72+L0fHeoFJwp8azXn7CedR77PBunqSqxS
-      ''
-    ];
+    users.users.john.openssh.authorizedKeys.keys =
+      let
+        framework-default = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK";
+        ci-builder = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK2B9vG8X+Rc1B7sdJyez7B2exzhTFN4yYB23pvwS6iP";
+        # note(jrr): I have no idea what the below key is... Justin had committed
+        # it. Maybe/Probably I gave it to him... Who knows?
+        unknown = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsUDBfzag72+L0fHeoFJwp8azXn7CedR77PBunqSqxS";
+      in
+      [
+        framework-default
+        ci-builder
+      ];
 
     users.users.siraben.openssh.authorizedKeys.keys = [
       ''
