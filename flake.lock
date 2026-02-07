@@ -21,8 +21,8 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1769705130,
-        "narHash": "sha256-hcvfoQkVTghjoMuX0Z8WPmE5n6DH8K52er2Xa8+Iwaw=",
+        "lastModified": 1770135163,
+        "narHash": "sha256-eDuYmNLiOWIEsjMQEA/Dgd/gXOuGvHW7tVOGv70EPsw=",
         "path": "/home/jrestivo/dev/webdav_calendar_view",
         "type": "path"
       },
@@ -824,6 +824,24 @@
         "owner": "numtide",
         "repo": "flake-utils",
         "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_6": {
+      "inputs": {
+        "systems": "systems_6"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
         "type": "github"
       },
       "original": {
@@ -1982,11 +2000,11 @@
     },
     "nixpkgs-master": {
       "locked": {
-        "lastModified": 1767643299,
-        "narHash": "sha256-D5jIjmtq2uhNrNUgoVNiCb/K8zJKoiCbMdJjEStA3FQ=",
+        "lastModified": 1769726785,
+        "narHash": "sha256-AArrtAkjr559jT0XCS1jP/SzSSlHMUhxL+QjCPDW9XU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "7a3cf7dd47434ac356350dd84c719dfc45b5e1c7",
+        "rev": "24af85e410d8df133b64bd6e1377c5163864c4a2",
         "type": "github"
       },
       "original": {
@@ -2298,6 +2316,22 @@
       }
     },
     "nixpkgs_23": {
+      "locked": {
+        "lastModified": 1769461804,
+        "narHash": "sha256-msG8SU5WsBUfVVa/9RPLaymvi5bI8edTavbIq3vRlhI=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "bfc1b8a4574108ceef22f02bafcf6611380c100d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_24": {
       "locked": {
         "lastModified": 1763283776,
         "narHash": "sha256-Y7TDFPK4GlqrKrivOcsHG8xSGqQx3A6c+i7novT85Uk=",
@@ -2655,10 +2689,27 @@
         "nixpkgs-stable": "nixpkgs-stable_3",
         "nixpkgs-unpatched": "nixpkgs-unpatched",
         "quadlet-nix": "quadlet-nix",
+        "rotki": "rotki",
         "strace_macos": "strace_macos",
         "wger": "wger",
         "wger-flutter": "wger-flutter",
         "wger-react": "wger-react"
+      }
+    },
+    "rotki": {
+      "inputs": {
+        "flake-utils": "flake-utils_6",
+        "nixpkgs": "nixpkgs_23"
+      },
+      "locked": {
+        "lastModified": 1769871172,
+        "narHash": "sha256-8n/R5ifcD+9UXrL44NmEzPUrzZAL8vRkI03LI74lTvI=",
+        "path": "/home/jrestivo/dev/rotki",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/jrestivo/dev/rotki",
+        "type": "path"
       }
     },
     "rust-overlay": {
@@ -2757,7 +2808,7 @@
     "strace_macos": {
       "inputs": {
         "flake-parts": "flake-parts_15",
-        "nixpkgs": "nixpkgs_23",
+        "nixpkgs": "nixpkgs_24",
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
@@ -2851,6 +2902,21 @@
       }
     },
     "systems_5": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_6": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
@@ -3049,8 +3115,8 @@
     "wger": {
       "flake": false,
       "locked": {
-        "lastModified": 1769694338,
-        "narHash": "sha256-SB5HZiORKnippX6RA0lJif70r95zJaqP1Ewq+EHusFA=",
+        "lastModified": 1769868148,
+        "narHash": "sha256-Rty4Y2Gg0RPktQgTCLemMfp6H8iErSp+aHYdrXOjBxg=",
         "path": "/home/jrestivo/dev/wger",
         "type": "path"
       },
@@ -3075,8 +3141,8 @@
     "wger-react": {
       "flake": false,
       "locked": {
-        "lastModified": 1769676705,
-        "narHash": "sha256-MOPMdNsFa7osXgi1gCeOtRa58FFWIswyUdMBNCGFo2o=",
+        "lastModified": 1769869021,
+        "narHash": "sha256-vR1PeSSOYVfIqZY6/d4KGDhZQywl3UwGxELAeiPSkqE=",
         "path": "/home/jrestivo/dev/wger-react",
         "type": "path"
       },

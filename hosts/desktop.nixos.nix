@@ -30,6 +30,8 @@
   custom_modules.rust-filehost.enable = false;
   custom_modules.hydra.enable = true;
   custom_modules.yubikey.enable = true;
+  custom_modules.trezor.enable = true;
+  custom_modules.rotki.enable = true;
   custom_modules.container_configs.enable = false;
   custom_modules.bens_config.enable = true;
   custom_modules.network_monitor.enable = true;
@@ -42,6 +44,7 @@
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
+  custom_modules.runner_vms.enable = true;
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {
@@ -131,5 +134,12 @@
   };
 
   programs.noisetorch.enable = false;
+
+  # Prevent OOM - earlyoom kills processes before system becomes unresponsive
+  services.earlyoom = {
+    enable = true;
+    freeMemThreshold = 5;
+    freeSwapThreshold = 10;
+  };
 
 }

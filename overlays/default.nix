@@ -33,6 +33,11 @@ let
 
   # Tmux resurrect and continuum (latest versions)
   tmux-resurrect-continuum = import ./tmux-resurrect-continuum.nix;
+
+  # Rotki portfolio tracker (local premium, no cloud)
+  rotki = import ./rotki.nix {
+    rotki-src = inputs.rotki;
+  };
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -50,4 +55,5 @@ in
   wger
   inputs.comfyui-nix.overlays.default
   inputs.caldav-calendar-web.overlays.default
+  rotki
 ]

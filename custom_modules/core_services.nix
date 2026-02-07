@@ -383,7 +383,7 @@ in
       11434
       47990
       47989
-      8083  # openstreetmap
+      8083 # openstreetmap
       # Port 53 moved to custom_modules/dns.nix
     ];
 
@@ -530,14 +530,15 @@ in
       ''
     ];
 
-    users.users.john.openssh.authorizedKeys.keys = [
-      ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK
-      ''
-      ''
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsUDBfzag72+L0fHeoFJwp8azXn7CedR77PBunqSqxS
-      ''
-    ];
+    users.users.john.openssh.authorizedKeys.keys =
+      let
+        framework-default = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ61iahx0HtGVD0qtBFIr8nTPivNxQimrqaloBazYCPK";
+        ci-builder = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK2B9vG8X+Rc1B7sdJyez7B2exzhTFN4yYB23pvwS6iP";
+      in
+      [
+        framework-default
+        ci-builder
+      ];
 
     users.users.siraben.openssh.authorizedKeys.keys = [
       ''

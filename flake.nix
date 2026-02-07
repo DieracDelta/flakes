@@ -38,6 +38,9 @@
 
     # CalDAV calendar web frontend
     caldav-calendar-web.url = "path:/home/jrestivo/dev/webdav_calendar_view";
+
+    # Rotki portfolio tracker (local premium, no cloud)
+    rotki.url = "path:/home/jrestivo/dev/rotki";
   };
 
   outputs =

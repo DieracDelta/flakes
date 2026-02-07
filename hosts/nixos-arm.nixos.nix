@@ -101,6 +101,8 @@
 
   # Open firewall for ET (not opened automatically by the service module)
   networking.firewall.allowedTCPPorts = [ 2022 ];
+  # WeebTogether game server (UDP)
+  networking.firewall.allowedUDPPorts = [ 7777 ];
 
   # Caddy reverse proxy to desktop services via Tailscale
   # Tailscale Funnel handles HTTPS termination, Caddy listens locally
@@ -130,6 +132,13 @@
           reverse_proxy https://office-desktop.tail5ca7.ts.net {
             header_up Host {upstream_hostport}
           }
+        }
+
+        # WeebTogether matchmaker API
+        @matchmaker path /matchmaker /matchmaker/*
+        handle @matchmaker {
+          uri strip_prefix /matchmaker
+          reverse_proxy localhost:3000
         }
 
         handle {

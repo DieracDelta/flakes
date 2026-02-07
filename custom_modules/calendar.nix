@@ -167,6 +167,9 @@ in
     # Caddy reverse proxy for CalDAV
     services.caddy.virtualHosts."office-desktop.tail5ca7.ts.net".extraConfig = mkAfter ''
 
+      # CalDAV discovery for iOS/macOS
+      redir /.well-known/caldav /caldav/ permanent
+
       redir /caldav /caldav/ permanent
 
       handle_path /caldav/* {

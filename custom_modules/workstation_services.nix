@@ -146,13 +146,15 @@ in
       IOWeight = 1000;
     };
 
-    # Lower priority for nix-daemon during builds
+    # Lower priority for nix-daemon during builds + memory limits
     systemd.services.nix-daemon.serviceConfig = {
       Nice = lib.mkForce 15;
       IOSchedulingClass = lib.mkForce "idle";
       IOSchedulingPriority = lib.mkForce 7;
       IPEgressPriority = 7;
       IPIngressPriority = 7;
+      MemoryHigh = "80G";  # Soft limit - throttles allocations when exceeded
+      MemoryMax = "100G";  # Hard limit - OOM killer if exceeded
     };
 
     # USB multiplexer for iOS devices
@@ -252,6 +254,10 @@ in
       spicetify-cli
       spotdl
       streamrip
+
+      gnupg
+      uv
+      python3
 
       # System tools
       partclone
