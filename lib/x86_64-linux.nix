@@ -166,10 +166,12 @@ let
                       path = toString ../.;
                     in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
-                  # Disable default nixpkgs registry to avoid conflicts with patched nixpkgs
+                  # Use upstream nixpkgs for registry so nix run works without custom config
                   registry.nixpkgs.to = lib.mkForce {
-                    type = "path";
-                    path = inputs.nixpkgs.outPath;
+                    type = "github";
+                    owner = "NixOS";
+                    repo = "nixpkgs";
+                    ref = "master";
                   };
                 };
               };
