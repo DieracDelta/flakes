@@ -105,6 +105,7 @@ in
         list_gens = "nix-env -p /nix/var/nix/profiles/system --list-generations";
         ll = "ls -l";
         ls = "eza -h --git --color=auto --group-directories-first -s extension";
+        ccn = ''nix run "github:sadjow/claude-code-nix"'';
         nd = "nix develop -c fish";
         sl = "ls";
         # yes this is morally wrong
