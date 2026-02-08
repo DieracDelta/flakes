@@ -38,6 +38,11 @@ let
   rotki = import ./rotki.nix {
     rotki-src = inputs.rotki;
   };
+
+  # Tirith terminal security (command analysis before execution)
+  tirith = import ./tirith.nix {
+    tirith-src = inputs.tirith;
+  };
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -56,4 +61,5 @@ in
   inputs.comfyui-nix.overlays.default
   inputs.caldav-calendar-web.overlays.default
   rotki
+  tirith
 ]

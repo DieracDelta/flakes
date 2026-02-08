@@ -21,8 +21,8 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1770135163,
-        "narHash": "sha256-eDuYmNLiOWIEsjMQEA/Dgd/gXOuGvHW7tVOGv70EPsw=",
+        "lastModified": 1770500298,
+        "narHash": "sha256-Hq/+G9wMe7ZSer7taxozqHGZujfMRzMjPYkJpUgaaY4=",
         "path": "/home/jrestivo/dev/webdav_calendar_view",
         "type": "path"
       },
@@ -2691,6 +2691,7 @@
         "quadlet-nix": "quadlet-nix",
         "rotki": "rotki",
         "strace_macos": "strace_macos",
+        "tirith": "tirith",
         "wger": "wger",
         "wger-flutter": "wger-flutter",
         "wger-react": "wger-react"
@@ -3024,6 +3025,22 @@
       "original": {
         "owner": "hashicorp",
         "repo": "terraform-ls",
+        "type": "github"
+      }
+    },
+    "tirith": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770410058,
+        "narHash": "sha256-g6rdWCmgwZgJCZuCSbVJCybV2pXGFkoLH1OCcO43OQ4=",
+        "owner": "sheeki03",
+        "repo": "tirith",
+        "rev": "34c777879d0325ee6c96bda5334124c74bb7b3ea",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sheeki03",
+        "repo": "tirith",
         "type": "github"
       }
     },

@@ -41,6 +41,10 @@
 
     # Rotki portfolio tracker (local premium, no cloud)
     rotki.url = "path:/home/jrestivo/dev/rotki";
+
+    # Tirith terminal security (local command analysis before execution)
+    tirith.url = "github:sheeki03/tirith";
+    tirith.flake = false;
   };
 
   outputs =

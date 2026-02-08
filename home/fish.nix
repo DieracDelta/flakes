@@ -46,6 +46,8 @@ in
     default = true;
   };
   config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.tirith ];
+
     programs.starship = {
       settings = {
         add_newline = false;
@@ -128,7 +130,10 @@ in
         # '';
       };
       # keys.sh contains a bunch of my keys
-      interactiveShellInit = builtins.readFile ./config.fish;
+      interactiveShellInit = ''
+        ${builtins.readFile ./config.fish}
+        tirith init --shell fish | source
+      '';
     };
   };
 }

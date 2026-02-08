@@ -13,7 +13,7 @@ let
   ghRepo = "DieracDelta/WeebTogether";
 
   commonPath = lib.makeBinPath (with pkgs; [
-    bash gh jq docker coreutils gnugrep procps curl
+    bash gh jq docker coreutils gnugrep procps curl python3 openssh
   ]);
 
   # Refresh the token file with a fresh registration token via gh CLI
@@ -49,9 +49,12 @@ in
       user = "jrestivo";
       group = "users";
       package = stablePkgs.github-runner;
-      extraPackages = with pkgs; [ bash docker gh jq curl coreutils gnugrep procps ];
+      extraPackages = with pkgs; [ bash docker gh jq curl coreutils gnugrep procps python3 openssh sshpass findutils ];
       serviceOverrides = {
         ProtectHome = false;
+        PrivateDevices = false;
+        PrivateTmp = false;
+        ReadWritePaths = [ "/var/tmp" ];
       };
     };
 
