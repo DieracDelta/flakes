@@ -193,6 +193,18 @@ in
       pkill -9 iscsid || true
     '';
 
+    # Run iscsid in stage 2 so NOP-Out pings detect stalled connections
+    # and trigger TCP reconnection instead of hanging forever.
+    services.openiscsi = {
+      enable = true;
+      name = "iqn.2015-02.oracle.boot";
+      extraConfig = ''
+        node.conn[0].timeo.noop_out_interval = 30
+        node.conn[0].timeo.noop_out_timeout = 300
+        node.session.timeo.replacement_timeout = 600
+      '';
+    };
+
     # LVM support
     services.lvm.enable = cfg.enableLVM;
 
