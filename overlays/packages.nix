@@ -50,22 +50,78 @@ tmuxOverlay // {
     };
   };
 
-  # Bump navidrome to 0.60.2 (nixpkgs#488091, not yet merged)
-  navidrome = prev.navidrome.overrideAttrs (oldAttrs: rec {
-    version = "0.60.2";
-    src = final.fetchFromGitHub {
-      owner = "navidrome";
-      repo = "navidrome";
-      rev = "v${version}";
-      hash = "sha256-2PzQEmxjaCRDobv0XgUk39Kb+t6+XQuB51rjDAlzEto=";
+  # Navidrome plugins
+  navidromePlugins = {
+    discord-rich-presence = final.buildGoModule {
+      pname = "discord-rich-presence";
+      version = "0.3.0";
+
+      src = final.fetchFromGitHub {
+        owner = "navidrome";
+        repo = "discord-rich-presence-plugin";
+        rev = "v0.3.0";
+        hash = "sha256-gmRi4nb7KC3GC6ZcmaE/BPa9FgChCZ21K+VzLAeeZzI=";
+      };
+
+      nativeBuildInputs = [ final.zip ];
+
+      vendorHash = "sha256-tJ6syjhiB8FFwYyFBX+iKsjFzqf6mUZQgTN7M2Saum8=";
+
+      env.CGO_ENABLED = "0";
+
+      buildPhase = ''
+        runHook preBuild
+        GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o plugin.wasm .
+        runHook postBuild
+      '';
+
+      installPhase = ''
+        runHook preInstall
+        mkdir -p $out/share/navidrome-plugins
+        # Create .ndp package (zip file with manifest.json and plugin.wasm)
+        zip -j $out/share/navidrome-plugins/discord-rich-presence.ndp plugin.wasm manifest.json
+        runHook postInstall
+      '';
+
+      meta = with final.lib; {
+        description = "Discord Rich Presence plugin for Navidrome";
+        homepage = "https://github.com/navidrome/discord-rich-presence-plugin";
+        license = licenses.gpl3Only;
+      };
     };
-    vendorHash = "sha256-AZMwgGwgjQg/MoA3xo6QH4579UsFXoLD6NDC2mT9Dv0=";
-    npmDeps = final.fetchNpmDeps {
-      inherit src;
-      sourceRoot = "${src.name}/ui";
-      hash = "sha256-EA2WM7xaqP7rS0pjx+yXwpjdauaduvDefmFH73eByxI=";
-    };
-  });
+  };
+
+  # Navidrome 0.60.2 with plugin support
+  # Use: pkgs.navidrome.override { plugins = with pkgs.navidromePlugins; [ discord-rich-presence ]; }
+  navidrome = final.lib.makeOverridable (
+    { plugins ? [ ] }:
+    prev.navidrome.overrideAttrs (oldAttrs: rec {
+      version = "0.60.2";
+      src = final.fetchFromGitHub {
+        owner = "navidrome";
+        repo = "navidrome";
+        rev = "v${version}";
+        hash = "sha256-2PzQEmxjaCRDobv0XgUk39Kb+t6+XQuB51rjDAlzEto=";
+      };
+      vendorHash = "sha256-AZMwgGwgjQg/MoA3xo6QH4579UsFXoLD6NDC2mT9Dv0=";
+      npmDeps = final.fetchNpmDeps {
+        inherit src;
+        sourceRoot = "${src.name}/ui";
+        hash = "sha256-EA2WM7xaqP7rS0pjx+yXwpjdauaduvDefmFH73eByxI=";
+      };
+
+      postInstall = ''
+        mkdir -p $out/share/plugins/
+        ${final.lib.concatMapStringsSep "\n" (plugin: ''
+          cp ${plugin}/share/navidrome-plugins/*.ndp $out/share/plugins/
+        '') plugins}
+      '';
+
+      passthru = oldAttrs.passthru // {
+        inherit plugins;
+      };
+    })
+  ) { };
 
   nototools = prev.nototools.overridePythonAttrs (old: {
     dontCheckRuntimeDeps = true;

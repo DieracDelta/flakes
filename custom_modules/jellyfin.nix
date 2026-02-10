@@ -42,8 +42,12 @@ in
     services.navidrome.settings."Scanner.FollowSymlinks" = true;
     services.navidrome.settings.Port = 4533;
     services.navidrome.settings.MusicFolder = "/var/lib/musiclibrary";
-    services.navidrome.package = pkgs.navidrome;
+    services.navidrome.package = pkgs.navidrome.override {
+      plugins = with pkgs.navidromePlugins; [ discord-rich-presence ];
+    };
     services.navidrome.settings.BaseUrl = "/navidrome";
+    services.navidrome.settings.Plugins.Enabled = true;
+    services.navidrome.settings.Plugins.Folder = "${config.services.navidrome.package}/share/plugins";
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
 
     services.jellyfin.enable = false;
