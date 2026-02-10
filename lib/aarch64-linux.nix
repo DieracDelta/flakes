@@ -44,6 +44,7 @@ let
         imports = [ (../. + "/hosts/${hostname}.hm.nix") ];
       };
     }
+    inputs.bpftop.nixosModules.default
   ];
 
   buildNixosConfiguration =

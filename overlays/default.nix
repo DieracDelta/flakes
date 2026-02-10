@@ -43,6 +43,9 @@ let
   tirith = import ./tirith.nix {
     tirith-src = inputs.tirith;
   };
+
+  # RAPIDS GPU computing stack for cuML (GPU clustering)
+  rapids = import ./rapids.nix { };
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -62,4 +65,5 @@ in
   inputs.caldav-calendar-web.overlays.default
   rotki
   tirith
+  rapids
 ]

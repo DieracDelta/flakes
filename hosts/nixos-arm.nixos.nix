@@ -72,6 +72,7 @@
 
   # Fish as default shell
   programs.fish.enable = true;
+  programs.bpftop.enable = true;
 
   # User configuration
   users.users.jrestivo = {

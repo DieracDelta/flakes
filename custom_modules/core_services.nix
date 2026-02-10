@@ -492,7 +492,6 @@ in
           "jellyfin"
           # "jellyfinMedia"
         ];
-        initialPassword = "bruh";
       };
     };
     # environment.etc = { };

@@ -139,6 +139,7 @@ let
     }
     quadlet-nix.nixosModules.quadlet
     comfyui-nix.nixosModules.default
+    inputs.bpftop.nixosModules.default
   ];
 
   buildNixosConfigurations =

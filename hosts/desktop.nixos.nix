@@ -46,6 +46,8 @@
   custom_modules.calendar.enable = true;
   custom_modules.runner_vms.enable = true;
 
+  programs.bpftop.enable = true;
+
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {
     enable = true;

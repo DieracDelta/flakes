@@ -43,8 +43,16 @@ in
     services.navidrome.settings.Port = 4533;
     services.navidrome.settings.MusicFolder = "/var/lib/musiclibrary";
     services.navidrome.package = pkgs.navidrome.override {
-      plugins = with pkgs.navidromePlugins; [ discord-rich-presence ];
+      plugins = with pkgs.navidromePlugins; [
+        discord-rich-presence
+        audiomuse-ai
+      ];
     };
+
+    # AudioMuse-AI - AI-powered music analysis for similar tracks
+    # TODO: Re-enable once RAPIDS cuML packages are built
+    # services.audiomuse-ai.enable = true;
+    # services.audiomuse-ai.musicDir = "/var/lib/musiclibrary";
     services.navidrome.settings.BaseUrl = "/navidrome";
     services.navidrome.settings.Plugins.Enabled = true;
     services.navidrome.settings.Plugins.Folder = "${config.services.navidrome.package}/share/plugins";
