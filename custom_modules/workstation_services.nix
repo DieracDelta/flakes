@@ -153,8 +153,8 @@ in
       IOSchedulingPriority = lib.mkForce 7;
       IPEgressPriority = 7;
       IPIngressPriority = 7;
-      MemoryHigh = "80G";  # Soft limit - throttles allocations when exceeded
-      MemoryMax = "100G";  # Hard limit - OOM killer if exceeded
+      MemoryHigh = "80G"; # Soft limit - throttles allocations when exceeded
+      MemoryMax = "100G"; # Hard limit - OOM killer if exceeded
     };
 
     # USB multiplexer for iOS devices
@@ -251,10 +251,7 @@ in
       qwen-code
 
       # Multimedia
-      spicetify-cli
-      spotdl
       streamrip
-
       gnupg
       uv
       python3
@@ -301,7 +298,7 @@ in
       m4
 
       # Vulkan/GPU tools
-      lsr
+      # lsr  # broken upstream: postConfigure→postPatch bug in nixpkgs master
       zig
       gnupg
       paperkey

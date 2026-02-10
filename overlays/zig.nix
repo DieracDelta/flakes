@@ -2,23 +2,16 @@ final: prev:
 let
   inherit (prev) lib;
 
+  # Override zig's default cpu flag from "baseline" to "znver3"
+  # The new zig setup hook (post nixpkgs#473413) uses env.zig_default_cpu_flag
+  # which gets substituted into setup-hook.sh via @zig_default_cpu_flag@
   customizeZig =
     name: drv:
-    let
-      extraFlags = if name == "zig_0_14" then [ "-fno-reference-trace" ] else [ ];
-      myGlobalFlags = [ "-Dcpu=znver3" ] ++ extraFlags;
-
-      finalZig = drv.overrideAttrs (old: {
-        passthru = old.passthru // {
-          hook = final.callPackage "${prev.path}/pkgs/development/compilers/zig/hook.nix" {
-            zig = finalZig;
-            globalBuildFlags = myGlobalFlags;
-          };
-          zig = finalZig;
-        };
-      });
-    in
-    finalZig;
+    drv.overrideAttrs (old: {
+      env = (old.env or { }) // {
+        zig_default_cpu_flag = "-Dcpu=znver3";
+      };
+    });
 
   zigTargets = [
     "zig_0_13"

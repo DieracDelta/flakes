@@ -84,21 +84,6 @@ final: prev: {
         };
       });
 
-      # TODO is this unneeded
-      # Fix opencv source directory name issue
-      opencv4 = python-prev.opencv4.overrideAttrs (old: {
-        postUnpack =
-          builtins.replaceStrings
-            [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-            [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-            old.postUnpack;
-        preConfigure =
-          builtins.replaceStrings
-            [ "$NIX_BUILD_TOP/source/opencv_contrib" ]
-            [ "$NIX_BUILD_TOP/${old.src.name}/opencv_contrib" ]
-            old.preConfigure;
-      });
-
       # PyICU: Use PyPI source instead of GitLab (which returns 502 errors)
       pyicu = python-prev.pyicu.overridePythonAttrs (old: rec {
         version = "2.16";

@@ -50,14 +50,26 @@ tmuxOverlay // {
     };
   };
 
+  # Bump navidrome to 0.60.2 (nixpkgs#488091, not yet merged)
+  navidrome = prev.navidrome.overrideAttrs (oldAttrs: rec {
+    version = "0.60.2";
+    src = final.fetchFromGitHub {
+      owner = "navidrome";
+      repo = "navidrome";
+      rev = "v${version}";
+      hash = "sha256-2PzQEmxjaCRDobv0XgUk39Kb+t6+XQuB51rjDAlzEto=";
+    };
+    vendorHash = "sha256-AZMwgGwgjQg/MoA3xo6QH4579UsFXoLD6NDC2mT9Dv0=";
+    npmDeps = final.fetchNpmDeps {
+      inherit src;
+      sourceRoot = "${src.name}/ui";
+      hash = "sha256-EA2WM7xaqP7rS0pjx+yXwpjdauaduvDefmFH73eByxI=";
+    };
+  });
+
   nototools = prev.nototools.overridePythonAttrs (old: {
     dontCheckRuntimeDeps = true;
     catchConflicts = false;
-  });
-
-  # Fix dcgm compilation with GCC 15 (missing include and typo)
-  dcgm = prev.dcgm.overrideAttrs (oldAttrs: {
-    patches = (oldAttrs.patches or [ ]) ++ [ ../patches/dcgm-fix-gcc15.patch ];
   });
 
   # Fix dcgm-exporter to find ldconfig in PATH instead of hardcoded /sbin/ldconfig
