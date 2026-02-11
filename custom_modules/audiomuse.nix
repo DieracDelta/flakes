@@ -89,6 +89,12 @@ in
       };
     };
 
+    environmentFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = "File containing environment variables (e.g. GEMINI_API_KEY)";
+    };
+
     redis = {
       host = mkOption {
         type = types.str;
@@ -164,21 +170,32 @@ in
           DATA_DIR = cfg.dataDir;
           TEMP_DIR = "${cfg.dataDir}/temp_audio";
 
-          # Models
+          # Models - individual paths (code defaults to /app/model/ Docker paths)
           MODELS_PATH = "${cfg.modelsPackage}/models";
+          EMBEDDING_MODEL_PATH = "${cfg.modelsPackage}/models/msd-musicnn-1.onnx";
+          PREDICTION_MODEL_PATH = "${cfg.modelsPackage}/models/msd-msd-musicnn-1.onnx";
+          CLAP_AUDIO_MODEL_PATH = "${cfg.modelsPackage}/models/clap_audio_model.onnx";
+          CLAP_TEXT_MODEL_PATH = "${cfg.modelsPackage}/models/clap_text_model.onnx";
+          DANCEABILITY_MODEL_PATH = "${cfg.modelsPackage}/models/danceability-msd-musicnn-1.onnx";
+          AGGRESSIVE_MODEL_PATH = "${cfg.modelsPackage}/models/mood_aggressive-msd-musicnn-1.onnx";
+          HAPPY_MODEL_PATH = "${cfg.modelsPackage}/models/mood_happy-msd-musicnn-1.onnx";
+          PARTY_MODEL_PATH = "${cfg.modelsPackage}/models/mood_party-msd-musicnn-1.onnx";
+          RELAXED_MODEL_PATH = "${cfg.modelsPackage}/models/mood_relaxed-msd-musicnn-1.onnx";
+          SAD_MODEL_PATH = "${cfg.modelsPackage}/models/mood_sad-msd-musicnn-1.onnx";
           HF_HOME = "${cfg.modelsPackage}/cache/huggingface";
           HF_HUB_OFFLINE = "1";
           TRANSFORMERS_OFFLINE = "1";
 
-          # CPU consistency settings (from Dockerfile)
-          ONEDNN_DEFAULT_FPMATH_MODE = "STRICT";
-          ORT_DISABLE_ALL_OPTIMIZATIONS = "1";
-          ORT_ENABLE_CPU_FP16_OPS = "0";
-          ORT_DISABLE_AVX512 = "1";
-          ORT_FORCE_SHARED_PROVIDER = "1";
-          MKL_ENABLE_INSTRUCTIONS = "AVX2";
-          MKL_DYNAMIC = "FALSE";
-          ORT_DISABLE_MEMORY_PATTERN_OPTIMIZATION = "1";
+          # GPU performance tuning (RTX 4090 24GB)
+          PER_SONG_MODEL_RELOAD = "false";  # Keep models loaded, recycle every 20 songs
+          CLAP_MINI_BATCH_SIZE = "8";       # Process 8 segments at once
+
+          # Reverse proxy support
+          ENABLE_PROXY_FIX = "true";
+
+          # AI model for cluster/playlist naming
+          AI_MODEL_PROVIDER = "GEMINI";
+          GEMINI_MODEL_NAME = "gemini-2.5-flash";
         };
 
         commonServiceConfig = {
@@ -197,6 +214,7 @@ in
           ReadOnlyPaths = [
             cfg.musicDir
             "${cfg.modelsPackage}"
+            "/run/opengl-driver"
           ];
 
           # GPU access for RAPIDS cuML
@@ -208,6 +226,8 @@ in
             "/dev/nvidia-uvm-tools rw"
           ];
           SupplementaryGroups = [ "video" "render" ];
+        } // lib.optionalAttrs (cfg.environmentFile != null) {
+          EnvironmentFile = cfg.environmentFile;
         };
       in
       {
@@ -235,6 +255,23 @@ in
         # RQ Worker (default priority)
         audiomuse-ai-worker = {
           description = "AudioMuse-AI RQ Worker";
+          after = [
+            "audiomuse-ai.service"
+            "redis-audiomuse.service"
+          ];
+          wants = [ "redis-audiomuse.service" ];
+          wantedBy = [ "multi-user.target" ];
+
+          environment = commonEnv;
+
+          serviceConfig = commonServiceConfig // {
+            ExecStart = "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker";
+          };
+        };
+
+        # RQ Worker (default priority, instance 2)
+        "audiomuse-ai-worker-2" = {
+          description = "AudioMuse-AI RQ Worker 2";
           after = [
             "audiomuse-ai.service"
             "redis-audiomuse.service"

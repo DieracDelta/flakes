@@ -62,7 +62,7 @@ let
 
     # ONNX
     onnx
-    onnxruntime  # TODO: Enable CUDA variant for GPU support
+    onnxruntime  # CUDA enabled via global cudaSupport = true
 
     # GPU-accelerated ML (RAPIDS cuML)
     cupy
@@ -113,7 +113,18 @@ tmuxOverlay // {
 
     postPatch = ''
       substituteInPlace config.py \
-        --replace-fail 'TEMP_DIR = "/app/temp_audio"' 'TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/audiomuse-temp")'
+        --replace-fail 'TEMP_DIR = "/app/temp_audio"' 'TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/audiomuse-temp")' \
+        --replace-fail 'EMBEDDING_MODEL_PATH = "/app/model/msd-musicnn-1.onnx"' \
+                       'EMBEDDING_MODEL_PATH = os.environ.get("EMBEDDING_MODEL_PATH", "/app/model/msd-musicnn-1.onnx")' \
+        --replace-fail 'PREDICTION_MODEL_PATH = "/app/model/msd-msd-musicnn-1.onnx"' \
+                       'PREDICTION_MODEL_PATH = os.environ.get("PREDICTION_MODEL_PATH", "/app/model/msd-msd-musicnn-1.onnx")'
+
+      # Fix CLAP Conv fallback: use EXHAUSTIVE algo search + relaxed memory arena
+      substituteInPlace tasks/clap_analyzer.py \
+        --replace-fail "'cudnn_conv_algo_search': 'DEFAULT'" \
+                       "'cudnn_conv_algo_search': 'EXHAUSTIVE'" \
+        --replace-fail "'arena_extend_strategy': 'kSameAsRequested'" \
+                       "'arena_extend_strategy': 'kNextPowerOfTwo'"
     '';
 
     installPhase = ''
