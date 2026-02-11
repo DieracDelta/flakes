@@ -64,6 +64,13 @@ let
     onnx
     onnxruntime  # TODO: Enable CUDA variant for GPU support
 
+    # GPU-accelerated ML (RAPIDS cuML)
+    cupy
+    final.python312Packages.rmm
+    final.python312Packages.pylibraft
+    final.python312Packages.cuvs
+    final.python312Packages.cuml
+
     # Utilities
     pyyaml
     requests
@@ -103,6 +110,11 @@ tmuxOverlay // {
       audiomuse-ai-python
       final.ffmpeg
     ];
+
+    postPatch = ''
+      substituteInPlace config.py \
+        --replace-fail 'TEMP_DIR = "/app/temp_audio"' 'TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/audiomuse-temp")'
+    '';
 
     installPhase = ''
       runHook preInstall

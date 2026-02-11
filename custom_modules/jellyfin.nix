@@ -50,9 +50,8 @@ in
     };
 
     # AudioMuse-AI - AI-powered music analysis for similar tracks
-    # TODO: Re-enable once RAPIDS cuML packages are built
-    # services.audiomuse-ai.enable = true;
-    # services.audiomuse-ai.musicDir = "/var/lib/musiclibrary";
+    services.audiomuse-ai.enable = true;
+    services.audiomuse-ai.musicDir = "/var/lib/musiclibrary";
     services.navidrome.settings.BaseUrl = "/navidrome";
     services.navidrome.settings.Plugins.Enabled = true;
     services.navidrome.settings.Plugins.Folder = "${config.services.navidrome.package}/share/plugins";
