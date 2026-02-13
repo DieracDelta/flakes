@@ -54,6 +54,13 @@ in
                 description = "Scrobble Proxy";
               };
             }
+            {
+              "AudioMuse-AI" = {
+                icon = "mdi-music-clef-treble";
+                href = "/audiomuse/";
+                description = "AI Music Analysis & Playlists";
+              };
+            }
             # {
             #   "Spotizerr" = {
             #     icon = "box";

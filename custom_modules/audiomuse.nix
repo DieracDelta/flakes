@@ -202,7 +202,7 @@ in
           User = cfg.user;
           Group = cfg.group;
           WorkingDirectory = cfg.dataDir;
-          Restart = "on-failure";
+          Restart = "always";
           RestartSec = 5;
 
           # Security hardening

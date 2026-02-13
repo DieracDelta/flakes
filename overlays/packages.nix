@@ -30,6 +30,23 @@ let
     };
   };
 
+  # pyloudnorm - ITU-R BS.1770 loudness normalization
+  pyloudnorm = final.python312Packages.buildPythonPackage rec {
+    pname = "pyloudnorm";
+    version = "0.1.1";
+    src = final.python312Packages.fetchPypi {
+      inherit pname version;
+      hash = "sha256-Y81OGX3qTneVFg6gjtAtMYCRvOiD5Dam28WWMya3Hh4=";
+    };
+    propagatedBuildInputs = with final.python312Packages; [ numpy scipy ];
+    pythonImportsCheck = [ "pyloudnorm" ];
+    meta = with final.lib; {
+      description = "ITU-R BS.1770-4 loudness normalization in Python";
+      homepage = "https://github.com/csteinmetz1/pyloudnorm";
+      license = licenses.mit;
+    };
+  };
+
   # AudioMuse-AI Python environment with all dependencies
   audiomuse-ai-python = final.python312.withPackages (ps: with ps; [
     # Web framework
@@ -86,6 +103,9 @@ let
 
     # MCP (Model Context Protocol)
     mcp
+
+    # Loudness normalization
+    pyloudnorm
 
     # Voyager (from our custom package)
     voyager
