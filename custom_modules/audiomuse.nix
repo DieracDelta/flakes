@@ -189,6 +189,18 @@ in
           # GPU performance tuning (RTX 4090 24GB)
           PER_SONG_MODEL_RELOAD = "false";  # Keep models loaded, recycle every 20 songs
           CLAP_MINI_BATCH_SIZE = "8";       # Process 8 segments at once
+          USE_GPU_CLUSTERING = "true";      # RAPIDS cuML GPU-accelerated clustering
+
+          # Clustering sample size: use 90th percentile of genre counts (~55K tracks vs default ~6.7K)
+          STRATIFIED_SAMPLING_TARGET_PERCENTILE = "90";
+          MIN_SONGS_PER_GENRE_FOR_STRATIFICATION = "500";
+
+          # CUDA runtime paths:
+          # - /run/opengl-driver/lib: NVIDIA driver (libcuda.so.1) for cuML GPU detection
+          # - cudatoolkit/lib: libnvrtc.so.12 etc. for cupy runtime compilation
+          LD_LIBRARY_PATH = "/run/opengl-driver/lib:${pkgs.cudaPackages.cudatoolkit}/lib";
+          # CUDA headers for cupy's runtime kernel compilation (cuda_fp16.h etc.)
+          CUDA_PATH = "${pkgs.cudaPackages.cudatoolkit}";
 
           # Reverse proxy support
           ENABLE_PROXY_FIX = "true";

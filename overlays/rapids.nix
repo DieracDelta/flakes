@@ -628,6 +628,52 @@ in
       };
     };
 
+    # treelite Python bindings - wraps C library via ctypes
+    # Uses format="other" to skip the custom build backend that tries to
+    # rebuild the C library; we install the pure Python files directly
+    # and point them at the pre-built C library.
+    treelite = final.python312Packages.buildPythonPackage {
+      pname = "treelite";
+      version = treeliteVersion;
+      format = "other";
+
+      src = treelite-src;
+      sourceRoot = "${treelite-src.name}/python";
+
+      propagatedBuildInputs = with final.python312Packages; [
+        numpy
+        scipy
+        packaging
+      ];
+
+      dontUnpack = false;
+
+      buildPhase = ''
+        # Write version file
+        echo '${treeliteVersion}' > treelite/VERSION
+
+        # Point treelite to the pre-built C library
+        cat > treelite/path_config.py << 'PYEOF'
+def get_custom_libpath():
+    return "${final.treelite}/lib"
+PYEOF
+      '';
+
+      installPhase = ''
+        mkdir -p $out/${final.python312.sitePackages}
+        cp -r treelite $out/${final.python312.sitePackages}/
+      '';
+
+      pythonImportsCheck = [ "treelite" ];
+
+      meta = with final.lib; {
+        description = "Treelite Python bindings for tree model serialization";
+        homepage = "https://github.com/dmlc/treelite";
+        license = licenses.asl20;
+        platforms = platforms.linux;
+      };
+    };
+
     # cuda-pathfinder - CUDA component path discovery (pure Python)
     cuda-pathfinder = final.python312Packages.buildPythonPackage {
       pname = "cuda-pathfinder";
@@ -982,6 +1028,90 @@ in
       };
     };
 
+    # cudf stub - provides empty types so cuml can import without the full cudf stack
+    # cuml's internals unconditionally do `import cudf` for type checking, but we only
+    # pass numpy/cupy arrays, so the stub types never match in isinstance checks.
+    cudf = final.python312Packages.buildPythonPackage {
+      pname = "cudf";
+      version = rapidsVersion;
+      format = "other";
+
+      dontUnpack = true;
+
+      buildPhase = ''
+        mkdir -p cudf/core cudf/api/types cudf/pandas
+        cat > cudf/__init__.py << 'PYEOF'
+"""cudf stub - provides type stubs for cuml compatibility."""
+from cudf.core.dataframe import DataFrame
+from cudf.core.series import Series
+from cudf.core.index import Index
+from cudf.core.buffer import Buffer
+
+def concat(*args, **kwargs):
+    raise NotImplementedError("cudf stub: concat not available")
+
+def from_pandas(*args, **kwargs):
+    raise NotImplementedError("cudf stub: from_pandas not available")
+PYEOF
+
+        cat > cudf/core/__init__.py << 'PYEOF'
+from cudf.core.dataframe import DataFrame
+from cudf.core.series import Series
+from cudf.core.index import Index
+from cudf.core.buffer import Buffer
+PYEOF
+
+        cat > cudf/core/dataframe.py << 'PYEOF'
+class DataFrame:
+    """Stub DataFrame type for cuml isinstance checks."""
+    pass
+PYEOF
+
+        cat > cudf/core/series.py << 'PYEOF'
+class Series:
+    """Stub Series type for cuml isinstance checks."""
+    null_count = 0
+    pass
+PYEOF
+
+        cat > cudf/core/index.py << 'PYEOF'
+class Index:
+    """Stub Index type for cuml isinstance checks."""
+    pass
+PYEOF
+
+        cat > cudf/core/buffer.py << 'PYEOF'
+class Buffer:
+    """Stub Buffer type for cuml isinstance checks."""
+    pass
+PYEOF
+
+        cat > cudf/api/__init__.py << 'PYEOF'
+PYEOF
+
+        cat > cudf/api/types/__init__.py << 'PYEOF'
+def is_categorical_dtype(*args, **kwargs):
+    return False
+def is_numeric_dtype(*args, **kwargs):
+    return False
+PYEOF
+
+        cat > cudf/pandas/__init__.py << 'PYEOF'
+PYEOF
+      '';
+
+      installPhase = ''
+        mkdir -p $out/${final.python312.sitePackages}
+        cp -r cudf $out/${final.python312.sitePackages}/
+      '';
+
+      meta = with final.lib; {
+        description = "cudf stub for cuml import compatibility";
+        license = licenses.asl20;
+        platforms = platforms.linux;
+      };
+    };
+
     # cuml Python bindings
     cuml = final.python312Packages.buildPythonPackage rec {
       pname = "cuml";
@@ -1013,6 +1143,7 @@ in
         final.libcuvs
         final.libraft
         final.librmm
+        final.treelite
         cuda_cudart
         cuda_cccl
       ]
@@ -1029,9 +1160,12 @@ in
         numba
         cupy
         joblib
+        pandas
         final.python312Packages.rmm
         final.python312Packages.pylibraft
         final.python312Packages.cuvs
+        final.python312Packages.cudf      # Stub types for import compatibility
+        final.python312Packages.treelite   # Tree model serialization
       ];
 
       dontUseCmakeConfigure = true;
@@ -1082,6 +1216,31 @@ in
           --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
           --replace-fail '"rapids-build-backend>=0.3.0,<0.4.0.dev0",' ""
         echo '${version}' > cuml/VERSION
+
+        # Fix nvtx.py fallback: the @contextmanager-decorated function uses 'return'
+        # instead of 'yield', causing TypeError at runtime when used as a decorator.
+        # Replace with a proper no-op class that works as both decorator and context manager.
+        cat > cuml/internals/nvtx.py << 'NVTXEOF'
+try:
+    from nvtx import annotate
+except ImportError:
+    class annotate:
+        """No-op replacement for nvtx.annotate (decorator + context manager)."""
+        def __init__(self, *args, **kwargs):
+            self._func = args[0] if (
+                len(kwargs) == 0 and len(args) == 1 and callable(args[0])
+            ) else None
+        def __call__(self, *args, **kwargs):
+            if self._func is not None:
+                return self._func(*args, **kwargs)
+            if len(args) == 1 and callable(args[0]):
+                return args[0]
+            return self
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            pass
+NVTXEOF
       '';
 
       # Skip tests during build

@@ -72,6 +72,7 @@ let
     numpy
     scipy
     numba
+    pandas
     scikit-learn
     umap-learn
     transformers
@@ -82,6 +83,7 @@ let
     onnxruntime  # CUDA enabled via global cudaSupport = true
 
     # GPU-accelerated ML (RAPIDS cuML)
+    # cuml propagates: cudf (stub), treelite, pandas, cupy, rmm, pylibraft, cuvs
     cupy
     final.python312Packages.rmm
     final.python312Packages.pylibraft
