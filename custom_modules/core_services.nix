@@ -148,10 +148,6 @@ in
             }
           }
 
-          handle_path /spotizerr* {
-            reverse_proxy 127.0.0.1:7171
-          }
-
           redir /audiomuse /audiomuse/
           handle_path /audiomuse* {
             reverse_proxy 127.0.0.1:8000 {

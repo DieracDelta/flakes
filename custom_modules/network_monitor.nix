@@ -212,6 +212,13 @@ in
       };
     };
 
+    services.vnstat.enable = true;
+    services.ntopng.enable = true;
+    services.ntopng.httpPort = 3123;
+    services.ntopng.extraConfig = ''
+      --http-prefix="/ntopng"
+    '';
+
     environment.systemPackages = [ netSummaryScript ];
   };
 }

@@ -61,13 +61,6 @@ in
                 description = "AI Music Analysis & Playlists";
               };
             }
-            # {
-            #   "Spotizerr" = {
-            #     icon = "box";
-            #     href = "/spotizerr/";
-            #     description = "Download from Spotify";
-            #   };
-            # }
           ];
         }
         {

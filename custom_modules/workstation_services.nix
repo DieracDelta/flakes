@@ -113,16 +113,17 @@ in
     ];
 
     # Netdata monitoring
-    services.netdata = {
-      package = pkgs.netdata.override { withCloudUi = true; };
-      enable = true;
-      config.global = {
-        "memory mode" = "ram";
-        "debug log" = "none";
-        "access log" = "none";
-        "error log" = "syslog";
-      };
-    };
+    services.netdata.enable = false;
+    # services.netdata = {
+    #   package = pkgs.netdata.override { withCloudUi = true; };
+    #   enable = true;
+    #   config.global = {
+    #     "memory mode" = "ram";
+    #     "debug log" = "none";
+    #     "access log" = "none";
+    #     "error log" = "syslog";
+    #   };
+    # };
 
     # Glances monitoring
     services.glances = {
