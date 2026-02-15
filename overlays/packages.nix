@@ -402,19 +402,19 @@ tmuxOverlay // {
     };
   };
 
-  # Navidrome 0.60.2 with plugin support
+  # Navidrome 0.60.3 with plugin support
   # Use: pkgs.navidrome.override { plugins = with pkgs.navidromePlugins; [ discord-rich-presence ]; }
   navidrome = final.lib.makeOverridable (
     { plugins ? [ ] }:
     prev.navidrome.overrideAttrs (oldAttrs: rec {
-      version = "0.60.2";
+      version = "0.60.3";
       src = final.fetchFromGitHub {
         owner = "navidrome";
         repo = "navidrome";
         rev = "v${version}";
-        hash = "sha256-2PzQEmxjaCRDobv0XgUk39Kb+t6+XQuB51rjDAlzEto=";
+        hash = "sha256-DwVmNJKjwEhTKIVPYFqaUR9SD4HpACkK4XJoFfQVRus=";
       };
-      vendorHash = "sha256-AZMwgGwgjQg/MoA3xo6QH4579UsFXoLD6NDC2mT9Dv0=";
+      vendorHash = "sha256-StI4CfWN/OnbYFktRriTJWMHTuJkCinpYk9qgsxMGG8=";
       npmDeps = final.fetchNpmDeps {
         inherit src;
         sourceRoot = "${src.name}/ui";

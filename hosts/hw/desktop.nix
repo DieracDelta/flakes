@@ -46,6 +46,7 @@
     "armv7l-linux"
     # "riscv64-linux"
   ];
+  boot.kernelPackages = pkgs.linuxPackages_latest;
   # boot.kernelPackages = pkgs.linux_6_1linuxPackages_latest;
   # boot.kernelPackages = pkgs.linuxPackages_5_15;
 
