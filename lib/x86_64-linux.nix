@@ -140,6 +140,14 @@ let
     quadlet-nix.nixosModules.quadlet
     comfyui-nix.nixosModules.default
     inputs.bpftop.nixosModules.default
+    inputs.nix-btm.nixosModules.default
+    ({ pkgs, ... }: {
+      # Plugin-files in nix.conf causes validation to dlopen the .so in a build
+      # sandbox, which fails. Load it via nix-daemon's env instead.
+      nix.settings.plugin-files = lib.mkForce [];
+      systemd.services.nix-daemon.environment.NIX_CONFIG =
+        "plugin-files = ${pkgs.nix-analytics-plugin}/lib/libnix-analytics.so";
+    })
   ];
 
   buildNixosConfigurations =

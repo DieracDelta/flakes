@@ -229,9 +229,7 @@
 
   nix.settings.max-jobs = 3;
   nix.settings.cores = 4;
-  nix.package =
-    (builtins.getFlake "github:nixos/nix/f6ca5dc5cb471b45553f8f464b940b73f0a058dc")
-    .packages.${pkgs.stdenv.hostPlatform.system}.default;
+  nix.package = pkgs.nix;
 
   # end hw file stuff
   #

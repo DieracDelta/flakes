@@ -66,4 +66,6 @@ in
   rotki
   tirith
   rapids
+  inputs.nix-btm.overlays.default
+  inputs.entire-cli.overlays.default
 ]

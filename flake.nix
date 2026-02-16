@@ -13,7 +13,7 @@
 
     my-nvim.url = "github:DieracDelta/vimconfig";
 
-    nix.url = "github:NixOS/nix/2.33.0";
+    nix.url = "github:NixOS/nix/2.33.3";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -45,9 +45,15 @@
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
 
+    # Nix build process monitor (TUI + daemon + nix plugin)
+    nix-btm.url = "github:DieracDelta/nix-btm/jr/mark-2";
+
     # Tirith terminal security (local command analysis before execution)
     tirith.url = "github:sheeki03/tirith";
     tirith.flake = false;
+
+    # Entire CLI
+    entire-cli.url = "github:DieracDelta/cli";
   };
 
   outputs =
@@ -73,7 +79,9 @@
 
       # Import platform-specific builders
       myLib = import ./lib {
-        inputs = inputs // { inherit nixpkgs; };
+        inputs = inputs // {
+          inherit nixpkgs;
+        };
       };
 
       inherit (nixpkgs-unpatched) lib;
@@ -85,16 +93,16 @@
           # Auto-discover x86_64 hosts (excluding nixos-arm)
           x86Dirs = lib.filterAttrs (
             name: fileType:
-            (fileType == "regular")
-            && (lib.hasSuffix ".nixos.nix" name)
-            && (name != "nixos-arm.nixos.nix")
+            (fileType == "regular") && (lib.hasSuffix ".nixos.nix" name) && (name != "nixos-arm.nixos.nix")
           ) (builtins.readDir ./hosts);
           x86Paths = lib.mapAttrsToList (name: _v: ./. + "/hosts/${name}") x86Dirs;
         in
         myLib.x86_64-linux.buildNixosConfigurations x86Paths
         // {
           # ARM NixOS (separate builder, no znver3/CUDA)
-          nixos-arm = myLib.aarch64-linux.buildNixosConfiguration "nixos-arm" (import ./hosts/nixos-arm.nixos.nix);
+          nixos-arm = myLib.aarch64-linux.buildNixosConfiguration "nixos-arm" (
+            import ./hosts/nixos-arm.nixos.nix
+          );
         };
 
       # Darwin (macOS) configurations

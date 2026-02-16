@@ -250,6 +250,7 @@ in
       goose-cli
       bingrep
       qwen-code
+      entire
 
       # Multimedia
       streamrip
