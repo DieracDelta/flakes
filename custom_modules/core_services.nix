@@ -221,7 +221,7 @@ in
           }
 
           handle_path /hydra* {
-            reverse_proxy 127.0.0.1:3001 {
+            reverse_proxy 127.0.0.1:3009 {
               header_up X-Request-Base /hydra
             }
           }

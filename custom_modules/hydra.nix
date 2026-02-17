@@ -22,15 +22,23 @@ in
       buildMachinesFiles = [ ];
       useSubstitutes = true;
       listenHost = "127.0.0.1";
-      port = 3001;
+      port = 3009;
       extraConfig = ''
         using_frontend_proxy 1
         allow_import_from_derivation = true
       '';
     };
 
-    nix.settings.trusted-users = [ "hydra" "hydra-queue-runner" "hydra-www" ];
-    nix.settings.allowed-users = [ "hydra" "hydra-queue-runner" "hydra-www" ];
+    nix.settings.trusted-users = [
+      "hydra"
+      "hydra-queue-runner"
+      "hydra-www"
+    ];
+    nix.settings.allowed-users = [
+      "hydra"
+      "hydra-queue-runner"
+      "hydra-www"
+    ];
     nix.settings.allow-import-from-derivation = true;
 
     nix.settings.allowed-uris = [
@@ -73,6 +81,6 @@ in
       "https://files.pythonhosted.org/"
     ];
 
-    networking.firewall.allowedTCPPorts = [ 3001 ];
+    networking.firewall.allowedTCPPorts = [ 3009 ];
   };
 }
