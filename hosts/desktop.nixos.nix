@@ -48,7 +48,7 @@
   custom_modules.runner_vms.enable = true;
 
   programs.bpftop.enable = true;
-  services.nix-analytics.enable = true;
+  services.nix-btm.enable = true;
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {

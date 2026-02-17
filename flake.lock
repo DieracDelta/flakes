@@ -1843,11 +1843,11 @@
         "rust-overlay": "rust-overlay_4"
       },
       "locked": {
-        "lastModified": 1771340877,
-        "narHash": "sha256-VTmnwJWbR8tg6RlUBQIADcBKb7mbRmrXntqbSGKMi+k=",
+        "lastModified": 1771344199,
+        "narHash": "sha256-9PmRpkWN85bNpSrIHGmDakth372YqcYd7S0xodkSufs=",
         "owner": "DieracDelta",
         "repo": "nix-btm",
-        "rev": "1ffe5709c90a17c95460fa7824e5ae5939d0c270",
+        "rev": "d9fcd8a905543347d83585db2894b597a17bcba4",
         "type": "github"
       },
       "original": {
