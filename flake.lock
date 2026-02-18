@@ -23,11 +23,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1771177308,
-        "narHash": "sha256-6TUz98qEUasDB7eZmYuZJYNvYcbhVDTS8qRwyWpAFmw=",
+        "lastModified": 1771346797,
+        "narHash": "sha256-id62/Ihht2MFCbBSWycyASO8SqHqgR0WWiXffRdlNaw=",
         "owner": "DieracDelta",
         "repo": "bpftop",
-        "rev": "e4d2e9285ea5daee5e7fced7a1f3ba54363672dd",
+        "rev": "4ee411fc6aaf0abdfc6246f704b1bbd9db447d4d",
         "type": "github"
       },
       "original": {
@@ -1843,11 +1843,11 @@
         "rust-overlay": "rust-overlay_4"
       },
       "locked": {
-        "lastModified": 1771344199,
-        "narHash": "sha256-9PmRpkWN85bNpSrIHGmDakth372YqcYd7S0xodkSufs=",
+        "lastModified": 1771380131,
+        "narHash": "sha256-Mkx8mR479LGL1yz/AJSm5pvTQPSemyJbwppwzt/PIl0=",
         "owner": "DieracDelta",
         "repo": "nix-btm",
-        "rev": "d9fcd8a905543347d83585db2894b597a17bcba4",
+        "rev": "4f91b15dba8e9a611c20fc957b71ab6d178afd65",
         "type": "github"
       },
       "original": {

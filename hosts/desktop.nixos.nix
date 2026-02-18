@@ -126,6 +126,11 @@
       NOMINATIM_IMPORT_STYLE = "full";
     };
   };
+
+  environment.systemPackages = with pkgs; [
+    linear-cli
+  ];
+
   services.nginx.virtualHosts."nominatim.local" = {
     listen = [
       {

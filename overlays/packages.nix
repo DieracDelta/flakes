@@ -746,4 +746,80 @@ tmuxOverlay // {
       platforms = platforms.linux;
     };
   };
+
+  linear-cli =
+    let
+      version = "1.10.0";
+      releaseBySystem = {
+        x86_64-linux = {
+          target = "x86_64-unknown-linux-gnu";
+          hash = "sha256-UZUYUkcHmh/cCM2xAxAeJrG1sdBj1fTB2n7HknjTdVg=";
+        };
+        aarch64-linux = {
+          target = "aarch64-unknown-linux-gnu";
+          hash = "sha256-QhBfvG5T67x3zpVVkcTPx+WL2+5niMYXbmoq/Hx2fko=";
+        };
+        x86_64-darwin = {
+          target = "x86_64-apple-darwin";
+          hash = "sha256-5HccJyxSjrCJbvEABBImfbgFDbLRiyP4HOFMylbR+DA=";
+        };
+        aarch64-darwin = {
+          target = "aarch64-apple-darwin";
+          hash = "sha256-gpxeAIKLgmc+UXTtFFME6pra5MElj7frWbGNSJQk7Ak=";
+        };
+      };
+      release = releaseBySystem.${final.stdenv.hostPlatform.system}
+        or (throw "linear-cli: unsupported system ${final.stdenv.hostPlatform.system}");
+      linear-bin = final.stdenvNoCC.mkDerivation {
+        pname = "linear-cli-bin";
+        inherit version;
+
+        src = final.fetchurl {
+          url = "https://github.com/schpet/linear-cli/releases/download/v${version}/linear-${release.target}.tar.xz";
+          hash = release.hash;
+        };
+
+        sourceRoot = "linear-${release.target}";
+
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 linear $out/bin/linear
+          runHook postInstall
+        '';
+      };
+    in
+    if final.stdenv.hostPlatform.isLinux then
+      let
+        linear-fhs = final.buildFHSEnv {
+          name = "linear-cli-fhs";
+          targetPkgs = _pkgs: [ ];
+          runScript = "${linear-bin}/bin/linear";
+        };
+      in
+      final.writeShellApplication {
+        name = "linear";
+        text = ''
+          exec ${linear-fhs}/bin/linear-cli-fhs "$@"
+        '';
+      }
+    else
+    final.stdenvNoCC.mkDerivation {
+      pname = "linear-cli";
+      inherit version;
+
+      installPhase = ''
+        runHook preInstall
+        mkdir -p $out/bin
+        ln -s ${linear-bin}/bin/linear $out/bin/linear
+        runHook postInstall
+      '';
+
+      meta = with final.lib; {
+        description = "CLI for Linear issue tracker";
+        homepage = "https://github.com/schpet/linear-cli";
+        license = licenses.mit;
+        mainProgram = "linear";
+        platforms = builtins.attrNames releaseBySystem;
+      };
+    };
 }
