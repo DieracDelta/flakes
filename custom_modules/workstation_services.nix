@@ -251,6 +251,7 @@ in
       bingrep
       qwen-code
       entire
+      sshpass
 
       # Multimedia
       streamrip

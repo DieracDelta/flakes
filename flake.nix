@@ -54,6 +54,9 @@
 
     # Entire CLI
     entire-cli.url = "github:DieracDelta/cli";
+
+    # tmux revive replacement for resurrect + continuum
+    tmux-revive-llms.url = "path:/home/jrestivo/dev/tmux-revive-llms";
   };
 
   outputs =

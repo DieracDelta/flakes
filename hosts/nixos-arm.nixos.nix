@@ -52,6 +52,7 @@
   nix.settings.experimental-features = [
     "nix-command"
     "flakes"
+    "cgroups"
   ];
 
   # System packages
@@ -73,6 +74,7 @@
   # Fish as default shell
   programs.fish.enable = true;
   programs.bpftop.enable = true;
+  services.nix-btm.enable = true;
 
   # User configuration
   users.users.jrestivo = {

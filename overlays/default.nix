@@ -25,6 +25,11 @@ let
   # Custom tmux gruvbox themes (darwin=green, arm=red, x86=gruvbox)
   tmux-gruvbox-themes = import ./tmux-gruvbox-themes.nix;
 
+  # tmux revive replacement (LLM-aware save/restore)
+  tmux-revive-llms = import ./tmux-revive-llms.nix {
+    tmux-revive-llms = inputs.tmux-revive-llms;
+  };
+
   # Actual Budget with base path support (fetches from DieracDelta/actual fork)
   actual = import ./actual.nix;
 
@@ -57,6 +62,7 @@ in
   packages
   external
   tmux-gruvbox-themes
+  tmux-revive-llms
   actual
   taskwarrior-web
   tmux-resurrect-continuum

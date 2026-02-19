@@ -15,8 +15,10 @@ let
   overlays = [
     (import ../overlays/tmux-search-panes.nix { })
     (import ../overlays/tmux-gruvbox-themes.nix)
+    (import ../overlays/tmux-revive-llms.nix { tmux-revive-llms = inputs.tmux-revive-llms; })
     (import ../overlays/tmux-resurrect-continuum.nix)
     (import ../overlays/tirith.nix { tirith-src = inputs.tirith; })
+    inputs.nix-btm.overlays.default
   ];
 
   pkgImport =
@@ -45,6 +47,7 @@ let
       };
     }
     inputs.bpftop.nixosModules.default
+    inputs.nix-btm.nixosModules.default
   ];
 
   buildNixosConfiguration =
