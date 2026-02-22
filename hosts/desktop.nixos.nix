@@ -49,6 +49,9 @@
 
   programs.bpftop.enable = true;
   services.nix-btm.enable = true;
+  services.shapebpf.enable = true;
+  services.shapebpf.interface = "enp6s0";
+  users.users.jrestivo.extraGroups = [ "shapebpf" ];
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {
@@ -129,6 +132,8 @@
 
   environment.systemPackages = with pkgs; [
     linear-cli
+    agent-deck
+    codex
   ];
 
   services.nginx.virtualHosts."nominatim.local" = {

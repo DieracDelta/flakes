@@ -141,6 +141,7 @@ let
     comfyui-nix.nixosModules.default
     inputs.bpftop.nixosModules.default
     inputs.nix-btm.nixosModules.default
+    inputs.shapebpf.nixosModules.default
   ];
 
   buildNixosConfigurations =

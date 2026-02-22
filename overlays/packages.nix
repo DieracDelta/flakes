@@ -434,6 +434,38 @@ tmuxOverlay // {
     })
   ) { };
 
+  # Agent Deck - TUI for managing AI coding agent sessions (Claude Code, Codex, etc.)
+  agent-deck = final.buildGoModule {
+    pname = "agent-deck";
+    version = "0.19.9";
+
+    src = final.fetchFromGitHub {
+      owner = "asheshgoplani";
+      repo = "agent-deck";
+      rev = "v0.19.9";
+      hash = "sha256-uXtLQgfzPpzFo5BCCpG5BCEhKRc9ikElc6jF/KEPm80=";
+    };
+
+    vendorHash = "sha256-hoVn3RTKhp0e48dPZlUQIPQygXA9Fi6hnJruaS53srQ=";
+
+    subPackages = [ "cmd/agent-deck" ];
+
+    nativeBuildInputs = [ final.makeWrapper ];
+    nativeCheckInputs = [ final.git ];
+
+    postInstall = ''
+      wrapProgram $out/bin/agent-deck \
+        --prefix PATH : ${final.lib.makeBinPath [ final.tmux final.git ]}
+    '';
+
+    meta = with final.lib; {
+      description = "Terminal session manager for AI coding agents";
+      homepage = "https://github.com/asheshgoplani/agent-deck";
+      license = licenses.mit;
+      platforms = platforms.linux;
+    };
+  };
+
   nototools = prev.nototools.overridePythonAttrs (old: {
     dontCheckRuntimeDeps = true;
     catchConflicts = false;

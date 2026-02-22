@@ -57,6 +57,13 @@
 
     # tmux revive replacement for resurrect + continuum
     tmux-revive-llms.url = "path:/home/jrestivo/dev/tmux-revive-llms";
+
+    # eBPF per-process bandwidth shaping daemon
+    shapebpf.url = "github:DieracDelta/shapeBPF";
+
+    # Claude Code and Codex (latest from nix overlays)
+    claude-code-nix.url = "github:sadjow/claude-code-nix";
+    codex-nix.url = "github:sadjow/codex-nix";
   };
 
   outputs =

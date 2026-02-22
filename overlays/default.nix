@@ -36,6 +36,8 @@ let
   # Taskwarrior Web UI (from GitHub)
   taskwarrior-web = import ./taskwarrior-web.nix;
 
+  tdf = import ./tdf.nix;
+
   # Tmux resurrect and continuum (latest versions)
   tmux-resurrect-continuum = import ./tmux-resurrect-continuum.nix;
 
@@ -65,6 +67,7 @@ in
   tmux-revive-llms
   actual
   taskwarrior-web
+  tdf
   tmux-resurrect-continuum
   wger
   inputs.comfyui-nix.overlays.default
@@ -74,4 +77,6 @@ in
   rapids
   inputs.nix-btm.overlays.default
   inputs.entire-cli.overlays.default
+  inputs.claude-code-nix.overlays.default
+  inputs.codex-nix.overlays.default
 ]
