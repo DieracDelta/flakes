@@ -252,7 +252,8 @@ in
       qwen-code
       entire
       sshpass
-      nodejs_latest # for linear
+      #nodejs_latest # for linear
+      mcp-remote
 
       # Multimedia
       streamrip

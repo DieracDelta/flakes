@@ -10,6 +10,7 @@ let
   rust = import ./rust.nix;
   python = import ./python.nix;
   packages = import ./packages.nix { };
+  mcpRemote = import ./mcp-remote.nix;
 
   # Overlays that need flake inputs
   external = import ./external.nix {
@@ -63,6 +64,7 @@ in
   python
   packages
   external
+  mcpRemote
   tmux-gruvbox-themes
   tmux-revive-llms
   actual
