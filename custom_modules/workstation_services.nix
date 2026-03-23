@@ -242,6 +242,7 @@ in
       kmon
 
       # AI/LLM tools
+      amp-cli
       claude-code
       claude-chill
       opencode

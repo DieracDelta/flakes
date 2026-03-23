@@ -52,6 +52,9 @@ let
     tirith-src = inputs.tirith;
   };
 
+  # Amp CLI (Sourcegraph coding agent) — pinned to latest npm release
+  amp-cli = import ./amp-cli.nix;
+
   # RAPIDS GPU computing stack for cuML (GPU clustering)
   rapids = import ./rapids.nix { };
 in
@@ -77,6 +80,7 @@ in
   rotki
   tirith
   rapids
+  amp-cli
   inputs.nix-btm.overlays.default
   inputs.entire-cli.overlays.default
   inputs.claude-code-nix.overlays.default
