@@ -327,6 +327,11 @@ in
       cntr
       rainfrog
       oxker
+
+      signal-desktop
+      bubblewrap
+      ghidra
+      nodejs_latest
     ];
   };
 }

@@ -1,0 +1,47 @@
+diff --git a/internal/ui/home.go b/internal/ui/home.go
+--- a/internal/ui/home.go
++++ b/internal/ui/home.go
+@@ -1275,43 +1275,6 @@
+ 		h.flatItems = scoped
+ 	}
+
+-	// Inject window items after sessions that have 2+ windows
+-	if len(h.flatItems) > 0 {
+-		expanded := make([]session.Item, 0, len(h.flatItems)+8)
+-		for _, item := range h.flatItems {
+-			expanded = append(expanded, item)
+-
+-			if item.Type != session.ItemTypeSession || item.Session == nil {
+-				continue
+-			}
+-			tmuxSess := item.Session.GetTmuxSession()
+-			if tmuxSess == nil {
+-				continue
+-			}
+-			wins := tmux.GetCachedWindows(tmuxSess.Name)
+-			if len(wins) < 2 || h.windowsCollapsed[item.Session.ID] {
+-				continue
+-			}
+-
+-			for winIdx, win := range wins {
+-				expanded = append(expanded, session.Item{
+-					Type:                session.ItemTypeWindow,
+-					WindowIndex:         win.Index,
+-					WindowName:          win.Name,
+-					WindowTool:          win.Tool,
+-					WindowSessionID:     item.Session.ID,
+-					Level:               item.Level + 1,
+-					Path:                item.Path,
+-					IsWindow:            true,
+-					IsLastWindow:        winIdx == len(wins)-1,
+-					IsLastInGroup:       item.IsLastInGroup && winIdx == len(wins)-1,
+-					ParentIsLastInGroup: item.IsLastInGroup,
+-				})
+-			}
+-		}
+-		h.flatItems = expanded
+-	}
+-
+ 	// Append remote sessions as selectable items
+ 	h.remoteSessionsMu.RLock()
+ 	remoteNames := make([]string, 0, len(h.remoteSessions))

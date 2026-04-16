@@ -1,0 +1,11 @@
+diff --git a/cmd/agent-deck/main.go b/cmd/agent-deck/main.go
+--- a/cmd/agent-deck/main.go
++++ b/cmd/agent-deck/main.go
+@@ -610,7 +610,6 @@
+ 	p := tea.NewProgram(
+ 		homeModel,
+ 		tea.WithAltScreen(),
+ 		tea.WithMouseCellMotion(),
+-		tea.WithInput(ui.NewCSIuReader(os.Stdin)),
+ 	)
+ 

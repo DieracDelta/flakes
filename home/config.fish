@@ -82,6 +82,7 @@ fish_vi_key_bindings
 set -U fish_greeting
 
 eval "$(starship init fish)"
+export NIX_BUILD_SHELL="bash"
+export LINEAR_API_KEY="$(linear auth token)"
 zoxide init fish | source
 
-export NIX_BUILD_SHELL="bash"

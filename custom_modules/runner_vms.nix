@@ -12,9 +12,21 @@ let
   scriptsDir = "/home/jrestivo/dev/runners_deployment/scripts";
   ghRepo = "DieracDelta/WeebTogether";
 
-  commonPath = lib.makeBinPath (with pkgs; [
-    bash gh jq docker coreutils gnugrep procps curl python3 openssh
-  ]);
+  commonPath = lib.makeBinPath (
+    with pkgs;
+    [
+      bash
+      gh
+      jq
+      docker
+      coreutils
+      gnugrep
+      procps
+      curl
+      python3
+      openssh
+    ]
+  );
 
   # Refresh the token file with a fresh registration token via gh CLI
   refreshTokenScript = pkgs.writeShellScript "refresh-runner-token" ''
@@ -40,7 +52,7 @@ in
   config = lib.mkIf cfg.enable {
     # Orchestrator runner via nixpkgs github-runners module
     services.github-runners.orchestrator = {
-      enable = true;
+      enable = false;
       url = "https://github.com/${ghRepo}";
       tokenFile = "/var/lib/github-runner/token";
       name = "linux-orchestrator";
@@ -49,7 +61,20 @@ in
       user = "jrestivo";
       group = "users";
       package = stablePkgs.github-runner;
-      extraPackages = with pkgs; [ bash docker gh jq curl coreutils gnugrep procps python3 openssh sshpass findutils ];
+      extraPackages = with pkgs; [
+        bash
+        docker
+        gh
+        jq
+        curl
+        coreutils
+        gnugrep
+        procps
+        python3
+        openssh
+        sshpass
+        findutils
+      ];
       serviceOverrides = {
         ProtectHome = false;
         PrivateDevices = false;

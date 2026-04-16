@@ -24,12 +24,12 @@
   imports = [ ./hw/desktop.nix ];
 
   custom_modules.music.enable = true;
-  custom_modules.paperless.enable = true;
+  custom_modules.paperless.enable = false;
   custom_modules.nextcloud.enable = false;
   custom_modules.core_services.enable = true;
   custom_modules.workstation_services.enable = true;
   custom_modules.rust-filehost.enable = false;
-  custom_modules.hydra.enable = true;
+  custom_modules.hydra.enable = false;
   custom_modules.yubikey.enable = true;
   custom_modules.trezor.enable = true;
   custom_modules.rotki.enable = true;
@@ -55,7 +55,7 @@
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {
-    enable = true;
+    enable = false;
     allowedHosts = [ "localhost" "127.0.0.1" "office-desktop.tail5ca7.ts.net" ];
     trustedOrigins = [ "https://office-desktop.tail5ca7.ts.net" ];
     siteUrl = "https://office-desktop.tail5ca7.ts.net/wger";
@@ -94,7 +94,7 @@
 
   # OpenTripPlanner for multi-modal transit routing
   services.opentripplanner = {
-    enable = true;
+    enable = false;
     port = 8084;
     maxMemoryGb = 8; # Larger region needs more memory
     # OSM data for NY + CT (downloaded and merged by OTP setup)

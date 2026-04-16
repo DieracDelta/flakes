@@ -157,6 +157,8 @@ let
     john
     nmap
     aircrack-ng
+    pwntools
+    hashcat
   ];
   cPack = with pkgs; [
     clang

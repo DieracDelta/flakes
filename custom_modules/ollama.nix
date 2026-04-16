@@ -26,7 +26,7 @@ in
 
     services.open-webui = {
       openFirewall = true;
-      enable = true;
+      enable = false;
       host = "0.0.0.0";
       environment = {
         OLLAMA_API_BASE_URL = "http://127.0.0.1:11111";
@@ -35,7 +35,7 @@ in
     };
 
     networking.firewall.allowedTCPPorts = [
-      11434  # Default ollama port (in case needed)
+      11434 # Default ollama port (in case needed)
     ];
   };
 }

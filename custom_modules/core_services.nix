@@ -371,6 +371,9 @@ in
 
     # ollama and webui are 11434 and 8080 respectively
     networking.firewall.allowedTCPPorts = [
+      5002
+      5001
+      5003
       5000
       19999
       3838
@@ -381,6 +384,7 @@ in
       444
       9993
       8080
+      9094
       3123
       8188
       11434

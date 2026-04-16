@@ -1,6 +1,5 @@
 # Individual package overrides and custom packages
-_:
-final: prev:
+_: final: prev:
 let
   # Import shared tmux-search-panes overlay
   tmuxOverlay = import ./tmux-search-panes.nix { } final prev;
@@ -48,72 +47,75 @@ let
   # };
 
   # AudioMuse-AI Python environment with all dependencies
-  audiomuse-ai-python = final.python312.withPackages (ps: with ps; [
-    # Web framework
-    flask
-    flask-cors
-    flasgger
+  audiomuse-ai-python = final.python312.withPackages (
+    ps: with ps; [
+      # Web framework
+      flask
+      flask-cors
+      flasgger
 
-    # Task queue
-    redis
-    rq
+      # Task queue
+      redis
+      rq
 
-    # Database
-    psycopg2
+      # Database
+      psycopg2
 
-    # Audio processing
-    librosa
-    soundfile
-    resampy
-    pydub
-    mutagen
+      # Audio processing
+      librosa
+      soundfile
+      resampy
+      pydub
+      mutagen
 
-    # ML/Scientific
-    numpy
-    scipy
-    numba
-    pandas
-    scikit-learn
-    umap-learn
-    transformers
-    sentencepiece
+      # ML/Scientific
+      numpy
+      scipy
+      numba
+      pandas
+      scikit-learn
+      umap-learn
+      transformers
+      sentencepiece
 
-    # ONNX
-    onnx
-    onnxruntime  # CUDA enabled via global cudaSupport = true
+      # ONNX
+      onnx
+      onnxruntime # CUDA enabled via global cudaSupport = true
 
-    # GPU-accelerated ML (RAPIDS cuML)
-    # cuml propagates: cudf (stub), treelite, pandas, cupy, rmm, pylibraft, cuvs
-    cupy
-    final.python312Packages.rmm
-    final.python312Packages.pylibraft
-    final.python312Packages.cuvs
-    final.python312Packages.cuml
+      # GPU-accelerated ML (RAPIDS cuML)
+      # cuml propagates: cudf (stub), treelite, pandas, cupy, rmm, pylibraft, cuvs
+      cupy
+      final.python312Packages.rmm
+      final.python312Packages.pylibraft
+      final.python312Packages.cuvs
+      final.python312Packages.cuml
 
-    # Utilities
-    pyyaml
-    requests
-    rapidfuzz
-    ftfy
-    packaging
-    protobuf
-    httpx
+      # Utilities
+      pyyaml
+      requests
+      rapidfuzz
+      ftfy
+      packaging
+      protobuf
+      httpx
 
-    # LLM integrations
-    google-genai
-    mistralai
+      # LLM integrations
+      google-genai
+      mistralai
 
-    # MCP (Model Context Protocol)
-    mcp
+      # MCP (Model Context Protocol)
+      mcp
 
-    # Loudness normalization
-    # pyloudnorm
+      # Loudness normalization
+      # pyloudnorm
 
-    # Voyager (from our custom package)
-    voyager
-  ]);
+      # Voyager (from our custom package)
+      voyager
+    ]
+  );
 in
-tmuxOverlay // {
+tmuxOverlay
+// {
   # AudioMuse-AI - Music analysis and playlist generation service
   audiomuse-ai = final.stdenvNoCC.mkDerivation {
     pname = "audiomuse-ai";
@@ -287,7 +289,10 @@ tmuxOverlay // {
       hash = "sha256-AqeNbkI0BMcnEWj3QPF+Q9vBCUf3Rt/EIFZwinRsyz0=";
     };
 
-    nativeBuildInputs = [ final.gnutar final.gzip ];
+    nativeBuildInputs = [
+      final.gnutar
+      final.gzip
+    ];
 
     installPhase = ''
       runHook preInstall
@@ -405,7 +410,9 @@ tmuxOverlay // {
   # Navidrome 0.60.3 with plugin support
   # Use: pkgs.navidrome.override { plugins = with pkgs.navidromePlugins; [ discord-rich-presence ]; }
   navidrome = final.lib.makeOverridable (
-    { plugins ? [ ] }:
+    {
+      plugins ? [ ],
+    }:
     prev.navidrome.overrideAttrs (oldAttrs: rec {
       version = "0.60.3";
       src = final.fetchFromGitHub {
@@ -437,16 +444,20 @@ tmuxOverlay // {
   # Agent Deck - TUI for managing AI coding agent sessions (Claude Code, Codex, etc.)
   agent-deck = final.buildGoModule {
     pname = "agent-deck";
-    version = "0.26.4";
+    version = "1.5.0";
 
     src = final.fetchFromGitHub {
       owner = "asheshgoplani";
       repo = "agent-deck";
-      rev = "v0.26.4";
-      hash = "sha256-XEZKuKN/M1z47Fam0xLqwbIe1Tir8CH3aHsNyQP0Tgs=";
+      rev = "v1.5.0";
+      hash = "sha256-0jOgTHlF2vx4fQC0V0sUyHAmi3YgNP3wydKiXp5pr9M=";
     };
 
-    vendorHash = "sha256-PrhxSMJm4TPRtNHkg36HQJE4a0UDfYUpQdYA0tUor9k=";
+    patches = [
+      ../patches/agent-deck-preserve-collapsed-groups.patch
+    ];
+
+    vendorHash = "sha256-xGf1KrSc0Jl75FqFjt5KJslQeVRQPFljqTxF7MphhNk=";
 
     subPackages = [ "cmd/agent-deck" ];
 
@@ -455,7 +466,12 @@ tmuxOverlay // {
 
     postInstall = ''
       wrapProgram $out/bin/agent-deck \
-        --prefix PATH : ${final.lib.makeBinPath [ final.tmux final.git ]}
+        --prefix PATH : ${
+          final.lib.makeBinPath [
+            final.tmux
+            final.git
+          ]
+        }
     '';
 
     meta = with final.lib; {
@@ -800,8 +816,9 @@ tmuxOverlay // {
           hash = "sha256-gpxeAIKLgmc+UXTtFFME6pra5MElj7frWbGNSJQk7Ak=";
         };
       };
-      release = releaseBySystem.${final.stdenv.hostPlatform.system}
-        or (throw "linear-cli: unsupported system ${final.stdenv.hostPlatform.system}");
+      release =
+        releaseBySystem.${final.stdenv.hostPlatform.system}
+          or (throw "linear-cli: unsupported system ${final.stdenv.hostPlatform.system}");
       linear-bin = final.stdenvNoCC.mkDerivation {
         pname = "linear-cli-bin";
         inherit version;
@@ -835,23 +852,23 @@ tmuxOverlay // {
         '';
       }
     else
-    final.stdenvNoCC.mkDerivation {
-      pname = "linear-cli";
-      inherit version;
+      final.stdenvNoCC.mkDerivation {
+        pname = "linear-cli";
+        inherit version;
 
-      installPhase = ''
-        runHook preInstall
-        mkdir -p $out/bin
-        ln -s ${linear-bin}/bin/linear $out/bin/linear
-        runHook postInstall
-      '';
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out/bin
+          ln -s ${linear-bin}/bin/linear $out/bin/linear
+          runHook postInstall
+        '';
 
-      meta = with final.lib; {
-        description = "CLI for Linear issue tracker";
-        homepage = "https://github.com/schpet/linear-cli";
-        license = licenses.mit;
-        mainProgram = "linear";
-        platforms = builtins.attrNames releaseBySystem;
+        meta = with final.lib; {
+          description = "CLI for Linear issue tracker";
+          homepage = "https://github.com/schpet/linear-cli";
+          license = licenses.mit;
+          mainProgram = "linear";
+          platforms = builtins.attrNames releaseBySystem;
+        };
       };
-    };
 }
