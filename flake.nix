@@ -61,8 +61,10 @@
     # eBPF per-process bandwidth shaping daemon
     shapebpf.url = "github:DieracDelta/shapeBPF";
 
-    # Claude Code and Codex (latest from nix overlays)
+    # Claude Code and Codex
     claude-code-nix.url = "github:sadjow/claude-code-nix";
+    # Local Claude Code overlay for faster testing/rollout than the pinned GitHub input
+    claude-code-nix-local.url = "path:/home/jrestivo/dev/claude-code-nix";
     codex-nix.url = "github:sadjow/codex-nix";
   };
 
