@@ -2,9 +2,20 @@
   config,
   pkgs,
   lib,
+  system,
+  nixpkgs-master,
   ...
 }:
-
+let
+  ollamaMasterPkgs = import nixpkgs-master {
+    inherit system;
+    config = {
+      allowUnfree = true;
+      cudaSupport = true;
+      cudaCapabilities = [ "8.9" ];
+    };
+  };
+in
 {
 
   nix.settings.allowed-users = [
@@ -36,6 +47,7 @@
   custom_modules.container_configs.enable = false;
   custom_modules.bens_config.enable = true;
   custom_modules.network_monitor.enable = true;
+  custom_modules.network_monitor.enableNtopng = false;
   custom_modules.nethog_monitor.enable = true;
   custom_modules.monitoring.enable = true;
   custom_modules.monitoring.enableUps = true;
@@ -48,15 +60,20 @@
   custom_modules.runner_vms.enable = true;
 
   programs.bpftop.enable = true;
-  services.nix-btm.enable = true;
+  # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
   services.shapebpf.interface = "enp6s0";
+  services.ollama.package = ollamaMasterPkgs.ollama-cuda;
   users.users.jrestivo.extraGroups = [ "shapebpf" ];
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {
     enable = false;
-    allowedHosts = [ "localhost" "127.0.0.1" "office-desktop.tail5ca7.ts.net" ];
+    allowedHosts = [
+      "localhost"
+      "127.0.0.1"
+      "office-desktop.tail5ca7.ts.net"
+    ];
     trustedOrigins = [ "https://office-desktop.tail5ca7.ts.net" ];
     siteUrl = "https://office-desktop.tail5ca7.ts.net/wger";
     adminUser = "admin";
@@ -116,7 +133,7 @@
 
   # Digitransit production UI for trip planning
   services.digitransit = {
-    enable = true;
+    enable = false;
     port = 8085;
     otpUrl = "http://localhost:8084/otp/";
   };

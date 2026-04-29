@@ -18,7 +18,7 @@ let
 
   mapnik-carto =
     let
-      env = { nativeBuildInputs = [ pkgs.nodePackages_latest.carto ]; };
+      env = { nativeBuildInputs = [ pkgs.carto ]; };
     in
     pkgs.runCommand "mapnik-carto" env ''
       mkdir $out

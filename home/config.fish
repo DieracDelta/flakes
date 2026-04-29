@@ -63,6 +63,9 @@ export ET_NO_TELEMETRY="y"
 
 export _ZO_MAXAGE=10000000
 export _ZO_RESOLVE_SYMLINKS=1
+export GH_TELEMETRY=false
+export DO_NOT_TRACK=true
+
 
 function last_history_item
     echo $history[1]

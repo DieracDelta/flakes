@@ -133,6 +133,11 @@ in
         root_url = "https://office-desktop.tail5ca7.ts.net/grafana/";
         serve_from_sub_path = true;
       };
+      settings.security = {
+        # Preserve Grafana's historical default during the 26.05 transition so
+        # existing encrypted DB fields remain readable until a deliberate rotation.
+        secret_key = "$__file{${config.services.grafana.dataDir}/secret_key}";
+      };
       settings.auth = {
         disable_login_form = true;
       };
@@ -231,6 +236,12 @@ in
             ]);
       };
     };
+    systemd.services.grafana.preStart = lib.mkAfter ''
+      if [ ! -s ${config.services.grafana.dataDir}/secret_key ]; then
+        umask 077
+        printf '%s\n' 'SW2YcwTIb9zpOOhoPsMm' > ${config.services.grafana.dataDir}/secret_key
+      fi
+    '';
 
     # ===================
     # UPS Monitoring (NUT)

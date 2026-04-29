@@ -74,12 +74,15 @@
   # Fish as default shell
   programs.fish.enable = true;
   programs.bpftop.enable = true;
-  services.nix-btm.enable = true;
+  # services.nix-btm.enable = false;
 
   # User configuration
   users.users.jrestivo = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "docker" ];
+    extraGroups = [
+      "wheel"
+      "docker"
+    ];
     shell = pkgs.fish;
     openssh.authorizedKeys.keys = [
       # root's ssh key for srcbot

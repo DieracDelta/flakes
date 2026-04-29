@@ -140,7 +140,7 @@ let
     quadlet-nix.nixosModules.quadlet
     comfyui-nix.nixosModules.default
     inputs.bpftop.nixosModules.default
-    inputs.nix-btm.nixosModules.default
+    # inputs.nix-btm.nixosModules.default
     inputs.shapebpf.nixosModules.default
   ];
 
@@ -200,5 +200,10 @@ let
     );
 in
 {
-  inherit pkgImport pkgs buildNixosConfigurations system;
+  inherit
+    pkgImport
+    pkgs
+    buildNixosConfigurations
+    system
+    ;
 }

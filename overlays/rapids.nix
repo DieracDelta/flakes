@@ -1158,7 +1158,6 @@ PYEOF
         scipy
         scikit-learn
         numba
-        cupy
         joblib
         pandas
         final.python312Packages.rmm

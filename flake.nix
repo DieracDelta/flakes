@@ -13,7 +13,7 @@
 
     my-nvim.url = "github:DieracDelta/vimconfig";
 
-    nix.url = "github:NixOS/nix/2.33.3";
+    nix.url = "github:NixOS/nix/2.34.6";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -44,9 +44,6 @@
 
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
-
-    # Nix build process monitor (TUI + daemon + nix plugin)
-    nix-btm.url = "github:DieracDelta/nix-btm/jr/mark-2";
 
     # Tirith terminal security (local command analysis before execution)
     tirith.url = "github:sheeki03/tirith";

@@ -128,6 +128,12 @@ in
     default = false;
   };
 
+  options.custom_modules.network_monitor.enableNtopng = lib.mkOption {
+    description = "Enable ntopng within the network monitor module.";
+    type = lib.types.bool;
+    default = true;
+  };
+
   config = lib.mkIf config.custom_modules.network_monitor.enable {
     systemd.tmpfiles.rules = [
       "d /var/log/network 0755 root root -"
@@ -213,11 +219,13 @@ in
     };
 
     services.vnstat.enable = true;
-    services.ntopng.enable = true;
-    services.ntopng.httpPort = 3123;
-    services.ntopng.extraConfig = ''
-      --http-prefix="/ntopng"
-    '';
+    services.ntopng = lib.mkIf config.custom_modules.network_monitor.enableNtopng {
+      enable = true;
+      httpPort = 3123;
+      extraConfig = ''
+        --http-prefix="/ntopng"
+      '';
+    };
 
     environment.systemPackages = [ netSummaryScript ];
   };

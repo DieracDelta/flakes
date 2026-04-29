@@ -81,7 +81,7 @@ in
   tirith
   rapids
   amp-cli
-  inputs.nix-btm.overlays.default
+  # inputs.nix-btm.overlays.default
   inputs.entire-cli.overlays.default
   inputs.claude-code-nix.overlays.default
   # Local path overlay wins so desktop can track /home/jrestivo/dev/claude-code-nix directly.

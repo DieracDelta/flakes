@@ -20,6 +20,7 @@ let
     };
 
     # Binary wheel, no build deps needed
+    propagatedBuildInputs = with final.python312Packages; [ numpy ];
     pythonImportsCheck = [ "voyager" ];
 
     meta = with final.lib; {
@@ -83,8 +84,8 @@ let
       onnxruntime # CUDA enabled via global cudaSupport = true
 
       # GPU-accelerated ML (RAPIDS cuML)
-      # cuml propagates: cudf (stub), treelite, pandas, cupy, rmm, pylibraft, cuvs
-      cupy
+      # Keep a single CUDA Python stack in the closure. Stock nixpkgs cupy currently
+      # conflicts with the custom RAPIDS cuda-python/cuda-bindings packages below.
       final.python312Packages.rmm
       final.python312Packages.pylibraft
       final.python312Packages.cuvs
@@ -444,20 +445,20 @@ tmuxOverlay
   # Agent Deck - TUI for managing AI coding agent sessions (Claude Code, Codex, etc.)
   agent-deck = final.buildGoModule {
     pname = "agent-deck";
-    version = "1.5.0";
+    version = "1.7.16";
 
     src = final.fetchFromGitHub {
       owner = "asheshgoplani";
       repo = "agent-deck";
-      rev = "v1.5.0";
-      hash = "sha256-0jOgTHlF2vx4fQC0V0sUyHAmi3YgNP3wydKiXp5pr9M=";
+      rev = "v1.7.16";
+      hash = "sha256-BeBCsRwY6RTw/UAquYHymbbzIpLwBux/gs0gxcEktHw=";
     };
 
     patches = [
       ../patches/agent-deck-preserve-collapsed-groups.patch
     ];
 
-    vendorHash = "sha256-xGf1KrSc0Jl75FqFjt5KJslQeVRQPFljqTxF7MphhNk=";
+    vendorHash = "sha256-1aCd3tT5Oh+K7kLils2r3kX4YMkDCL3Eqoj5XJ9R8m0=";
 
     subPackages = [ "cmd/agent-deck" ];
 

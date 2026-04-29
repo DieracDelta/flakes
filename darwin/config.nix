@@ -37,7 +37,7 @@
     hl
     tldr
     smartmontools
-    neofetch
+    fastfetch
     bottom
     htop
     coreutils

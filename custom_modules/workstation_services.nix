@@ -154,6 +154,7 @@ in
       IOSchedulingPriority = lib.mkForce 7;
       IPEgressPriority = 7;
       IPIngressPriority = 7;
+      AllowedCPUs = "0-19";
       MemoryHigh = "80G"; # Soft limit - throttles allocations when exceeded
       MemoryMax = "100G"; # Hard limit - OOM killer if exceeded
     };
@@ -223,7 +224,7 @@ in
       sqlite
       difftastic
       cachix
-      nix-btm
+      # nix-btm
       nix-search
       smartmontools
       magic-wormhole-rs
