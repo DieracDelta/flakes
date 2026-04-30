@@ -94,6 +94,7 @@
     options = [
       "subvol=root"
       "compress=zstd"
+      "noatime"
     ];
   };
 
@@ -103,6 +104,7 @@
     options = [
       "subvol=home"
       "compress=zstd"
+      "noatime"
     ];
   };
 
@@ -201,6 +203,9 @@
   };
 
   boot.kernel.sysctl = {
+    "vm.dirty_background_bytes" = 67108864; # 64 MiB
+    "vm.dirty_bytes" = 268435456; # 256 MiB
+    "vm.min_free_kbytes" = 262144; # 256 MiB
     "vm.page-cluster" = 0;
     "vm.swappiness" = 60;
     "vm.watermark_scale_factor" = 125;

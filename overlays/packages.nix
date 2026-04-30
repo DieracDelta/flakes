@@ -150,6 +150,15 @@ tmuxOverlay
                        "'cudnn_conv_algo_search': 'EXHAUSTIVE'" \
         --replace-fail "'arena_extend_strategy': 'kSameAsRequested'" \
                        "'arena_extend_strategy': 'kNextPowerOfTwo'"
+
+      # Nixpkgs' mistralai 2.3.2 currently installs only metadata in this
+      # environment. AudioMuse is configured to use Gemini, so don't make the
+      # whole service depend on importing the optional Mistral client at startup.
+      substituteInPlace ai.py \
+        --replace-fail 'from mistralai import Mistral' \
+                       $'try:\n    from mistralai import Mistral\nexcept ImportError:\n    Mistral = None' \
+        --replace-fail '        client = Mistral(api_key=mistral_api_key)' \
+                       $'        if Mistral is None:\n            return "Error: Mistral Python client is unavailable."\n\n        client = Mistral(api_key=mistral_api_key)'
     '';
 
     installPhase = ''

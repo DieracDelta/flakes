@@ -15,11 +15,15 @@ let
       cudaCapabilities = [ "8.9" ];
     };
   };
+  forgejoDomain = "office-desktop.tail5ca7.ts.net";
+  forgejoBasePath = "/forgejo";
+  forgejoPort = 3010;
 in
 {
 
   nix.settings.allowed-users = [
     "jrestivo"
+    "gitea-runner"
     "siraben"
     "jachym"
     "faye"
@@ -27,6 +31,7 @@ in
   ];
   nix.settings.trusted-users = [
     "jrestivo"
+    "gitea-runner"
     "siraben"
     "jachym"
     "faye"
@@ -63,8 +68,146 @@ in
   # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
   services.shapebpf.interface = "enp6s0";
+  systemd.services.shapebpf.environment.RUST_LOG = lib.mkForce "error";
   services.ollama.package = ollamaMasterPkgs.ollama-cuda;
-  users.users.jrestivo.extraGroups = [ "shapebpf" ];
+  users.users.jrestivo.extraGroups = [
+    "forgejo"
+    "shapebpf"
+  ];
+
+  services.forgejo = {
+    enable = true;
+    stateDir = "/var/lib/forgejo";
+
+    database = {
+      type = "postgres";
+    };
+
+    lfs.enable = true;
+
+    dump = {
+      enable = true;
+      interval = "03:45";
+      backupDir = "/var/lib/forgejo/dump";
+      type = "tar.zst";
+      age = "8w";
+    };
+
+    settings = {
+      DEFAULT = {
+        APP_NAME = "Forgejo";
+      };
+
+      server = {
+        DOMAIN = forgejoDomain;
+        ROOT_URL = "https://${forgejoDomain}${forgejoBasePath}/";
+        HTTP_ADDR = "127.0.0.1";
+        HTTP_PORT = forgejoPort;
+        DISABLE_SSH = false;
+        SSH_DOMAIN = forgejoDomain;
+        SSH_PORT = 22;
+      };
+
+      session = {
+        COOKIE_NAME = "forgejo_session";
+        COOKIE_SECURE = true;
+      };
+
+      service = {
+        DISABLE_REGISTRATION = false;
+        REQUIRE_SIGNIN_VIEW = true;
+      };
+
+      mirror = {
+        ENABLED = true;
+        DEFAULT_INTERVAL = "8h";
+        MIN_INTERVAL = "10m";
+      };
+
+      repository = {
+        DEFAULT_REPO_UNITS = "repo.code,repo.releases,repo.issues,repo.pulls,repo.wiki,repo.projects,repo.packages,repo.actions";
+      };
+
+      "repository.pull-request" = {
+        DEFAULT_MERGE_STYLE = "rebase";
+      };
+
+      actions = {
+        ENABLED = true;
+      };
+    };
+  };
+
+  services.gitea-actions-runner = {
+    package = pkgs.forgejo-runner;
+    instances.desktop = {
+      enable = true;
+      name = "desktop";
+      url = "http://127.0.0.1:${toString forgejoPort}";
+      tokenFile = "/var/lib/forgejo/runner_token";
+      labels = [
+        "native:host"
+        "ubuntu-latest:host"
+        "ubuntu-22.04:host"
+        "debian-latest:host"
+      ];
+      hostPackages = with pkgs; [
+        bash
+        coreutils
+        curl
+        gawk
+        gitMinimal
+        gnused
+        nix
+        nodejs
+        wget
+      ];
+      settings.log = {
+        level = "debug";
+        job_level = "debug";
+      };
+      settings.container = {
+        docker_host = "-";
+        force_pull = false;
+        force_rebuild = false;
+        valid_volumes = [ ];
+      };
+    };
+  };
+
+  virtualisation.docker = {
+    enable = true;
+    autoPrune = {
+      enable = true;
+      dates = "daily";
+      flags = [
+        "--all"
+        "--filter=until=24h"
+      ];
+    };
+  };
+
+  services.caddy.virtualHosts."${forgejoDomain}".extraConfig = lib.mkBefore ''
+
+    redir ${forgejoBasePath} ${forgejoBasePath}/ permanent
+    handle_path ${forgejoBasePath}/* {
+      reverse_proxy 127.0.0.1:${toString forgejoPort}
+    }
+  '';
+
+  services.homepage-dashboard.services = lib.mkAfter [
+    {
+      "Development" = [
+        {
+          "Forgejo" = {
+            icon = "forgejo";
+            href = "${forgejoBasePath}/";
+            description = "Self-hosted Git forge";
+          };
+        }
+      ];
+    }
+  ];
 
   # wger workout/nutrition tracker with micronutrient support
   custom_modules.wger = {

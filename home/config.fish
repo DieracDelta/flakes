@@ -53,6 +53,11 @@ if test $os = "Darwin"
   fish_add_path /Users/jrestivo/dev/tdf/target/release/
   export EDITOR="/Users/jrestivo/dev/vimconfig/result/bin/nvim"
 else if test $os = "Linux"
+  set -gx FORGEJO_URL "https://office-desktop.tail5ca7.ts.net/forgejo"
+  set -gx FORGEJO_URL http://127.0.0.1:3010
+  set -gx FORGEJO_ACCESS_TOKEN (command cat /home/jrestivo/FOREJO_TOKEN | string trim)
+
+
   ssh-add ~/.ssh/id_rsa
   export EDITOR="/home/jrestivo/dev/vimconfig/result/bin/nvim"
 else
