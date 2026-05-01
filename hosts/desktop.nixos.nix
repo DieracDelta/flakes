@@ -63,6 +63,11 @@ in
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
   custom_modules.runner_vms.enable = true;
+  custom_modules.plane = {
+    enable = true;
+    domain = "office-desktop.tail5ca7.ts.net";
+    basePath = "/plane";
+  };
 
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;
@@ -205,6 +210,13 @@ in
             description = "Self-hosted Git forge";
           };
         }
+        {
+          "Plane" = {
+            icon = "plane";
+            href = "/plane/";
+            description = "Project management";
+          };
+        }
       ];
     }
   ];
@@ -294,6 +306,7 @@ in
     linear-cli
     agent-deck
     codex
+    plane-mcp-server
   ];
 
   services.nginx.virtualHosts."nominatim.local" = {

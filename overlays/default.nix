@@ -57,6 +57,9 @@ let
 
   # RAPIDS GPU computing stack for cuML (GPU clustering)
   rapids = import ./rapids.nix { };
+
+  # Plane project management (self-hosted)
+  plane = import ./plane;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -81,6 +84,7 @@ in
   tirith
   rapids
   amp-cli
+  plane
   # inputs.nix-btm.overlays.default
   inputs.entire-cli.overlays.default
   inputs.claude-code-nix.overlays.default

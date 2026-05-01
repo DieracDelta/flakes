@@ -1,0 +1,132 @@
+diff --git a/apps/api/plane/settings/storage.py b/apps/api/plane/settings/storage.py
+index 1111111..2222222 100644
+--- a/apps/api/plane/settings/storage.py
++++ b/apps/api/plane/settings/storage.py
+@@ -64,34 +64,25 @@ class S3Storage(S3Boto3Storage):
+     def generate_presigned_post(self, object_name, file_type, file_size, expiration=None):
+-        """Generate a presigned URL to upload an S3 object"""
++        """Generate a presigned PUT URL to upload an S3 object.
++        Returns a response compatible with the presigned POST format."""
+         if expiration is None:
+             expiration = self.signed_url_expiration
+-        fields = {"Content-Type": file_type}
+-
+-        conditions = [
+-            {"bucket": self.aws_storage_bucket_name},
+-            ["content-length-range", 1, file_size],
+-            {"Content-Type": file_type},
+-        ]
+-
+-        # Add condition for the object name (key)
+-        if object_name.startswith("${filename}"):
+-            conditions.append(["starts-with", "$key", object_name[: -len("${filename}")]])
+-        else:
+-            fields["key"] = object_name
+-            conditions.append({"key": object_name})
+-
+-        # Generate the presigned POST URL
+         try:
+-            # Generate a presigned URL for the S3 object
+-            response = self.s3_client.generate_presigned_post(
+-                Bucket=self.aws_storage_bucket_name,
+-                Key=object_name,
+-                Fields=fields,
+-                Conditions=conditions,
++            url = self.s3_client.generate_presigned_url(
++                "put_object",
++                Params={
++                    "Bucket": self.aws_storage_bucket_name,
++                    "Key": object_name,
++                    "ContentType": file_type,
++                },
+                 ExpiresIn=expiration,
+             )
+-        # Handle errors
+         except ClientError as e:
+-            print(f"Error generating presigned POST URL: {e}")
++            print(f"Error generating presigned PUT URL: {e}")
+             return None
+
+-        return response
++        return {
++            "url": url,
++            "fields": {},
++            "method": "PUT",
++            "content_type": file_type,
++        }
+
+     def _get_content_disposition(self, disposition, filename=None):
+diff --git a/packages/services/src/file/file-upload.service.ts b/packages/services/src/file/file-upload.service.ts
+index 3333333..4444444 100644
+--- a/packages/services/src/file/file-upload.service.ts
++++ b/packages/services/src/file/file-upload.service.ts
+@@ -27,13 +27,22 @@ export class FileUploadService extends APIService {
+    * @param {string} url - The URL to upload the file to
+    * @param {FormData} data - The form data to upload
+    * @returns {Promise<void>} Promise resolving to void
+    * @throws {Error} If the request fails
+    */
+-  async uploadFile(url: string, data: FormData): Promise<void> {
++  async uploadFile(url: string, data: FormData | File, method: string = "POST", contentType?: string): Promise<void> {
+     this.cancelSource = axios.CancelToken.source();
+-    return this.post(url, data, {
+-      headers: {
+-        "Content-Type": "multipart/form-data",
+-      },
++    const headers: Record<string, string> = method === "PUT" && contentType
++      ? { "Content-Type": contentType }
++      : { "Content-Type": "multipart/form-data" };
++    const axiosMethod = method === "PUT" ? "put" : "post";
++    return this.request({
++      method: axiosMethod,
++      url,
++      data,
++      headers,
+       cancelToken: this.cancelSource.token,
+       withCredentials: false,
+     })
+diff --git a/packages/services/src/file/helper.ts b/packages/services/src/file/helper.ts
+index 5555555..6666666 100644
+--- a/packages/services/src/file/helper.ts
++++ b/packages/services/src/file/helper.ts
+@@ -55,10 +55,16 @@ const validateFilename = (filename: string): string | null => {
+  * @param {File} file
+  * @returns {FormData} file upload request payload
+  */
+-export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData => {
+-  const formData = new FormData();
+-  Object.entries(signedURLResponse.upload_data.fields).forEach(([key, value]) => formData.append(key, value));
+-  formData.append("file", file);
+-  return formData;
++export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData | File => {
++  const uploadData = signedURLResponse.upload_data;
++  if (uploadData.method === "PUT") {
++    return file;
++  }
++  const formData = new FormData();
++  Object.entries(uploadData.fields).forEach(([key, value]) => formData.append(key, value));
++  formData.append("file", file);
++  return formData;
+ };
+diff --git a/apps/web/core/services/file.service.ts b/apps/web/core/services/file.service.ts
+index 7777777..8888888 100644
+--- a/apps/web/core/services/file.service.ts
++++ b/apps/web/core/services/file.service.ts
+@@ -82,8 +82,13 @@ export class FileService extends APIService {
+       .then(async (response) => {
+         const signedURLResponse: TFileSignedURLResponse = response?.data;
+         const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
+-        await this.fileUploadService.uploadFile(
+-          signedURLResponse.upload_data.url,
+-          fileUploadPayload,
+-        );
++        const uploadData = signedURLResponse.upload_data;
++        if (uploadData.method === "PUT") {
++          await this.fileUploadService.uploadFile(uploadData.url, fileUploadPayload, "PUT", uploadData.content_type);
++        } else {
++          await this.fileUploadService.uploadFile(
++            uploadData.url,
++            fileUploadPayload,
++          );
++        }
+         return signedURLResponse.asset_id;

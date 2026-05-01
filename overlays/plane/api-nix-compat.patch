@@ -1,0 +1,53 @@
+--- a/apps/api/plane/settings/production.py
++++ b/apps/api/plane/settings/production.py
+@@ -14,18 +14,26 @@
+ # Honor the 'X-Forwarded-Proto' header for request.is_secure()
+ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+-INSTALLED_APPS += ("scout_apm.django",)  # noqa
+-
+-
+-# Scout Settings
+-SCOUT_MONITOR = os.environ.get("SCOUT_MONITOR", False)
+-SCOUT_KEY = os.environ.get("SCOUT_KEY", "")
+-SCOUT_NAME = "Plane"
+-
+-LOG_DIR = os.path.join(BASE_DIR, "logs")  # noqa
+-
+-if not os.path.exists(LOG_DIR):
+-    os.makedirs(LOG_DIR)
++# Scout APM (optional — only if installed)
++try:
++    import scout_apm.django  # noqa
++    INSTALLED_APPS += ("scout_apm.django",)  # noqa
++    SCOUT_MONITOR = os.environ.get("SCOUT_MONITOR", False)
++    SCOUT_KEY = os.environ.get("SCOUT_KEY", "")
++    SCOUT_NAME = "Plane"
++except ImportError:
++    pass
++
++LOG_DIR = os.environ.get("LOG_DIR", os.path.join(BASE_DIR, "logs"))  # noqa
++os.makedirs(LOG_DIR, exist_ok=True)
++
++# Allow STATIC_ROOT override for read-only filesystems (e.g. Nix store)
++if os.environ.get("STATIC_ROOT"):
++    STATIC_ROOT = os.environ["STATIC_ROOT"]  # noqa
++
++# Sub-path deployment: tell Django about the base path so redirects are correct
++if os.environ.get("PLANE_BASE_PATH"):
++    FORCE_SCRIPT_NAME = os.environ["PLANE_BASE_PATH"]  # noqa
+
+ # Logging configuration
+ LOGGING = {
+@@ -47,9 +55,9 @@
+         "file": {
+             "class": "plane.utils.logging.SizedTimedRotatingFileHandler",
+             "filename": (
+-                os.path.join(BASE_DIR, "logs", "plane-debug.log")  # noqa
++                os.path.join(LOG_DIR, "plane-debug.log")
+                 if DEBUG
+-                else os.path.join(BASE_DIR, "logs", "plane-error.log")  # noqa
++                else os.path.join(LOG_DIR, "plane-error.log")
+             ),
+             "when": "s",
+             "maxBytes": 1024 * 1024 * 1,
