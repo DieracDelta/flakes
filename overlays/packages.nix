@@ -454,20 +454,26 @@ tmuxOverlay
   # Agent Deck - TUI for managing AI coding agent sessions (Claude Code, Codex, etc.)
   agent-deck = final.buildGoModule {
     pname = "agent-deck";
-    version = "1.7.16";
+    version = "1.7.79";
 
     src = final.fetchFromGitHub {
       owner = "asheshgoplani";
       repo = "agent-deck";
-      rev = "v1.7.16";
-      hash = "sha256-BeBCsRwY6RTw/UAquYHymbbzIpLwBux/gs0gxcEktHw=";
+      rev = "v1.7.79";
+      hash = "sha256-XJwm+ZtwaA8MbOWvY2523yUM3KvXDjhPBHxG23uhNZM=";
     };
 
     patches = [
       ../patches/agent-deck-preserve-collapsed-groups.patch
+      ../patches/agent-deck-remove-csiureader.patch
     ];
 
-    vendorHash = "sha256-1aCd3tT5Oh+K7kLils2r3kX4YMkDCL3Eqoj5XJ9R8m0=";
+    postPatch = ''
+      substituteInPlace internal/session/conductor.go \
+        --replace-fail "/bin/bash" "${final.bash}/bin/bash"
+    '';
+
+    vendorHash = "sha256-aH32Up3redCpeyjZkjcjiVN0tfYpF+GFB2WVAGm3J2I=";
 
     subPackages = [ "cmd/agent-deck" ];
 
@@ -480,6 +486,7 @@ tmuxOverlay
           final.lib.makeBinPath [
             final.tmux
             final.git
+            final.bash
           ]
         }
     '';

@@ -87,6 +87,7 @@ in
   users.users.gitea-runner = {
     isSystemUser = true;
     group = "gitea-runner";
+    extraGroups = [ "docker" ];
     home = "/var/cache/forgejo-actions/runner";
     createHome = true;
   };
@@ -185,10 +186,53 @@ in
         level = "debug";
         job_level = "debug";
       };
+      settings.runner.capacity = 12;
       settings.container = {
         docker_host = "-";
         force_pull = false;
         force_rebuild = false;
+        options = "--volume psi-code-nix:/nix";
+        workdir_parent = "/var/cache/forgejo-actions/work";
+        valid_volumes = [ "psi-code-nix" ];
+      };
+      settings.host.workdir_parent = "/var/cache/forgejo-actions/work";
+      settings.cache = {
+        enabled = true;
+        dir = "/var/cache/forgejo-actions/runner/actcache";
+      };
+    };
+    instances.desktop-docker = {
+      enable = true;
+      name = "desktop-docker";
+      url = "http://127.0.0.1:${toString forgejoPort}";
+      tokenFile = "/var/lib/forgejo/runner_token";
+      labels = [
+        "docker:docker://docker.io/nixos/nix:latest"
+      ];
+      hostPackages = with pkgs; [
+        bash
+        coreutils
+        curl
+        findutils
+        gawk
+        gitMinimal
+        gnused
+        jq
+        nix
+        nodejs
+        util-linux
+        wget
+      ];
+      settings.log = {
+        level = "debug";
+        job_level = "debug";
+      };
+      settings.runner.capacity = 12;
+      settings.container = {
+        docker_host = "unix:///run/docker.sock";
+        force_pull = false;
+        force_rebuild = false;
+        network = "host";
         options = "--volume psi-code-nix:/nix";
         workdir_parent = "/var/cache/forgejo-actions/work";
         valid_volumes = [ "psi-code-nix" ];
@@ -214,7 +258,32 @@ in
       ];
     };
   };
-
+  systemd.services."gitea-runner-desktop\\x2ddocker" = {
+    environment.HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+    after = [ "docker-volume-psi-code-nix.service" ];
+    requires = [ "docker-volume-psi-code-nix.service" ];
+    serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      User = "gitea-runner";
+      Group = "gitea-runner";
+      WorkingDirectory = lib.mkForce "/var/lib/gitea-runner/desktop-docker";
+      ReadWritePaths = [
+        "/var/cache/forgejo-actions"
+        "/var/tmp"
+      ];
+    };
+  };
+  systemd.services.docker-volume-psi-code-nix = {
+    description = "Create persistent Docker volume for psi-code CI Nix store";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "docker.service" ];
+    requires = [ "docker.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.docker}/bin/docker volume create --label forgejo-ci=psi-code --label keep=true psi-code-nix";
+    };
+  };
   systemd.tmpfiles.rules = [
     "a+ /home/jrestivo - - - - u:gitea-runner:--x"
     "Z /var/lib/gitea-runner 0755 gitea-runner gitea-runner -"

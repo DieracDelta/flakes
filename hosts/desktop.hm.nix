@@ -7,4 +7,9 @@
     vim.enable = true;
     xmonad.enable = true;
   };
+
+  home.file.".config/baloofilerc".text = ''
+    [Basic Settings]
+    Indexing-Enabled=false
+  '';
 }
