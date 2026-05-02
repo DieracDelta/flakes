@@ -492,6 +492,28 @@ tmuxOverlay
     };
   };
 
+  forgejo-mcp = final.buildGoModule rec {
+    pname = "forgejo-mcp";
+    version = "2.17.0";
+
+    src = final.fetchFromGitHub {
+      owner = "goern";
+      repo = "forgejo-mcp";
+      rev = "v${version}";
+      hash = "sha256-DcpS2467MCFfIVsdYEfd5t6kPjMeLElMQbDyuXI04XE=";
+    };
+
+    vendorHash = "sha256-5CV4drUaYKtZ/RoydAatblhsqU8VWYzYByjhcb9KZVY=";
+
+    meta = with final.lib; {
+      description = "MCP server for interacting with Forgejo repositories";
+      homepage = "https://github.com/goern/forgejo-mcp";
+      license = licenses.mit;
+      platforms = platforms.linux;
+      mainProgram = "forgejo-mcp";
+    };
+  };
+
   nototools = prev.nototools.overridePythonAttrs (old: {
     dontCheckRuntimeDeps = true;
     catchConflicts = false;

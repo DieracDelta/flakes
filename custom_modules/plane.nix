@@ -5,7 +5,7 @@ let
   # Build frontend with the configured base paths baked in
   planeFrontend = pkgs.plane-frontend.overrideAttrs (old: {
     # Cache buster: ensures rebuild when base derivation buildPhase changes
-    name = "plane-frontend-0-unstable-2026-04-28-v4";
+    name = "plane-frontend-0-unstable-2026-04-28-v5";
     env = (old.env or { }) // {
       VITE_API_BASE_URL = cfg.basePath;
       VITE_WEB_BASE_URL = cfg.basePath;
@@ -212,6 +212,7 @@ in
           LIVE_BASE_PATH = "/live/";
           STATIC_ROOT = "${cfg.stateDir}/static";
           LOG_DIR = "${cfg.stateDir}/logs";
+          API_KEY_RATE_LIMIT = "10000000/minute";
           PLANE_BASE_PATH = cfg.basePath;
         };
         commonServiceConfig = {

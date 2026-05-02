@@ -40,6 +40,15 @@ in
                 description = "Subsonic Music Server";
               };
             }
+          ] ++ lib.optionals config.custom_modules.soulseek.enable [
+            {
+              "Soulseek" = {
+                icon = "mdi-download-network";
+                href = "${config.custom_modules.soulseek.basePath}/";
+                description = "slskd Soulseek client";
+              };
+            }
+          ] ++ [
             {
               "Koito" = {
                 icon = "mdi-music-box-multiple";

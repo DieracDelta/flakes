@@ -63,6 +63,10 @@ in
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
   custom_modules.runner_vms.enable = true;
+  custom_modules.soulseek = {
+    enable = true;
+    tailscaleExitNode = "100.109.204.162";
+  };
   custom_modules.plane = {
     enable = true;
     domain = "office-desktop.tail5ca7.ts.net";
@@ -79,6 +83,13 @@ in
     "forgejo"
     "shapebpf"
   ];
+  users.groups.gitea-runner = { };
+  users.users.gitea-runner = {
+    isSystemUser = true;
+    group = "gitea-runner";
+    home = "/var/cache/forgejo-actions/runner";
+    createHome = true;
+  };
 
   services.forgejo = {
     enable = true;
@@ -160,11 +171,14 @@ in
         bash
         coreutils
         curl
+        findutils
         gawk
         gitMinimal
         gnused
+        jq
         nix
         nodejs
+        util-linux
         wget
       ];
       settings.log = {
@@ -175,10 +189,46 @@ in
         docker_host = "-";
         force_pull = false;
         force_rebuild = false;
-        valid_volumes = [ ];
+        options = "--volume psi-code-nix:/nix";
+        workdir_parent = "/var/cache/forgejo-actions/work";
+        valid_volumes = [ "psi-code-nix" ];
+      };
+      settings.host.workdir_parent = "/var/cache/forgejo-actions/work";
+      settings.cache = {
+        enabled = true;
+        dir = "/var/cache/forgejo-actions/runner/actcache";
       };
     };
   };
+
+  systemd.services.gitea-runner-desktop = {
+    environment.HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+    serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      User = "gitea-runner";
+      Group = "gitea-runner";
+      WorkingDirectory = lib.mkForce "/var/lib/gitea-runner/desktop";
+      ReadWritePaths = [
+        "/var/cache/forgejo-actions"
+        "/var/tmp"
+      ];
+    };
+  };
+
+  systemd.tmpfiles.rules = [
+    "a+ /home/jrestivo - - - - u:gitea-runner:--x"
+    "Z /var/lib/gitea-runner 0755 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/runner 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/runner/actcache 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/work 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/cargo-home 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/cargo-target 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/frontend-cargo-target 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/lake 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/next 0775 gitea-runner gitea-runner -"
+  ];
 
   virtualisation.docker = {
     enable = true;
@@ -306,6 +356,7 @@ in
     linear-cli
     agent-deck
     codex
+    forgejo-mcp
     plane-mcp-server
   ];
 

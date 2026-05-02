@@ -126,6 +126,13 @@ stdenv.mkDerivation (finalAttrs: {
       onUploadProgress: uploadProgressHandler,
     })'
 
+    # Remove "Star us on GitHub" button
+    substituteInPlace 'apps/web/app/(all)/[workspaceSlug]/(projects)/star-us-link.tsx' \
+      --replace-fail \
+        'return (' \
+        'return null; // removed
+    const _unused = ('
+
     # Clear turbo cache so patched sources get recompiled
     rm -rf node_modules/.cache/turbo .turbo
 
