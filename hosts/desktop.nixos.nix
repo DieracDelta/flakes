@@ -72,6 +72,20 @@ in
     domain = "office-desktop.tail5ca7.ts.net";
     basePath = "/plane";
   };
+  custom_modules.borgbackup = {
+    enable = false;
+    repos = {
+      local = {
+        path = "/storage/backups/borg/forgejo-plane";
+        startAt = "*-*-* 04:00:00";
+      };
+      arm-vps = {
+        path = "ssh://borg@nixos-arm.tail5ca7.ts.net/./borg/desktop";
+        sshKey = "/root/.ssh/borg_ed25519";
+        startAt = "*-*-* 04:30:00";
+      };
+    };
+  };
 
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;

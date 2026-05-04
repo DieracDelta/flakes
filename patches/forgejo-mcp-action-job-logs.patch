@@ -1,0 +1,262 @@
+diff --git a/operation/actions/actions.go b/operation/actions/actions.go
+index 8330d1c..009e86e 100644
+--- a/operation/actions/actions.go
++++ b/operation/actions/actions.go
+@@ -6,11 +6,11 @@ import (
+ 	"errors"
+ 	"fmt"
+ 
+-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
+ 	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
+ 	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
+ 	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
+ 	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
++	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
+ 
+ 	"github.com/mark3labs/mcp-go/mcp"
+ 	"github.com/mark3labs/mcp-go/server"
+@@ -36,6 +36,7 @@ func RegisterTool(s *server.MCPServer) {
+ 	s.AddTool(DispatchWorkflowTool, DispatchWorkflowFn)
+ 	s.AddTool(ListWorkflowRunsTool, ListWorkflowRunsFn)
+ 	s.AddTool(GetWorkflowRunTool, GetWorkflowRunFn)
++	s.AddTool(GetActionJobLogsByRunNumberTool, GetActionJobLogsByRunNumberFn)
+ }
+ 
+ func DispatchWorkflowFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+diff --git a/operation/actions/job_logs.go b/operation/actions/job_logs.go
+new file mode 100644
+index 0000000..f6010e5
+--- /dev/null
++++ b/operation/actions/job_logs.go
+@@ -0,0 +1,231 @@
++package actions
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"net/http"
++	"net/url"
++	"strings"
++
++	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
++	"codeberg.org/goern/forgejo-mcp/v2/pkg/flag"
++	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
++	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
++	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
++
++	"github.com/mark3labs/mcp-go/mcp"
++)
++
++const (
++	GetActionJobLogsByRunNumberToolName = "get_action_job_logs_by_run_number"
++)
++
++type actionRunListResponse struct {
++	TotalCount   int64 `json:"total_count"`
++	WorkflowRuns []struct {
++		ID      int64  `json:"id"`
++		Title   string `json:"title"`
++		Status  string `json:"status"`
++		HTMLURL string `json:"html_url"`
++	} `json:"workflow_runs"`
++}
++
++type actionRunJob struct {
++	ID      int64    `json:"id"`
++	Attempt int64    `json:"attempt"`
++	Name    string   `json:"name"`
++	Status  string   `json:"status"`
++	TaskID  int64    `json:"task_id"`
++	RunsOn  []string `json:"runs_on"`
++}
++
++var (
++	GetActionJobLogsByRunNumberTool = mcp.NewTool(
++		GetActionJobLogsByRunNumberToolName,
++		mcp.WithDescription("Fetch Forgejo Actions job logs from UI run number and zero-based UI job index"),
++		mcp.WithString("owner", mcp.Required(), mcp.Description(params.Owner)),
++		mcp.WithString("repo", mcp.Required(), mcp.Description(params.Repo)),
++		mcp.WithNumber("run_number", mcp.Required(), mcp.Description("UI run number from /actions/runs/{run_number}")),
++		mcp.WithNumber("job_index", mcp.Required(), mcp.Description("Zero-based UI job index from /jobs/{job_index}")),
++		mcp.WithNumber("attempt", mcp.Description("Attempt number; defaults to latest")),
++		mcp.WithNumber("tail_lines", mcp.Description("Return only the last N log lines; defaults to full log"), mcp.Min(0)),
++	)
++)
++
++func GetActionJobLogsByRunNumberFn(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
++	log.Debugf("Called GetActionJobLogsByRunNumberFn")
++
++	owner, ok := req.GetArguments()["owner"].(string)
++	if !ok || owner == "" {
++		return to.ErrorResult(errors.New("owner is required"))
++	}
++	repo, ok := req.GetArguments()["repo"].(string)
++	if !ok || repo == "" {
++		return to.ErrorResult(errors.New("repo is required"))
++	}
++	runNumberFloat, err := to.Float64(req.GetArguments()["run_number"])
++	if err != nil {
++		return to.ErrorResult(errors.New("run_number is required"))
++	}
++	runNumber := int64(runNumberFloat)
++	if runNumber <= 0 {
++		return to.ErrorResult(errors.New("run_number must be a positive integer"))
++	}
++	jobIndexFloat, err := to.Float64(req.GetArguments()["job_index"])
++	if err != nil {
++		return to.ErrorResult(errors.New("job_index is required"))
++	}
++	jobIndex := int(jobIndexFloat)
++	if jobIndex < 0 {
++		return to.ErrorResult(errors.New("job_index must be zero or greater"))
++	}
++
++	attempt := int64(0)
++	if attemptFloat, err := to.Float64(req.GetArguments()["attempt"]); err == nil {
++		attempt = int64(attemptFloat)
++		if attempt <= 0 {
++			return to.ErrorResult(errors.New("attempt must be a positive integer"))
++		}
++	}
++
++	tailLines := 0
++	if tailFloat, err := to.Float64(req.GetArguments()["tail_lines"]); err == nil {
++		tailLines = int(tailFloat)
++		if tailLines < 0 {
++			return to.ErrorResult(errors.New("tail_lines must be zero or greater"))
++		}
++	}
++
++	runListPath := fmt.Sprintf(
++		"/api/v1/repos/%s/%s/actions/runs?run_number=%d&limit=1",
++		url.PathEscape(owner),
++		url.PathEscape(repo),
++		runNumber,
++	)
++	var runList actionRunListResponse
++	if err := getJSON(ctx, runListPath, &runList); err != nil {
++		return to.ErrorResult(fmt.Errorf("failed to resolve run_number %d: %w", runNumber, err))
++	}
++	if len(runList.WorkflowRuns) == 0 {
++		return to.ErrorResult(fmt.Errorf("no workflow run found for %s/%s run_number %d", owner, repo, runNumber))
++	}
++	run := runList.WorkflowRuns[0]
++
++	jobsPath := fmt.Sprintf(
++		"/api/v1/repos/%s/%s/actions/runs/%d/jobs",
++		url.PathEscape(owner),
++		url.PathEscape(repo),
++		run.ID,
++	)
++	var jobs []actionRunJob
++	if err := getJSON(ctx, jobsPath, &jobs); err != nil {
++		return to.ErrorResult(fmt.Errorf("failed to list jobs for API run_id %d: %w", run.ID, err))
++	}
++	if jobIndex >= len(jobs) {
++		return to.ErrorResult(fmt.Errorf("job_index %d is out of range for run_number %d; run has %d jobs", jobIndex, runNumber, len(jobs)))
++	}
++	job := jobs[jobIndex]
++
++	attemptSegment := "latest"
++	if attempt > 0 {
++		attemptSegment = fmt.Sprintf("%d", attempt)
++	}
++	logsPath := fmt.Sprintf(
++		"/api/v1/repos/%s/%s/actions/runs/%d/jobs/%d/attempts/%s/logs",
++		url.PathEscape(owner),
++		url.PathEscape(repo),
++		run.ID,
++		job.ID,
++		attemptSegment,
++	)
++	logText, err := getText(ctx, logsPath)
++	if err != nil {
++		return to.ErrorResult(fmt.Errorf("failed to fetch logs for API run_id %d job_id %d attempt %s: %w", run.ID, job.ID, attemptSegment, err))
++	}
++	if tailLines > 0 {
++		logText = tail(logText, tailLines)
++	}
++
++	var sb strings.Builder
++	sb.WriteString(fmt.Sprintf("Resolved %s/%s Actions log\n", owner, repo))
++	sb.WriteString(fmt.Sprintf("UI run_number: %d -> API run_id: %d\n", runNumber, run.ID))
++	sb.WriteString(fmt.Sprintf("UI job_index: %d -> API job_id: %d\n", jobIndex, job.ID))
++	sb.WriteString(fmt.Sprintf("Job: %s | Status: %s | Attempt: %d | Task: %d\n", job.Name, job.Status, job.Attempt, job.TaskID))
++	sb.WriteString(fmt.Sprintf("Run: %s | Status: %s\n", run.Title, run.Status))
++	if run.HTMLURL != "" {
++		sb.WriteString(fmt.Sprintf("URL: %s\n", run.HTMLURL))
++	}
++	if tailLines > 0 {
++		sb.WriteString(fmt.Sprintf("Log: last %d lines\n\n", tailLines))
++	} else {
++		sb.WriteString("\n")
++	}
++	sb.WriteString(logText)
++
++	return to.TextResult(sb.String())
++}
++
++func getJSON(ctx context.Context, path string, out any) error {
++	body, err := rawForgejoRequest(ctx, path, "application/json")
++	if err != nil {
++		return err
++	}
++	if err := json.Unmarshal(body, out); err != nil {
++		return fmt.Errorf("decode JSON response: %w", err)
++	}
++	return nil
++}
++
++func getText(ctx context.Context, path string) (string, error) {
++	body, err := rawForgejoRequest(ctx, path, "text/plain")
++	if err != nil {
++		return "", err
++	}
++	return string(body), nil
++}
++
++func rawForgejoRequest(ctx context.Context, path string, accept string) ([]byte, error) {
++	baseURL := strings.TrimRight(forgejo.GetBaseURL(), "/")
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
++	if err != nil {
++		return nil, err
++	}
++	if flag.Token != "" {
++		req.Header.Set("Authorization", "token "+flag.Token)
++	}
++	if accept != "" {
++		req.Header.Set("Accept", accept)
++	}
++	if flag.UserAgent != "" {
++		req.Header.Set("User-Agent", flag.UserAgent)
++	}
++
++	resp, err := http.DefaultClient.Do(req)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++
++	body, err := io.ReadAll(resp.Body)
++	if err != nil {
++		return nil, err
++	}
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		return nil, fmt.Errorf("Forgejo API returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
++	}
++	return body, nil
++}
++
++func tail(s string, lineCount int) string {
++	lines := strings.SplitAfter(s, "\n")
++	if len(lines) > 0 && lines[len(lines)-1] == "" {
++		lines = lines[:len(lines)-1]
++	}
++	if lineCount >= len(lines) {
++		return s
++	}
++	return strings.Join(lines[len(lines)-lineCount:], "")
++}

@@ -182,6 +182,15 @@
     };
   };
 
+  # Borg backup server — receives encrypted backups from desktop
+  services.borgbackup.repos.desktop = {
+    path = "/var/lib/borg/desktop";
+    authorizedKeys = [
+      # TODO: replace with actual public key from /root/.ssh/borg_ed25519.pub on desktop
+      "ssh-ed25519 AAAA_REPLACE_WITH_DESKTOP_BORG_PUBKEY borg@desktop"
+    ];
+  };
+
   # Disable networkd wait-online (not needed, interfaces are unmanaged)
   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 }

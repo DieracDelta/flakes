@@ -510,6 +510,8 @@ tmuxOverlay
       hash = "sha256-DcpS2467MCFfIVsdYEfd5t6kPjMeLElMQbDyuXI04XE=";
     };
 
+    patches = [ ../patches/forgejo-mcp-action-job-logs.patch ];
+
     vendorHash = "sha256-5CV4drUaYKtZ/RoydAatblhsqU8VWYzYByjhcb9KZVY=";
 
     meta = with final.lib; {
@@ -520,6 +522,22 @@ tmuxOverlay
       mainProgram = "forgejo-mcp";
     };
   };
+
+  forgejo = final.forgejo-lts;
+
+  forgejo-lts = (
+    final.callPackage (
+      import "${prev.path}/pkgs/by-name/fo/forgejo/generic.nix" {
+        version = "15.0.1";
+        hash = "sha256-40hyQ6MPskyty/LsMVczuDpbu2q3Syoj3c00HUS+pVE=";
+        npmDepsHash = "sha256-xWbnSX11RkLjtJ62qG6rD+xQAOnUuI99r9uEHakkZPY=";
+        vendorHash = "sha256-JUBAcRYgflrvoAK0OvaU/Xr6/BakgaUtYwtvBF9vyk0=";
+        lts = true;
+      }
+    ) { }
+  ).overrideAttrs (oldAttrs: {
+    patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-actions-api-jobs-logs.patch ];
+  });
 
   nototools = prev.nototools.overridePythonAttrs (old: {
     dontCheckRuntimeDeps = true;
