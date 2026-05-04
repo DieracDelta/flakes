@@ -23,11 +23,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1771604125,
-        "narHash": "sha256-P0AeDcw4axUs3nzEX9ZvwY+WhIqlU4pSMzfc7vhyy4g=",
+        "lastModified": 1777733638,
+        "narHash": "sha256-5cpACM+n4FK7FwO4slHjWjgAgl9acjAP1ZtlF3nakSU=",
         "owner": "DieracDelta",
         "repo": "bpftop",
-        "rev": "d2ed0f826c433ddd34d4c735a376dd22223e7cb4",
+        "rev": "da7f4f8495d59701821c9266b090d40daa226d4a",
         "type": "github"
       },
       "original": {

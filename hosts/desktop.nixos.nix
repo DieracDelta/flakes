@@ -141,6 +141,10 @@ in
         MIN_INTERVAL = "10m";
       };
 
+      migrations = {
+        ALLOWED_DOMAINS = "beelink.tail09906.ts.net";
+      };
+
       repository = {
         DEFAULT_REPO_UNITS = "repo.code,repo.releases,repo.issues,repo.pulls,repo.wiki,repo.projects,repo.packages,repo.actions";
       };
