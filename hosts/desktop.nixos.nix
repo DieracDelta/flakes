@@ -73,14 +73,14 @@ in
     basePath = "/plane";
   };
   custom_modules.borgbackup = {
-    enable = false;
+    enable = true;
     repos = {
       local = {
         path = "/storage/backups/borg/forgejo-plane";
         startAt = "*-*-* 04:00:00";
       };
       arm-vps = {
-        path = "ssh://borg@nixos-arm.tail5ca7.ts.net/./borg/desktop";
+        path = "borg@100.104.74.94:.";
         sshKey = "/root/.ssh/borg_ed25519";
         startAt = "*-*-* 04:30:00";
       };

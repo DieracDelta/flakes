@@ -129,6 +129,7 @@ in
           port = 53;
           ratelimit = 1000;
           upstream_dns = [
+            "[/tail5ca7.ts.net/]100.100.100.100" # Tailscale MagicDNS
             "127.0.0.1:5335"                      # Local Unbound (primary)
             "9.9.9.9"                             # Quad9 plain DNS (fallback)
           ];

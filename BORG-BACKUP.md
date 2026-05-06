@@ -119,10 +119,13 @@ raw file data
 Run the setup script once as root on the desktop:
 
 ```bash
-sudo ./setup-borg-backup.sh
+sudo python3 ./setup-borg-backup.py
 ```
 
-The script walks through five steps interactively:
+The script is resumable — state is saved to `/etc/borg/.setup-state.json`
+after each step. If interrupted, re-run and it picks up where it left off.
+
+It walks through five steps interactively:
 
 ### Step 1: SSH key
 
@@ -316,4 +319,4 @@ deduplicated chunks still referenced by kept archives are preserved.
 | `custom_modules/borgbackup.nix` | Backup client module (jobs, init services, packages) |
 | `hosts/desktop.nixos.nix` | Enables module, defines repos |
 | `hosts/nixos-arm.nixos.nix` | Borg server (restricted SSH user + repo path) |
-| `setup-borg-backup.sh` | One-time interactive setup script |
+| `setup-borg-backup.py` | One-time interactive setup script (resumable) |

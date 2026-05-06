@@ -88,8 +88,18 @@ in
       "d /var/backup/postgres 0700 root root -"
     ];
 
-    # Auto-initialize repos on first backup trigger
-    systemd.services = mapAttrs' (name: repoCfg:
+    # Grant backup jobs write access to the dump directory
+    systemd.services = lib.mkMerge [
+      (mapAttrs' (name: _:
+        nameValuePair "borgbackup-job-${name}" {
+          serviceConfig.ReadWritePaths = [ "/var/backup/postgres" ];
+          # Borg exit 1 = warning (e.g., file changed during backup). Not a failure.
+          serviceConfig.SuccessExitStatus = "1";
+        }
+      ) cfg.repos)
+
+      # Auto-initialize repos on first backup trigger
+      (mapAttrs' (name: repoCfg:
       nameValuePair "borgbackup-init-${name}" {
         description = "Auto-initialize Borg repo ${name} if needed";
         requiredBy = [ "borgbackup-job-${name}.service" ];
@@ -101,7 +111,7 @@ in
         environment = {
           BORG_PASSCOMMAND = passCommand;
         } // optionalAttrs (repoCfg.sshKey != null) {
-          BORG_RSH = "ssh -i ${repoCfg.sshKey}";
+          BORG_RSH = "ssh -i ${repoCfg.sshKey} -o StrictHostKeyChecking=accept-new";
         };
         path = [ pkgs.borgbackup pkgs.age ];
         script = ''
@@ -115,7 +125,8 @@ in
           fi
         '';
       }
-    ) cfg.repos;
+    ) cfg.repos)
+    ];
 
     services.borgbackup.jobs = mapAttrs (_name: repoCfg: {
       paths = [

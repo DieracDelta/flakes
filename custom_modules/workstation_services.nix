@@ -257,6 +257,11 @@ in
       #nodejs_latest # for linear
       mcp-remote
 
+      # borg backup
+      age
+      openssl
+      openssh
+
       # Multimedia
       streamrip
       gnupg

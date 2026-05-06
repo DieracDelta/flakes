@@ -186,8 +186,7 @@
   services.borgbackup.repos.desktop = {
     path = "/var/lib/borg/desktop";
     authorizedKeys = [
-      # TODO: replace with actual public key from /root/.ssh/borg_ed25519.pub on desktop
-      "ssh-ed25519 AAAA_REPLACE_WITH_DESKTOP_BORG_PUBKEY borg@desktop"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA4oPghLFIZi9cGzvQY64/mk7w3uCZFcH0RwgdqgEMXH borg@desktop"
     ];
   };
 
