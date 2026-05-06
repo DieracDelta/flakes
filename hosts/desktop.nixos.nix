@@ -84,6 +84,11 @@ in
         sshKey = "/root/.ssh/borg_ed25519";
         startAt = "*-*-* 04:30:00";
       };
+      beelink = {
+        path = "jrestivo@100.85.199.123:borg/desktop";
+        sshKey = "/root/.ssh/borg_ed25519";
+        startAt = "*-*-* 05:00:00";
+      };
     };
   };
 

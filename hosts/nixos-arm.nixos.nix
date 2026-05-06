@@ -184,7 +184,7 @@
 
   # Borg backup server — receives encrypted backups from desktop
   services.borgbackup.repos.desktop = {
-    path = "/var/lib/borg/desktop";
+    path = "/home/borg/desktop";
     authorizedKeys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA4oPghLFIZi9cGzvQY64/mk7w3uCZFcH0RwgdqgEMXH borg@desktop"
     ];
