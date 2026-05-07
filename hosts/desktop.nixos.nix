@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   system,
   nixpkgs-master,
   ...
@@ -397,7 +398,7 @@ in
   };
 
   services.openstreetmap = {
-    enable = true;
+    enable = false;
     totalRamGb = 16;
     port = 8083;
     threads = 4;
@@ -448,6 +449,7 @@ in
     linear-cli
     agent-deck
     codex
+    inputs.psi-coding-agent.packages.${system}.default
     forgejo-mcp
     plane-mcp-server
   ];

@@ -1,0 +1,105 @@
+diff --git a/internal/ui/home.go b/internal/ui/home.go
+index 6529522..d51f444 100644
+--- a/internal/ui/home.go
++++ b/internal/ui/home.go
+@@ -2302,6 +2302,11 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
+ 	}
+ }
+ 
++func (h *Home) shouldFetchPreviewOutput() bool {
++	config, _ := session.LoadUserConfig()
++	return config == nil || config.GetShowOutput()
++}
++
+ // fetchPreviewDebounced returns a command that triggers preview fetch after debounce delay.
+ // PERFORMANCE: Prevents rapid subprocess spawning during keyboard navigation.
+ func (h *Home) fetchPreviewDebounced(sessionID string, windowIndex int) tea.Cmd {
+@@ -4247,6 +4252,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		}
+ 
+ 		if msg.remoteName != "" {
++			if !h.shouldFetchPreviewOutput() {
++				return h, nil
++			}
++
+ 			var cmds []tea.Cmd
+ 
+ 			// Preview fetch
+@@ -4273,16 +4282,19 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 
+ 		if inst != nil {
+ 			var cmds []tea.Cmd
++			previewOutputEnabled := h.shouldFetchPreviewOutput()
+ 
+ 			// Preview fetch
+-			h.previewCacheMu.Lock()
+-			needsPreviewFetch := h.previewFetchingID != msg.previewKey
+-			if needsPreviewFetch {
+-				h.previewFetchingID = msg.previewKey
+-			}
+-			h.previewCacheMu.Unlock()
+-			if needsPreviewFetch {
+-				cmds = append(cmds, h.fetchPreview(inst, msg.previewKey, msg.windowIndex))
++			if previewOutputEnabled {
++				h.previewCacheMu.Lock()
++				needsPreviewFetch := h.previewFetchingID != msg.previewKey
++				if needsPreviewFetch {
++					h.previewFetchingID = msg.previewKey
++				}
++				h.previewCacheMu.Unlock()
++				if needsPreviewFetch {
++					cmds = append(cmds, h.fetchPreview(inst, msg.previewKey, msg.windowIndex))
++				}
+ 			}
+ 
+ 			// Analytics fetch (for Claude/Gemini sessions with analytics enabled)
+@@ -4665,28 +4677,30 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		// Remote previews use a longer TTL to avoid frequent SSH calls.
+ 		const remotePreviewCacheTTL = 10 * time.Second
+ 		var previewCmd tea.Cmd
+-		selectedInst, selectedKey, selectedWinIdx := h.selectedPreviewTarget()
+-		if selectedInst != nil && !h.shouldSuppressPreviewRefresh(time.Now()) {
+-			h.previewCacheMu.Lock()
+-			cachedTime, hasCached := h.previewCacheTime[selectedKey]
+-			cacheExpired := !hasCached || time.Since(cachedTime) > previewCacheTTL
+-			// Only fetch if cache is stale/missing AND not currently fetching this item
+-			if cacheExpired && h.previewFetchingID != selectedKey {
+-				h.previewFetchingID = selectedKey
+-				previewCmd = h.fetchPreview(selectedInst, selectedKey, selectedWinIdx)
+-			}
+-			h.previewCacheMu.Unlock()
+-		} else {
+-			remoteName, remoteSessionID, remoteKey, ok := h.selectedRemotePreviewTarget()
+-			if ok {
++		if h.shouldFetchPreviewOutput() {
++			selectedInst, selectedKey, selectedWinIdx := h.selectedPreviewTarget()
++			if selectedInst != nil && !h.shouldSuppressPreviewRefresh(time.Now()) {
+ 				h.previewCacheMu.Lock()
+-				cachedTime, hasCached := h.previewCacheTime[remoteKey]
+-				cacheExpired := !hasCached || time.Since(cachedTime) > remotePreviewCacheTTL
+-				if cacheExpired && h.previewFetchingID != remoteKey {
+-					h.previewFetchingID = remoteKey
+-					previewCmd = h.fetchRemotePreview(remoteName, remoteSessionID, remoteKey)
++				cachedTime, hasCached := h.previewCacheTime[selectedKey]
++				cacheExpired := !hasCached || time.Since(cachedTime) > previewCacheTTL
++				// Only fetch if cache is stale/missing AND not currently fetching this item
++				if cacheExpired && h.previewFetchingID != selectedKey {
++					h.previewFetchingID = selectedKey
++					previewCmd = h.fetchPreview(selectedInst, selectedKey, selectedWinIdx)
+ 				}
+ 				h.previewCacheMu.Unlock()
++			} else {
++				remoteName, remoteSessionID, remoteKey, ok := h.selectedRemotePreviewTarget()
++				if ok {
++					h.previewCacheMu.Lock()
++					cachedTime, hasCached := h.previewCacheTime[remoteKey]
++					cacheExpired := !hasCached || time.Since(cachedTime) > remotePreviewCacheTTL
++					if cacheExpired && h.previewFetchingID != remoteKey {
++						h.previewFetchingID = remoteKey
++						previewCmd = h.fetchRemotePreview(remoteName, remoteSessionID, remoteKey)
++					}
++					h.previewCacheMu.Unlock()
++				}
+ 			}
+ 		}
+ 		cmds := []tea.Cmd{h.tick(), previewCmd, remoteFetchCmd}

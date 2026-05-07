@@ -52,6 +52,9 @@
     # Entire CLI
     entire-cli.url = "github:DieracDelta/cli";
 
+    # PSI coding agent
+    psi-coding-agent.url = "git+ssh://forgejo@office-desktop.tail5ca7.ts.net/jrestivo/psi-coding-agent.git?ref=feature/aggregate-prs-63-55-51-33";
+
     # tmux revive replacement for resurrect + continuum
     tmux-revive-llms.url = "path:/home/jrestivo/dev/tmux-revive-llms";
 

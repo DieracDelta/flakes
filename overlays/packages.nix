@@ -343,18 +343,18 @@ tmuxOverlay
     # AudioMuse-AI plugin for Navidrome
     audiomuse-ai = final.buildGoModule {
       pname = "audiomuse-ai-nv-plugin";
-      version = "unstable-2025-02-10";
+      version = "8";
 
       src = final.fetchFromGitHub {
         owner = "NeptuneHub";
         repo = "AudioMuse-AI-NV-plugin";
-        rev = "c279bc118f1283f587247a36b9a9d654e6f52860";
-        hash = "sha256-SWWafntBqdIZKvtXoa8efT2ChQeFU+8ms0YvmGu5t80=";
+        rev = "v8";
+        hash = "sha256-WyobjyadD9IcY6mFYhCmuQgLbnoHpDoiLfINNfKmQM8=";
       };
 
       nativeBuildInputs = [ final.zip ];
 
-      vendorHash = "sha256-pGusT8DChHLx1GZlBy4r/Ii6oILNwevc2EL4WkqhQIM=";
+      vendorHash = "sha256-mXes+doBSa5kcfHp1cuzTz30wnyyPN7NLC0iOSL8FDo=";
 
       env.CGO_ENABLED = "0";
 
@@ -380,18 +380,18 @@ tmuxOverlay
 
     discord-rich-presence = final.buildGoModule {
       pname = "discord-rich-presence";
-      version = "0.3.0";
+      version = "1.0.0";
 
       src = final.fetchFromGitHub {
         owner = "navidrome";
         repo = "discord-rich-presence-plugin";
-        rev = "v0.3.0";
-        hash = "sha256-gmRi4nb7KC3GC6ZcmaE/BPa9FgChCZ21K+VzLAeeZzI=";
+        rev = "v1.0.0";
+        hash = "sha256-YH1K6uagIloQQ4gdezKMAfx9KbGL9chiTx/i8CiH4io=";
       };
 
       nativeBuildInputs = [ final.zip ];
 
-      vendorHash = "sha256-tJ6syjhiB8FFwYyFBX+iKsjFzqf6mUZQgTN7M2Saum8=";
+      vendorHash = "sha256-M5dI0gNfy2x9IVN1284pdvUaCui0sgxFCC+9weq2ipM=";
 
       env.CGO_ENABLED = "0";
 
@@ -417,25 +417,25 @@ tmuxOverlay
     };
   };
 
-  # Navidrome 0.60.3 with plugin support
+  # Navidrome 0.61.2 with plugin support
   # Use: pkgs.navidrome.override { plugins = with pkgs.navidromePlugins; [ discord-rich-presence ]; }
   navidrome = final.lib.makeOverridable (
     {
       plugins ? [ ],
     }:
     prev.navidrome.overrideAttrs (oldAttrs: rec {
-      version = "0.60.3";
+      version = "0.61.2";
       src = final.fetchFromGitHub {
         owner = "navidrome";
         repo = "navidrome";
         rev = "v${version}";
-        hash = "sha256-DwVmNJKjwEhTKIVPYFqaUR9SD4HpACkK4XJoFfQVRus=";
+        hash = "sha256-epSgGiDdfNRUaQtWoOd4ADKtF7Ptt3p9UOqsWBzZg7I=";
       };
-      vendorHash = "sha256-StI4CfWN/OnbYFktRriTJWMHTuJkCinpYk9qgsxMGG8=";
+      vendorHash = "sha256-RmmZudmWBxiw+c9g8KFEX+ALFD0xP/SBsYc6b6RWWO8=";
       npmDeps = final.fetchNpmDeps {
         inherit src;
         sourceRoot = "${src.name}/ui";
-        hash = "sha256-EA2WM7xaqP7rS0pjx+yXwpjdauaduvDefmFH73eByxI=";
+        hash = "sha256-7hy2vLCEicKzjORpJZ0mrRS8PT3GsJ8DWdvj/7SrB70=";
       };
 
       postInstall = ''
@@ -454,18 +454,20 @@ tmuxOverlay
   # Agent Deck - TUI for managing AI coding agent sessions (Claude Code, Codex, etc.)
   agent-deck = final.buildGoModule {
     pname = "agent-deck";
-    version = "1.7.79";
+    version = "1.8.1";
 
     src = final.fetchFromGitHub {
       owner = "asheshgoplani";
       repo = "agent-deck";
-      rev = "v1.7.79";
-      hash = "sha256-XJwm+ZtwaA8MbOWvY2523yUM3KvXDjhPBHxG23uhNZM=";
+      rev = "v1.8.1";
+      hash = "sha256-jC4MVs4ptb0Ud/1iiEgOQLcunNsVRB1VlmRE2kuT4U8=";
     };
 
     patches = [
       ../patches/agent-deck-preserve-collapsed-groups.patch
       ../patches/agent-deck-remove-csiureader.patch
+      ../patches/agent-deck-add-psi.patch
+      ../patches/agent-deck-disable-preview-fetch.patch
     ];
 
     postPatch = ''

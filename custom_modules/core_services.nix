@@ -173,6 +173,22 @@ in
             reverse_proxy 127.0.0.1:4747
           }
 
+          redir /game /game/
+          handle_path /game/* {
+            reverse_proxy 127.0.0.1:8069 {
+              header_up X-Forwarded-Prefix /game
+              header_up X-Forwarded-Proto {scheme}
+            }
+          }
+
+          redir /game_server /game_server/
+          handle_path /game_server/* {
+            reverse_proxy 127.0.0.1:7777 {
+              header_up X-Forwarded-Prefix /game_server
+              header_up X-Forwarded-Proto {scheme}
+            }
+          }
+
           handle_path /sunshine* {
             reverse_proxy https://127.0.0.1:48012 {
               transport http {

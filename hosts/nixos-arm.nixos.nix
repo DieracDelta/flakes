@@ -140,6 +140,22 @@
           }
         }
 
+        # Desktop game/dev app
+        @game path /game /game/*
+        handle @game {
+          reverse_proxy https://office-desktop.tail5ca7.ts.net {
+            header_up Host {upstream_hostport}
+          }
+        }
+
+        # Desktop game server WebSocket endpoint
+        @game_server path /game_server /game_server/*
+        handle @game_server {
+          reverse_proxy https://office-desktop.tail5ca7.ts.net {
+            header_up Host {upstream_hostport}
+          }
+        }
+
         # WeebTogether matchmaker API
         @matchmaker path /matchmaker /matchmaker/*
         handle @matchmaker {
