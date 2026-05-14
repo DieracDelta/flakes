@@ -1,0 +1,64 @@
+diff --git a/plugins/manager_sync.go b/plugins/manager_sync.go
+index 98d1f2d0..b63e6f75 100644
+--- a/plugins/manager_sync.go
++++ b/plugins/manager_sync.go
+@@ -52,16 +52,25 @@ func computeFileSHA256(path string) (string, error) {
+ 	return hex.EncodeToString(h.Sum(nil)), nil
+ }
+ 
+-// addPluginToDB adds a new plugin to the database as disabled.
++func isDefaultEnabledPlugin(name string) bool {
++	switch name {
++	case "discord-rich-presence", "audiomuse-ai":
++		return true
++	default:
++		return false
++	}
++}
++
++// addPluginToDB adds a new plugin to the database.
+ func (m *Manager) addPluginToDB(ctx context.Context, repo model.PluginRepository, name, path string, metadata *PluginMetadata) error {
+ 	now := time.Now()
+ 	newPlugin := &model.Plugin{
+ 		ID:        name,
+ 		Path:      path,
+ 		Manifest:  marshalManifest(metadata.Manifest),
+ 		SHA256:    metadata.SHA256,
+-		Enabled:   false,
++		Enabled:   isDefaultEnabledPlugin(name),
+ 		CreatedAt: now,
+ 		UpdatedAt: now,
+ 	}
+ 	if err := repo.Put(newPlugin); err != nil {
+@@ -75,7 +84,7 @@ func (m *Manager) addPluginToDB(ctx context.Context, repo model.PluginRepository
+ }
+ 
+ // updatePluginInDB updates an existing plugin in the database after a file change.
+-// If the plugin was enabled, it will be unloaded and disabled.
++// If the plugin was enabled, it will be unloaded and default-enabled plugins will remain enabled.
+ func (m *Manager) updatePluginInDB(ctx context.Context, repo model.PluginRepository, dbPlugin *model.Plugin, path string, metadata *PluginMetadata) error {
+ 	wasEnabled := dbPlugin.Enabled
+ 	if wasEnabled {
+@@ -84,7 +93,7 @@ func (m *Manager) updatePluginInDB(ctx context.Context, repo model.PluginReposit
+ 	dbPlugin.Path = path
+ 	dbPlugin.Manifest = marshalManifest(metadata.Manifest)
+ 	dbPlugin.SHA256 = metadata.SHA256
+-	dbPlugin.Enabled = false
++	dbPlugin.Enabled = wasEnabled || isDefaultEnabledPlugin(dbPlugin.ID)
+ 	dbPlugin.LastError = ""
+ 	dbPlugin.UpdatedAt = time.Now()
+ 	if err := repo.Put(dbPlugin); err != nil {
+@@ -170,10 +179,12 @@ func (m *Manager) syncPlugins(ctx context.Context, folder string) error {
+ 
+ 		// If plugin exists in DB with same hash, skip full manifest extraction
+ 		if exists && dbPlugin.SHA256 == sha256Hash {
+-			// Plugin unchanged - just update path in case folder moved
+-			if dbPlugin.Path != path {
++			// Plugin unchanged - update path in case folder moved and keep managed plugins enabled.
++			shouldEnable := isDefaultEnabledPlugin(name) && !dbPlugin.Enabled
++			if dbPlugin.Path != path || shouldEnable {
+ 				dbPlugin.Path = path
++				dbPlugin.Enabled = dbPlugin.Enabled || shouldEnable
+ 				dbPlugin.UpdatedAt = now
+ 				if err := repo.Put(dbPlugin); err != nil {
+ 					log.Error(ctx, "Failed to update plugin path in DB", "plugin", name, err)

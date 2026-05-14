@@ -59,7 +59,9 @@ let
   rapids = import ./rapids.nix { };
 
   # Plane project management (self-hosted)
-  plane = import ./plane;
+  plane = import ./plane {
+    plane-mcp-server-src = inputs.plane-mcp-server-src;
+  };
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -90,5 +92,6 @@ in
   inputs.claude-code-nix.overlays.default
   # Local path overlay wins so desktop can track /home/jrestivo/dev/claude-code-nix directly.
   inputs.claude-code-nix-local.overlays.default
+  inputs.hermes-agent.overlays.default
   inputs.codex-nix.overlays.default
 ]

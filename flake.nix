@@ -42,6 +42,10 @@
     # Rotki portfolio tracker (local premium, no cloud)
     rotki.url = "path:/home/jrestivo/dev/rotki";
 
+    # Plane MCP server local development overlay
+    plane-mcp-server-src.url = "path:/home/jrestivo/dev/plane-mcp-server";
+    plane-mcp-server-src.flake = false;
+
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
 
@@ -66,6 +70,10 @@
     # Local Claude Code overlay for faster testing/rollout than the pinned GitHub input
     claude-code-nix-local.url = "path:/home/jrestivo/dev/claude-code-nix";
     codex-nix.url = "github:sadjow/codex-nix";
+
+    # Hermes Agent
+    hermes-agent.url = "github:NousResearch/hermes-agent";
+    hermes-agent.inputs.nixpkgs.follows = "nixpkgs-unpatched";
   };
 
   outputs =

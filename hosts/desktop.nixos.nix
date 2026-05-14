@@ -19,6 +19,20 @@ let
   forgejoDomain = "office-desktop.tail5ca7.ts.net";
   forgejoBasePath = "/forgejo";
   forgejoPort = 3010;
+  signalCliHermesDaemon = pkgs.writeShellScript "signal-cli-hermes-daemon" ''
+    set -euo pipefail
+
+    if [ -z "''${SIGNAL_ACCOUNT:-}" ]; then
+      echo "SIGNAL_ACCOUNT is required. Set it in /home/jrestivo/.config/hermes/signal-cli-daemon.env" >&2
+      exit 1
+    fi
+
+    exec ${pkgs.signal-cli}/bin/signal-cli \
+      --config "''${SIGNAL_CLI_CONFIG:-/home/jrestivo/.local/share/signal-cli}" \
+      --account "$SIGNAL_ACCOUNT" \
+      daemon \
+      --http "''${SIGNAL_HTTP_BIND:-127.0.0.1:18080}"
+  '';
 in
 {
 
@@ -98,6 +112,29 @@ in
   services.shapebpf.enable = true;
   services.shapebpf.interface = "enp6s0";
   systemd.services.shapebpf.environment.RUST_LOG = lib.mkForce "error";
+  systemd.services.signal-cli-hermes = {
+    description = "signal-cli HTTP daemon for Hermes Agent";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+
+    unitConfig.ConditionPathExists = "/home/jrestivo/.config/hermes/signal-cli-daemon.env";
+
+    environment = {
+      HOME = "/home/jrestivo";
+      SIGNAL_CLI_CONFIG = "/home/jrestivo/.local/share/signal-cli";
+      SIGNAL_HTTP_BIND = "127.0.0.1:18080";
+    };
+
+    serviceConfig = {
+      User = "jrestivo";
+      EnvironmentFile = "/home/jrestivo/.config/hermes/signal-cli-daemon.env";
+      ExecStart = signalCliHermesDaemon;
+      Restart = "on-failure";
+      RestartSec = "10s";
+      WorkingDirectory = "/home/jrestivo";
+    };
+  };
   services.ollama.package = ollamaMasterPkgs.ollama-cuda;
   users.users.jrestivo.extraGroups = [
     "forgejo"
@@ -449,6 +486,7 @@ in
     linear-cli
     agent-deck
     codex
+    hermes-agent
     inputs.psi-coding-agent.packages.${system}.default
     forgejo-mcp
     plane-mcp-server

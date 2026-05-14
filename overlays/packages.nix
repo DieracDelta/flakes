@@ -438,6 +438,10 @@ tmuxOverlay
         hash = "sha256-7hy2vLCEicKzjORpJZ0mrRS8PT3GsJ8DWdvj/7SrB70=";
       };
 
+      patches = (oldAttrs.patches or [ ]) ++ [
+        ../patches/navidrome-default-enable-managed-plugins.patch
+      ];
+
       postInstall = ''
         mkdir -p $out/share/plugins/
         ${final.lib.concatMapStringsSep "\n" (plugin: ''

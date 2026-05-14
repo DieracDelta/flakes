@@ -7,6 +7,8 @@
 with lib;
 let
   cfg = config.custom_modules.dns;
+  adguardTlsServerName = "office-desktop.tail5ca7.ts.net";
+  adguardTlsDir = "/var/lib/AdGuardHome/tls";
 in
 {
   options.custom_modules.dns.enable = mkOption {
@@ -124,6 +126,22 @@ in
         http = {
           address = "127.0.0.1:3003";
         };
+        tls = {
+          enabled = true;
+          server_name = adguardTlsServerName;
+          force_https = false;
+          port_https = 5443;
+          port_dns_over_tls = 853;
+          port_dns_over_quic = 0;
+          port_dnscrypt = 0;
+          dnscrypt_config_file = "";
+          allow_unencrypted_doh = false;
+          certificate_chain = "";
+          private_key = "";
+          certificate_path = "${adguardTlsDir}/cert.pem";
+          private_key_path = "${adguardTlsDir}/key.pem";
+          strict_sni_check = false;
+        };
         dns = {
           bind_hosts = [ "0.0.0.0" ];
           port = 53;
@@ -156,12 +174,54 @@ in
 
     # Ensure Unbound starts before AdGuard
     systemd.services.adguardhome = {
+      requires = [ "adguardhome-tailscale-cert.service" ];
       wants = [ "unbound.service" ];
-      after = [ "unbound.service" ];
+      after = [
+        "unbound.service"
+        "adguardhome-tailscale-cert.service"
+      ];
+    };
+
+    systemd.services.adguardhome-tailscale-cert = {
+      description = "Fetch Tailscale certificate for AdGuard Home encrypted DNS";
+      wants = [ "tailscaled.service" ];
+      after = [ "tailscaled.service" ];
+      before = [ "adguardhome.service" ];
+      path = with pkgs; [
+        coreutils
+        tailscale
+      ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        install -d -m 0755 ${adguardTlsDir}
+
+        tmpdir="$(mktemp -d)"
+        trap 'rm -rf "$tmpdir"' EXIT
+
+        tailscale cert \
+          --cert-file "$tmpdir/cert.pem" \
+          --key-file "$tmpdir/key.pem" \
+          ${adguardTlsServerName}
+
+        install -m 0644 "$tmpdir/cert.pem" ${adguardTlsDir}/cert.pem
+        install -m 0644 "$tmpdir/key.pem" ${adguardTlsDir}/key.pem
+      '';
+    };
+
+    systemd.timers.adguardhome-tailscale-cert = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
     };
 
     # Firewall
-    networking.firewall.allowedTCPPorts = [ 53 ];
+    networking.firewall.allowedTCPPorts = [
+      53
+      853
+      5443
+    ];
     networking.firewall.allowedUDPPorts = [ 53 ];
 
     # Add Unbound to Prometheus scrape targets

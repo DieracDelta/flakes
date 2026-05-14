@@ -256,6 +256,7 @@ in
       sshpass
       #nodejs_latest # for linear
       mcp-remote
+      signal-cli
 
       # borg backup
       age

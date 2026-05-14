@@ -1,6 +1,7 @@
 {
   lib,
   python312,
+  plane-mcp-server-src,
   fetchPypi ? python312.pkgs.fetchPypi,
 }:
 
@@ -32,14 +33,10 @@ let
 in
 python.pkgs.buildPythonApplication rec {
   pname = "plane-mcp-server";
-  version = "0.2.8";
+  version = "0.2.9-local";
   pyproject = true;
 
-  src = python.pkgs.fetchPypi {
-    pname = "plane_mcp_server";
-    inherit version;
-    hash = "sha256-iPdLzJ6e8MN6DQ1QKr+pXZS3Pgk6R+kzJa6Jt0/BhNI=";
-  };
+  src = plane-mcp-server-src;
 
   build-system = [ python.pkgs.setuptools ];
 
