@@ -56,6 +56,7 @@ else if test $os = "Linux"
   set -gx FORGEJO_URL "https://office-desktop.tail5ca7.ts.net/forgejo"
   set -gx FORGEJO_URL http://127.0.0.1:3010
   set -gx FORGEJO_ACCESS_TOKEN (command cat /home/jrestivo/FOREJO_TOKEN | string trim)
+  set -gx PLANE_API_KEY (command cat /home/jrestivo/PLANE_TOKEN | string trim)
 
 
   ssh-add ~/.ssh/id_rsa
@@ -93,4 +94,3 @@ eval "$(starship init fish)"
 export NIX_BUILD_SHELL="bash"
 export LINEAR_API_KEY="$(linear auth token)"
 zoxide init fish | source
-

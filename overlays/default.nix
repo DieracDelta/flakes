@@ -62,6 +62,12 @@ let
   plane = import ./plane {
     plane-mcp-server-src = inputs.plane-mcp-server-src;
   };
+
+  # Jitsi Meet with Olm/E2EE dependency removed.
+  jitsi = import ./jitsi.nix;
+
+  # Jitsi Skynet AI services
+  skynet = import ./skynet.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -87,6 +93,8 @@ in
   rapids
   amp-cli
   plane
+  jitsi
+  skynet
   # inputs.nix-btm.overlays.default
   inputs.entire-cli.overlays.default
   inputs.claude-code-nix.overlays.default

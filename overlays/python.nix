@@ -92,6 +92,18 @@ final: prev: {
           hash = "sha256-QrOoBi47I+knynJ+a14XMNhscCeYNOSIcVKJXS6wEtk=";
         };
       });
+
+      # nixpkgs master briefly pointed at pytorch-lightning 2.6.2, but
+      # Lightning-AI has no 2.6.2 GitHub tag. Pin the last available tag.
+      pytorch-lightning = python-prev.pytorch-lightning.overridePythonAttrs (old: rec {
+        version = "2.6.1";
+        src = final.fetchFromGitHub {
+          owner = "Lightning-AI";
+          repo = "pytorch-lightning";
+          tag = version;
+          hash = "sha256-zOSV2X3yZy0uh1lJ2yNl/hHBvfIDcIrATHtiRwThsQA=";
+        };
+      });
     })
   ];
 }

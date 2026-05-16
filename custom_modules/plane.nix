@@ -93,6 +93,29 @@ in
       };
     };
 
+    mcp = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Run a shared Plane MCP HTTP server.";
+      };
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8211;
+        description = "Port for the shared Plane MCP HTTP server.";
+      };
+      workspaceSlug = lib.mkOption {
+        type = lib.types.str;
+        default = "iro";
+        description = "Default Plane workspace slug for local MCP clients.";
+      };
+      tokenFile = lib.mkOption {
+        type = lib.types.str;
+        default = "/home/jrestivo/PLANE_TOKEN";
+        description = "Plane API token file read at service startup.";
+      };
+    };
+
     rabbitmq = {
       host = lib.mkOption {
         type = lib.types.str;
@@ -362,6 +385,39 @@ in
               --max-requests 1200 \
               --max-requests-jitter 1000 \
               --access-logfile -
+          '';
+        };
+
+        # ── Shared MCP server ────────────────────────────────────
+        plane-mcp = lib.mkIf cfg.mcp.enable {
+          description = "Plane MCP HTTP server";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "plane-api.service" ];
+          requires = [ "plane-api.service" ];
+          serviceConfig = {
+            Type = "simple";
+            User = "plane";
+            Group = "plane";
+            Restart = "on-failure";
+            RestartSec = 30;
+            WorkingDirectory = cfg.stateDir;
+            LoadCredential = [ "plane_api_key:${cfg.mcp.tokenFile}" ];
+          };
+          environment = {
+            PLANE_BASE_URL = "http://127.0.0.1:${toString cfg.port}";
+            PLANE_INTERNAL_BASE_URL = "http://127.0.0.1:${toString cfg.port}";
+            PLANE_WORKSPACE_SLUG = cfg.mcp.workspaceSlug;
+            PLANE_OAUTH_PROVIDER_BASE_URL = "http://127.0.0.1:${toString cfg.mcp.port}";
+            # The upstream HTTP entrypoint always constructs OAuth and SSE apps
+            # before mounting the API-key app that Codex uses. Dummy OAuth
+            # credentials satisfy that constructor without enabling OAuth use.
+            PLANE_OAUTH_PROVIDER_CLIENT_ID = "local-api-key-mode";
+            PLANE_OAUTH_PROVIDER_CLIENT_SECRET = "local-api-key-mode";
+          };
+          script = ''
+            set -euo pipefail
+            export PLANE_API_KEY="$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/plane_api_key")"
+            exec ${pkgs.plane-mcp-server}/bin/plane-mcp-server http
           '';
         };
 

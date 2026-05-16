@@ -19,6 +19,12 @@ let
   forgejoDomain = "office-desktop.tail5ca7.ts.net";
   forgejoBasePath = "/forgejo";
   forgejoPort = 3010;
+  forgejoRunnerCapacity = 12;
+  forgejoRunnerCpuQuota = "800%";
+  forgejoRunnerAllowedCPUs = "0-7";
+  forgejoRunnerMemoryHigh = "24G";
+  forgejoRunnerMemoryMax = "32G";
+  forgejoDockerJobOptions = "--cpus=8 --cpuset-cpus=0-7 --memory=12g --memory-swap=12g --volume psi-code-nix:/nix";
   signalCliHermesDaemon = pkgs.writeShellScript "signal-cli-hermes-daemon" ''
     set -euo pipefail
 
@@ -72,8 +78,9 @@ in
   custom_modules.monitoring.enable = true;
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
-  custom_modules.comfyui.enable = true;
+  custom_modules.comfyui.enable = false;
   custom_modules.actual.enable = true;
+  custom_modules.jitsi-skynet.enable = true;
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
@@ -247,12 +254,12 @@ in
         level = "debug";
         job_level = "debug";
       };
-      settings.runner.capacity = 12;
+      settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
         docker_host = "-";
         force_pull = false;
         force_rebuild = false;
-        options = "--volume psi-code-nix:/nix";
+        options = forgejoDockerJobOptions;
         workdir_parent = "/var/cache/forgejo-actions/work";
         valid_volumes = [ "psi-code-nix" ];
       };
@@ -288,13 +295,13 @@ in
         level = "debug";
         job_level = "debug";
       };
-      settings.runner.capacity = 12;
+      settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
         docker_host = "unix:///run/docker.sock";
         force_pull = false;
         force_rebuild = false;
         network = "host";
-        options = "--volume psi-code-nix:/nix";
+        options = forgejoDockerJobOptions;
         workdir_parent = "/var/cache/forgejo-actions/work";
         valid_volumes = [ "psi-code-nix" ];
       };
@@ -312,6 +319,11 @@ in
       DynamicUser = lib.mkForce false;
       User = "gitea-runner";
       Group = "gitea-runner";
+      CPUQuota = forgejoRunnerCpuQuota;
+      AllowedCPUs = forgejoRunnerAllowedCPUs;
+      MemoryAccounting = true;
+      MemoryHigh = forgejoRunnerMemoryHigh;
+      MemoryMax = forgejoRunnerMemoryMax;
       WorkingDirectory = lib.mkForce "/var/lib/gitea-runner/desktop";
       ReadWritePaths = [
         "/var/cache/forgejo-actions"
@@ -327,6 +339,11 @@ in
       DynamicUser = lib.mkForce false;
       User = "gitea-runner";
       Group = "gitea-runner";
+      CPUQuota = forgejoRunnerCpuQuota;
+      AllowedCPUs = forgejoRunnerAllowedCPUs;
+      MemoryAccounting = true;
+      MemoryHigh = forgejoRunnerMemoryHigh;
+      MemoryMax = forgejoRunnerMemoryMax;
       WorkingDirectory = lib.mkForce "/var/lib/gitea-runner/desktop-docker";
       ReadWritePaths = [
         "/var/cache/forgejo-actions"

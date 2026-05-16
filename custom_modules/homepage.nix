@@ -105,6 +105,14 @@ in
                 };
               };
             }
+          ] ++ lib.optionals config.custom_modules.jitsi-skynet.enable [
+            {
+              "Skynet" = {
+                icon = "mdi-brain";
+                href = "https://${config.custom_modules.jitsi-skynet.domain}:${toString config.custom_modules.jitsi-skynet.skynetPort}";
+                description = "Jitsi AI services";
+              };
+            }
           ];
         }
         {
