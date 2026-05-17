@@ -19,12 +19,35 @@ let
   forgejoDomain = "office-desktop.tail5ca7.ts.net";
   forgejoBasePath = "/forgejo";
   forgejoPort = 3010;
+  forgejoMcpPort = 8213;
+  forgejoMcpTokenFile = "/home/jrestivo/FOREJO_TOKEN";
   forgejoRunnerCapacity = 12;
   forgejoRunnerCpuQuota = "800%";
   forgejoRunnerAllowedCPUs = "0-7";
   forgejoRunnerMemoryHigh = "24G";
   forgejoRunnerMemoryMax = "32G";
-  forgejoDockerJobOptions = "--cpus=8 --cpuset-cpus=0-7 --memory=12g --memory-swap=12g --volume psi-code-nix:/nix";
+  forgejoRunnerNixConfig = "build-users-group =";
+  forgejoDockerJobOptions = "--cpus=8 --cpuset-cpus=0-7 --memory=12g --memory-swap=12g --env \"NIX_CONFIG=${forgejoRunnerNixConfig}\" --volume psi-code-nix:/nix";
+  forgejoMcpDaemon = pkgs.writeShellScript "forgejo-mcp-daemon" ''
+    set -euo pipefail
+
+    export FORGEJO_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/forgejo_token")"
+    exec ${pkgs.forgejo-mcp}/bin/forgejo-mcp \
+      --transport http \
+      --http-port ${toString forgejoMcpPort} \
+      --url http://127.0.0.1:${toString forgejoPort}
+  '';
+  leanMcpBin = "/home/jrestivo/dev/lean-lsp-mcp/.venv/bin/lean-lsp-mcp";
+  leanMcpPort = 8212;
+  leanMcpPath = lib.makeBinPath [
+    pkgs.bash
+    pkgs.coreutils
+    pkgs.curl
+    pkgs.git
+    pkgs.gnumake
+    pkgs.nix
+    pkgs.which
+  ] + ":/home/jrestivo/.elan/bin:/home/jrestivo/.local/bin:/run/current-system/sw/bin";
   signalCliHermesDaemon = pkgs.writeShellScript "signal-cli-hermes-daemon" ''
     set -euo pipefail
 
@@ -140,6 +163,47 @@ in
       Restart = "on-failure";
       RestartSec = "10s";
       WorkingDirectory = "/home/jrestivo";
+    };
+  };
+  systemd.services.forgejo-mcp = {
+    description = "Shared Forgejo MCP server";
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "forgejo.service"
+      "network.target"
+    ];
+    requires = [ "forgejo.service" ];
+
+    serviceConfig = {
+      ExecStart = forgejoMcpDaemon;
+      LoadCredential = [ "forgejo_token:${forgejoMcpTokenFile}" ];
+      Restart = "on-failure";
+      RestartSec = "10s";
+      User = "forgejo";
+      Group = "forgejo";
+    };
+  };
+  systemd.services.lean-lsp-mcp = {
+    description = "Shared Lean LSP MCP server";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network.target" ];
+
+    unitConfig.ConditionPathExists = leanMcpBin;
+
+    environment = {
+      HOME = "/home/jrestivo";
+      PATH = lib.mkForce leanMcpPath;
+      UV_CACHE_DIR = "/tmp/uv-cache";
+      LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING = "true";
+    };
+
+    serviceConfig = {
+      User = "jrestivo";
+      Group = "users";
+      WorkingDirectory = "/home/jrestivo/dev/lean-lsp-mcp";
+      ExecStart = "${leanMcpBin} --transport streamable-http --host 127.0.0.1 --port ${toString leanMcpPort}";
+      Restart = "on-failure";
+      RestartSec = "10s";
     };
   };
   services.ollama.package = ollamaMasterPkgs.ollama-cuda;
@@ -314,7 +378,10 @@ in
   };
 
   systemd.services.gitea-runner-desktop = {
-    environment.HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+    environment = {
+      HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+      NIX_CONFIG = forgejoRunnerNixConfig;
+    };
     serviceConfig = {
       DynamicUser = lib.mkForce false;
       User = "gitea-runner";
@@ -332,7 +399,10 @@ in
     };
   };
   systemd.services."gitea-runner-desktop\\x2ddocker" = {
-    environment.HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+    environment = {
+      HOME = lib.mkForce "/var/cache/forgejo-actions/runner";
+      NIX_CONFIG = forgejoRunnerNixConfig;
+    };
     after = [ "docker-volume-psi-code-nix.service" ];
     requires = [ "docker-volume-psi-code-nix.service" ];
     serviceConfig = {
