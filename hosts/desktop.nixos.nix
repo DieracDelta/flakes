@@ -116,6 +116,7 @@ in
     enable = true;
     domain = "office-desktop.tail5ca7.ts.net";
     basePath = "/plane";
+    port = 8085;
   };
   custom_modules.borgbackup = {
     enable = true;

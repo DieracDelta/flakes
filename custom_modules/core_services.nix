@@ -175,6 +175,7 @@ in
 
           redir /game /game/
           handle_path /game/* {
+            encode zstd gzip
             reverse_proxy 127.0.0.1:8069 {
               header_up X-Forwarded-Prefix /game
               header_up X-Forwarded-Proto {scheme}

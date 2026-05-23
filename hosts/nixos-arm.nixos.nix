@@ -143,6 +143,7 @@
         # Desktop game/dev app
         @game path /game /game/*
         handle @game {
+          encode zstd gzip
           reverse_proxy https://office-desktop.tail5ca7.ts.net {
             header_up Host {upstream_hostport}
           }

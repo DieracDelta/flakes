@@ -218,11 +218,11 @@ in
             then "postgresql://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.host}"
             else "postgresql://${cfg.database.user}@${cfg.database.host}:${toString cfg.database.port}/${cfg.database.name}";
           REDIS_URL = "redis://127.0.0.1:${toString cfg.redis.port}/";
+          AMQP_URL = "redis://127.0.0.1:${toString cfg.redis.port}/1";
           RABBITMQ_HOST = cfg.rabbitmq.host;
           RABBITMQ_PORT = toString cfg.rabbitmq.port;
-          RABBITMQ_USER = "guest";
-          RABBITMQ_VHOST = "/";
-          RABBITMQ_PASSWORD = "guest";
+          RABBITMQ_USER = cfg.rabbitmq.user;
+          RABBITMQ_VHOST = cfg.rabbitmq.vhost;
           WEB_URL = "https://${cfg.domain}${cfg.basePath}";
           CORS_ALLOWED_ORIGINS = "https://${cfg.domain}";
           USE_MINIO = "0";
@@ -258,6 +258,7 @@ in
           description = "Generate Plane secrets";
           wantedBy = [ "multi-user.target" ];
           before = [
+            "plane-migrator.service"
             "plane-api.service"
             "plane-worker.service"
             "plane-beat.service"
