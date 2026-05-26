@@ -54,6 +54,7 @@ let
       flask
       flask-cors
       flasgger
+      sqlglot
 
       # Task queue
       redis
@@ -68,6 +69,7 @@ let
       resampy
       pydub
       mutagen
+      mpd2
 
       # ML/Scientific
       numpy
@@ -99,6 +101,13 @@ let
       packaging
       protobuf
       httpx
+      psutil
+      langdetect
+      pyjwt
+      argon2-cffi
+      gunicorn
+      zstandard
+      wn
 
       # LLM integrations
       google-genai
@@ -114,19 +123,49 @@ let
       voyager
     ]
   );
+
+  audiomuse-ai-music-server-src = final.fetchFromGitHub {
+    owner = "NeptuneHub";
+    repo = "AudioMuse-AI-MusicServer";
+    rev = "25cba18494aeb263177d81c44ae92a03289a584d";
+    hash = "sha256-mhnNxAQiZezOjXRRUsttYXWZmfhgHg4r041pan3tHug=";
+  };
+
+  audiomuse-ai-music-server-frontend = final.buildNpmPackage {
+    pname = "audiomuse-ai-music-server-frontend";
+    version = "68";
+
+    src = "${audiomuse-ai-music-server-src}/music-server-frontend";
+
+    npmDepsHash = "sha256-K/MxewrLTNrLJnrRS4AXzqTzLhH46KIOr6KEvr1bhnY=";
+    nodejs = final.nodejs_22;
+
+    postPatch = ''
+      cp ${./audiomuse-music-server-frontend-package-lock.json} package-lock.json
+    '';
+
+    env.CI = "false";
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/share/audiomuse-ai-music-server/frontend
+      cp -r build/* $out/share/audiomuse-ai-music-server/frontend/
+      runHook postInstall
+    '';
+  };
 in
 tmuxOverlay
 // {
   # AudioMuse-AI - Music analysis and playlist generation service
   audiomuse-ai = final.stdenvNoCC.mkDerivation {
     pname = "audiomuse-ai";
-    version = "unstable-2025-02-10";
+    version = "2.0.1";
 
     src = final.fetchFromGitHub {
       owner = "NeptuneHub";
       repo = "AudioMuse-AI";
-      rev = "b67d2e6284b0be9ef9087cede3931192301c3374";
-      hash = "sha256-bJllS4R9VvrDNrEc03eMTk5Pn8MrX/k5W+h6RTKS8lI=";
+      rev = "v2.0.1";
+      hash = "sha256-pb5gflGcBTcgi9VPZNIbd1ulWXAdBud69dMvz6ssaMA=";
     };
 
     nativeBuildInputs = [ final.makeWrapper ];
@@ -138,11 +177,23 @@ tmuxOverlay
 
     postPatch = ''
       substituteInPlace config.py \
-        --replace-fail 'TEMP_DIR = "/app/temp_audio"' 'TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/audiomuse-temp")' \
-        --replace-fail 'EMBEDDING_MODEL_PATH = "/app/model/msd-musicnn-1.onnx"' \
-                       'EMBEDDING_MODEL_PATH = os.environ.get("EMBEDDING_MODEL_PATH", "/app/model/msd-musicnn-1.onnx")' \
-        --replace-fail 'PREDICTION_MODEL_PATH = "/app/model/msd-msd-musicnn-1.onnx"' \
-                       'PREDICTION_MODEL_PATH = os.environ.get("PREDICTION_MODEL_PATH", "/app/model/msd-msd-musicnn-1.onnx")'
+        --replace-fail 'TEMP_DIR = "/app/temp_audio"  # Always use /app/temp_audio' \
+                       'TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/audiomuse-temp")'
+
+      substituteInPlace app.py \
+        --replace-fail "app.run(debug=False, host='0.0.0.0', port=8000)" \
+                       "app.run(debug=False, host=os.environ.get('FLASK_HOST', '0.0.0.0'), port=int(os.environ.get('FLASK_PORT', '8000')))"
+
+      substituteInPlace templates/includes/layout.html \
+        --replace-fail '    {% block bodyAdditions %}' \
+                       $'    <script>\n        window.AUDIOMUSE_BASE_PATH = {{ request.script_root|tojson }};\n        window.audiomuseUrl = function(path) {\n            var base = window.AUDIOMUSE_BASE_PATH || "";\n            if (!path || path.charAt(0) !== "/" || !base || path.indexOf(base + "/") === 0) {\n                return path;\n            }\n            return base + path;\n        };\n        (function() {\n            var originalFetch = window.fetch;\n            window.fetch = function(resource, init) {\n                if (typeof resource === "string" && resource.charAt(0) === "/") {\n                    resource = window.audiomuseUrl(resource);\n                }\n                return originalFetch.call(this, resource, init);\n            };\n        })();\n    </script>\n\n    {% block bodyAdditions %}'
+
+      substituteInPlace templates/login.html \
+        --replace-fail 'action="/auth"' 'action="{{ url_for("auth_endpoint") }}"'
+
+      substituteInPlace static/setup.js \
+        --replace-fail "window.location.href = '/';" \
+                       "window.location.href = window.audiomuseUrl ? window.audiomuseUrl('/') : '/';"
 
       # Fix CLAP Conv fallback: use EXHAUSTIVE algo search + relaxed memory arena
       substituteInPlace tasks/clap_analyzer.py \
@@ -151,14 +202,7 @@ tmuxOverlay
         --replace-fail "'arena_extend_strategy': 'kSameAsRequested'" \
                        "'arena_extend_strategy': 'kNextPowerOfTwo'"
 
-      # Nixpkgs' mistralai 2.3.2 currently installs only metadata in this
-      # environment. AudioMuse is configured to use Gemini, so don't make the
-      # whole service depend on importing the optional Mistral client at startup.
-      substituteInPlace ai.py \
-        --replace-fail 'from mistralai import Mistral' \
-                       $'try:\n    from mistralai import Mistral\nexcept ImportError:\n    Mistral = None' \
-        --replace-fail '        client = Mistral(api_key=mistral_api_key)' \
-                       $'        if Mistral is None:\n            return "Error: Mistral Python client is unavailable."\n\n        client = Mistral(api_key=mistral_api_key)'
+      # v2.0.1 already guards optional Mistral imports in tasks/ai/providers/mistral.py.
     '';
 
     installPhase = ''
@@ -168,10 +212,21 @@ tmuxOverlay
       cp -r . $out/lib/audiomuse-ai/
 
       mkdir -p $out/bin
+      cat > $out/lib/audiomuse-ai/nix_launcher.py <<'PY'
+      import os
+
+      from app import app
+
+      app.run(
+          debug=False,
+          host=os.environ.get("FLASK_HOST", "0.0.0.0"),
+          port=int(os.environ.get("FLASK_PORT", "8000")),
+      )
+      PY
 
       # Main Flask app
       makeWrapper ${audiomuse-ai-python}/bin/python $out/bin/audiomuse-ai \
-        --add-flags "$out/lib/audiomuse-ai/app.py" \
+        --add-flags "$out/lib/audiomuse-ai/nix_launcher.py" \
         --prefix PATH : ${final.lib.makeBinPath [ final.ffmpeg ]} \
         --set PYTHONPATH "$out/lib/audiomuse-ai"
 
@@ -194,6 +249,63 @@ tmuxOverlay
       description = "AI-powered music analysis and playlist generation";
       homepage = "https://github.com/NeptuneHub/AudioMuse-AI";
       license = licenses.mit;
+      platforms = platforms.linux;
+    };
+  };
+
+  # AudioMuse-AI MusicServer - Open Subsonic-compatible music server
+  audiomuse-ai-music-server = final.buildGoModule {
+    pname = "audiomuse-ai-music-server";
+    version = "68";
+
+    src = audiomuse-ai-music-server-src;
+    sourceRoot = "${audiomuse-ai-music-server-src.name}/music-server-backend";
+
+    vendorHash = "sha256-T+hmB4mFWQoETpc/A4GJi+RapkiiGiTiNigFTkjAZbc=";
+
+    nativeBuildInputs = [
+      final.makeWrapper
+      final.pkg-config
+    ];
+
+    buildInputs = [ final.sqlite ];
+
+    env.CGO_ENABLED = "1";
+
+    postPatch = ''
+      substituteInPlace main.go \
+        --replace-fail 'Addr:              ":8080",' \
+                       'Addr:              ":" + getEnv("PORT", "8080"),' \
+        --replace-fail 'log.Println("[GIN-debug] Listening and serving HTTP on :8080")' \
+                       'log.Printf("[GIN-debug] Listening and serving HTTP on :%s", getEnv("PORT", "8080"))'
+    '';
+
+    buildPhase = ''
+      runHook preBuild
+      go build -tags fts5 -o music-server .
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+
+      install -Dm755 music-server $out/bin/audiomuse-ai-music-server
+      cp -r ${audiomuse-ai-music-server-frontend}/share $out/
+
+      wrapProgram $out/bin/audiomuse-ai-music-server \
+        --prefix PATH : ${final.lib.makeBinPath [ final.ffmpeg ]} \
+        --set-default FRONTEND_BUILD_DIR "$out/share/audiomuse-ai-music-server/frontend" \
+        --set-default GIN_MODE release \
+        --run 'export DATABASE_PATH="''${DATABASE_PATH:-''${XDG_STATE_HOME:-$HOME/.local/share}/audiomuse-ai-music-server/music.db}"'
+
+      runHook postInstall
+    '';
+
+    meta = with final.lib; {
+      description = "Open Subsonic-compatible AudioMuse-AI music server";
+      homepage = "https://github.com/NeptuneHub/AudioMuse-AI-MusicServer";
+      license = licenses.mit;
+      mainProgram = "audiomuse-ai-music-server";
       platforms = platforms.linux;
     };
   };

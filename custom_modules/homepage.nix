@@ -70,6 +70,14 @@ in
                 description = "AI Music Analysis & Playlists";
               };
             }
+          ] ++ lib.optionals config.services.audiomuse-ai-music-server.enable [
+            {
+              "AudioMuse MusicServer" = {
+                icon = "mdi-music-circle";
+                href = "https://${config.services.audiomuse-ai-music-server.caddy.host}:${toString config.services.audiomuse-ai-music-server.caddy.httpsPort}";
+                description = "Open Subsonic Music Server";
+              };
+            }
           ];
         }
         {
