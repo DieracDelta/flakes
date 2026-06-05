@@ -11,10 +11,44 @@ let
   configDir = "${stateDir}/config";
   dbName = "koito"; # Must match dbUser for ensureDBOwnership
   dbUser = "koito";
+  dbUrl = "postgres:///${dbName}?host=/run/postgresql";
+  sqliteDb = "${configDir}/koito.db";
+  migratePostgresToSqlite = pkgs.writeShellScript "koito-postgres-to-sqlite" ''
+    set -euo pipefail
+
+    if [ -f ${escapeShellArg sqliteDb} ]; then
+      echo "Koito SQLite database already exists; skipping PostgreSQL migration"
+      exit 0
+    fi
+
+    echo "Koito SQLite database missing; running v0.2.1 PostgreSQL-to-SQLite migration"
+    export KOITO_DATABASE_URL=${escapeShellArg dbUrl}
+    export KOITO_SQLITE_ENABLED=true
+    export KOITO_MIGRATE_ONLY=true
+    cd ${escapeShellArg "${pkgs.koito_0_2_1}/share/koito"}
+    exec ${escapeShellArg "${pkgs.koito_0_2_1}/bin/koito"}
+  '';
+  koitoStart = pkgs.writeShellScript "koito-start" ''
+    set -euo pipefail
+
+    if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -f "$CREDENTIALS_DIRECTORY/password" ]; then
+      export KOITO_DEFAULT_PASSWORD="$(cat "$CREDENTIALS_DIRECTORY/password")"
+    fi
+
+    cd ${escapeShellArg "${cfg.package}/share/koito"}
+    exec ${escapeShellArg "${cfg.package}/bin/koito"}
+  '';
 in
 {
   options.custom_modules.koito = {
     enable = mkEnableOption "Koito scrobbler service";
+
+    package = mkOption {
+      type = types.package;
+      default = pkgs.koito;
+      defaultText = literalExpression "pkgs.koito";
+      description = "Koito package to run after PostgreSQL-to-SQLite migration.";
+    };
 
     port = mkOption {
       type = types.port;
@@ -103,13 +137,13 @@ in
 
       environment =
         {
-          KOITO_DATABASE_URL = "postgres:///${dbName}?host=/run/postgresql";
           KOITO_ALLOWED_HOSTS = cfg.allowedHosts;
           KOITO_LISTEN_PORT = toString cfg.port;
           KOITO_CONFIG_DIR = configDir;
           KOITO_BIND_ADDR = "127.0.0.1";
           KOITO_LOG_LEVEL = "info";
           KOITO_DEFAULT_USERNAME = cfg.defaultUsername;
+          KOITO_PUBLIC_BASE_PATH = "/koito";
         }
         // optionalAttrs (cfg.subsonicUrl != null) {
           KOITO_SUBSONIC_URL = cfg.subsonicUrl;
@@ -119,8 +153,8 @@ in
         Type = "simple";
         User = "koito";
         Group = "koito";
-        WorkingDirectory = "${pkgs.koito}/share/koito";
-        ExecStart = "${pkgs.koito}/bin/koito";
+        WorkingDirectory = "${cfg.package}/share/koito";
+        ExecStart = koitoStart;
         Restart = "on-failure";
         RestartSec = "10s";
 
@@ -142,11 +176,8 @@ in
         ];
       };
 
-      # Set default password from credential if provided
-      preStart = mkIf (cfg.defaultPasswordFile != null) ''
-        if [ -f "$CREDENTIALS_DIRECTORY/password" ]; then
-          export KOITO_DEFAULT_PASSWORD=$(cat "$CREDENTIALS_DIRECTORY/password")
-        fi
+      preStart = ''
+        ${migratePostgresToSqlite}
       '';
     };
 

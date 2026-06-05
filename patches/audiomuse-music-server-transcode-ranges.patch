@@ -1,0 +1,273 @@
+--- a/music-server-backend/main.go
++++ b/music-server-backend/main.go
+@@ -12,12 +12,12 @@
+ 	"os"
+ 	"os/signal"
+ 	"path/filepath"
++	"strconv"
+ 	"strings"
+ 	"sync"
+ 	"sync/atomic"
+ 	"syscall"
+ 	"time"
+-	"strconv"
+ 
+ 	"github.com/gin-gonic/gin"
+ 	_ "github.com/mattn/go-sqlite3"
+@@ -62,6 +62,9 @@
+ 	case "GET":
+ 		router.GET(path+".view", handler)
+ 		router.GET(path, handler) // Also register without .view
++	case "HEAD":
++		router.HEAD(path+".view", handler)
++		router.HEAD(path, handler)
+ 	case "POST":
+ 		router.POST(path+".view", handler)
+ 		router.POST(path, handler)
+@@ -156,6 +159,7 @@
+ 		// Core endpoints - register both with and without .view suffix
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/getLicense", subsonicGetLicense)
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/stream", subsonicStream)
++		subsonicCompatibilityHandler(subsonic, "HEAD", "/stream", subsonicStream)
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/waveform", subsonicGetWaveform)    // NEW: Fast waveform data
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
+--- a/music-server-backend/subsonic_music_handlers.go
++++ b/music-server-backend/subsonic_music_handlers.go
+@@ -3,7 +3,9 @@
+ 
+ import (
+ 	"bytes"
++	"crypto/sha1"
+ 	"database/sql"
++	"encoding/hex"
+ 	"encoding/json"
+ 	"fmt"
+ 	"io"
+@@ -572,28 +574,6 @@
+ 	log.Printf("🎵 TRANSCODING REQUEST: format=%s, bitrate=%dkbps, file=%s, songID=%s",
+ 		format, bitrate, filepath.Base(inputPath), songID)
+ 
+-	// Parse Range header if present
+-	rangeHeader := c.GetHeader("Range")
+-	var requestedStart int64 = 0
+-	var isRangeRequest bool = false
+-
+-	if rangeHeader != "" {
+-		// Parse "bytes=12345-" or "bytes=12345-67890"
+-		re := regexp.MustCompile(`bytes=(\d+)-`)
+-		matches := re.FindStringSubmatch(rangeHeader)
+-		if len(matches) > 1 {
+-			requestedStart, _ = strconv.ParseInt(matches[1], 10, 64)
+-			// Only treat as range request if starting position is > 0
+-			// bytes=0- is just the browser asking for the whole file
+-			if requestedStart > 0 {
+-				isRangeRequest = true
+-				log.Printf("📍 RANGE REQUEST: bytes=%d- (seeking in transcoded stream)", requestedStart)
+-			} else {
+-				log.Printf("📀 Initial request (Range: bytes=0-) - treating as full stream")
+-			}
+-		}
+-	}
+-
+ 	// FFmpeg format mapping
+ 	ffmpegFormatMap := map[string]string{
+ 		"mp3":  "mp3",
+@@ -609,65 +589,22 @@
+ 		return
+ 	}
+ 
+-	var seekSeconds float64 = 0
+-
+-	if isRangeRequest && requestedStart > 0 {
+-		// Calculate approximate seek time from byte offset
+-		// Formula: bytes / (bitrate_kbps * 125) = seconds
+-		seekSeconds = float64(requestedStart) / float64(bitrate*125)
+-		log.Printf("🔍 Calculated seek position: %.2f seconds", seekSeconds)
+-	}
+-
+-	// Get optimized transcoding profile
+-	profileArgs := getTranscodingProfile(format, bitrate)
+-
+-	// Build FFmpeg command with seeking support
+-	args := []string{}
+-
+-	// Add seek BEFORE input for fast seeking (only if actually seeking)
+-	if seekSeconds > 0 {
+-		args = append(args, "-ss", fmt.Sprintf("%.2f", seekSeconds))
+-		log.Printf("🔧 Adding FFmpeg seek flag: -ss %.2f", seekSeconds)
+-	}
+-
+-	args = append(args, "-i", inputPath, "-vn")
+-	args = append(args, profileArgs...)
+-	args = append(args, "-f", ffmpegFormat, "pipe:1")
+-
+-	log.Printf("🔧 FFmpeg command: ffmpeg %s", strings.Join(args, " "))
+-
+-	cmd := exec.Command("ffmpeg", args...)
+-
+-	// Capture stderr for debugging
+-	stderr, err := cmd.StderrPipe()
+-	if err != nil {
+-		log.Printf("❌ Failed to create FFmpeg stderr pipe: %v", err)
+-	} else {
+-		go func() {
+-			buf := make([]byte, 1024)
+-			for {
+-				n, err := stderr.Read(buf)
+-				if n > 0 {
+-					log.Printf("📹 FFmpeg: %s", string(buf[:n]))
+-				}
+-				if err != nil {
+-					break
+-				}
+-			}
+-		}()
+-	}
+-
+-	stdout, err := cmd.StdoutPipe()
++	cachePath, err := transcodeCachePath(inputPath, format, bitrate)
+ 	if err != nil {
+-		log.Printf("❌ Failed to create FFmpeg stdout pipe: %v", err)
++		log.Printf("❌ Failed to prepare transcoding cache: %v", err)
+ 		streamDirect(c, inputPath)
+ 		return
+ 	}
+ 
+-	if err := cmd.Start(); err != nil {
+-		log.Printf("❌ Failed to start FFmpeg: %v", err)
+-		streamDirect(c, inputPath)
+-		return
++	if !usableCachedTranscode(cachePath) {
++		if err := transcodeToCache(inputPath, cachePath, format, bitrate, ffmpegFormat); err != nil {
++			log.Printf("❌ Failed to transcode %s: %v", filepath.Base(inputPath), err)
++			streamDirect(c, inputPath)
++			return
++		}
++		log.Printf("✅ Transcoding cached in %dms: %s", time.Since(startTime).Milliseconds(), cachePath)
++	} else {
++		log.Printf("⚡ Using cached transcode: %s", cachePath)
+ 	}
+ 
+ 	// Set headers
+@@ -686,61 +623,73 @@
+ 	c.Header("X-Transcode-Format", format)
+ 	c.Header("X-Transcode-Bitrate", bitrateStr)
+ 	c.Header("Cache-Control", "no-cache")
+-	c.Header("Connection", "keep-alive")
+ 
+-	if isRangeRequest {
+-		c.Status(http.StatusPartialContent)
+-		log.Printf("📤 Sending 206 Partial Content response")
+-	} else {
+-		c.Status(http.StatusOK)
+-		log.Printf("📤 Sending 200 OK response")
++	file, err := os.Open(cachePath)
++	if err != nil {
++		log.Printf("❌ Failed to open transcoded cache %s: %v", cachePath, err)
++		streamDirect(c, inputPath)
++		return
+ 	}
++	defer file.Close()
+ 
+-	// Flush headers immediately
+-	if flusher, ok := c.Writer.(http.Flusher); ok {
+-		flusher.Flush()
+-		elapsed := time.Since(startTime).Milliseconds()
+-		log.Printf("⚡ Headers flushed at %dms", elapsed)
+-	}
+-
+-	// Stream transcoded audio
+-	buf := make([]byte, 4096)
+-	bytesWritten := int64(0)
+-	chunkCount := 0
+-
+-	for {
+-		n, err := stdout.Read(buf)
+-		if n > 0 {
+-			written, writeErr := c.Writer.Write(buf[:n])
+-			bytesWritten += int64(written)
+-			chunkCount++
++	fileInfo, err := file.Stat()
++	if err != nil {
++		log.Printf("❌ Failed to stat transcoded cache %s: %v", cachePath, err)
++		streamDirect(c, inputPath)
++		return
++	}
+ 
+-			if flusher, ok := c.Writer.(http.Flusher); ok {
+-				flusher.Flush()
+-			}
++	http.ServeContent(c.Writer, c.Request, fileInfo.Name(), fileInfo.ModTime(), file)
++}
+ 
+-			if chunkCount == 1 {
+-				elapsed := time.Since(startTime).Milliseconds()
+-				log.Printf("🚀 FIRST CHUNK SENT at %dms (%d bytes)", elapsed, written)
+-			}
++func transcodeCachePath(inputPath string, format string, bitrate int) (string, error) {
++	info, err := os.Stat(inputPath)
++	if err != nil {
++		return "", err
++	}
++	key := fmt.Sprintf("%s|%s|%d|%d|%d", inputPath, format, bitrate, info.Size(), info.ModTime().UnixNano())
++	sum := sha1.Sum([]byte(key))
++	dir := filepath.Join(os.TempDir(), "audiomuse-ai-music-server-transcodes")
++	if err := os.MkdirAll(dir, 0700); err != nil {
++		return "", err
++	}
++	return filepath.Join(dir, hex.EncodeToString(sum[:])+"."+format), nil
++}
+ 
+-			if writeErr != nil {
+-				log.Printf("⚠️  Client disconnected: %v", writeErr)
+-				cmd.Process.Kill()
+-				break
+-			}
+-		}
+-		if err == io.EOF {
+-			break
+-		}
+-		if err != nil {
+-			log.Printf("❌ Read error: %v", err)
+-			break
+-		}
++func usableCachedTranscode(path string) bool {
++	info, err := os.Stat(path)
++	return err == nil && info.Size() > 0
++}
++
++func transcodeToCache(inputPath string, cachePath string, format string, bitrate int, ffmpegFormat string) error {
++	profileArgs := getTranscodingProfile(format, bitrate)
++	dir := filepath.Dir(cachePath)
++	tmp, err := os.CreateTemp(dir, filepath.Base(cachePath)+".*.tmp")
++	if err != nil {
++		return err
++	}
++	tmpPath := tmp.Name()
++	if err := tmp.Close(); err != nil {
++		_ = os.Remove(tmpPath)
++		return err
+ 	}
++	defer os.Remove(tmpPath)
+ 
+-	cmd.Wait()
+-	log.Printf("✅ Transcoding complete: %d bytes sent", bytesWritten)
++	args := []string{"-y", "-i", inputPath, "-vn"}
++	args = append(args, profileArgs...)
++	args = append(args, "-f", ffmpegFormat, tmpPath)
++
++	log.Printf("🔧 FFmpeg command: ffmpeg %s", strings.Join(args, " "))
++
++	cmd := exec.Command("ffmpeg", args...)
++	output, err := cmd.CombinedOutput()
++	if err != nil {
++		return fmt.Errorf("ffmpeg failed: %w: %s", err, strings.TrimSpace(string(output)))
++	}
++	if err := os.Rename(tmpPath, cachePath); err != nil {
++		return err
++	}
++	return nil
+ }
+ 
+ // generateWaveformPeaks generates waveform peaks from an audio file using FFmpeg

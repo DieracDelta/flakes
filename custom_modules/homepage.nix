@@ -176,6 +176,13 @@ in
               };
             }
             {
+              "Note Note" = {
+                icon = "mdi-music-note";
+                href = "/note-note/";
+                description = "Interval training web build on port 8091";
+              };
+            }
+            {
               "CTF Dojo" = {
                 icon = "mdi-flag";
                 href = "https://office-desktop.tail5ca7.ts.net:9444";

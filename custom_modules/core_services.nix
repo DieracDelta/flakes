@@ -282,12 +282,22 @@ in
             reverse_proxy 127.0.0.1:3428
           }
 
+          redir /note-note /note-note/
+          handle /note-note/* {
+            encode zstd gzip
+            header Cache-Control "no-store"
+            @note_note_wasm path /note-note/*.wasm
+            header @note_note_wasm >Content-Type application/wasm
+            reverse_proxy 127.0.0.1:8091
+          }
+
           handle_path /adguard* {
             reverse_proxy 127.0.0.1:3003
           }
 
           redir /koito /koito/
           handle_path /koito/* {
+            header Cache-Control "no-store"
             reverse_proxy 127.0.0.1:4110
           }
 

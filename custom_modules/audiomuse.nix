@@ -63,6 +63,20 @@ in
       };
     };
 
+    analysis = {
+      forceCpu = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Force AudioMuse analysis workers to use CPU inference instead of CUDA.";
+      };
+
+      perSongModelReload = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Reload ONNX sessions after each song for lower memory pressure during analysis.";
+      };
+    };
+
     database = {
       host = mkOption {
         type = types.str;
@@ -172,28 +186,29 @@ in
 
           # Models - individual paths (code defaults to /app/model/ Docker paths)
           MODELS_PATH = "${cfg.modelsPackage}/models";
-          EMBEDDING_MODEL_PATH = "${cfg.modelsPackage}/models/msd-musicnn-1.onnx";
-          PREDICTION_MODEL_PATH = "${cfg.modelsPackage}/models/msd-msd-musicnn-1.onnx";
-          CLAP_AUDIO_MODEL_PATH = "${cfg.modelsPackage}/models/clap_audio_model.onnx";
+          EMBEDDING_MODEL_PATH = "${cfg.modelsPackage}/models/musicnn_embedding.onnx";
+          PREDICTION_MODEL_PATH = "${cfg.modelsPackage}/models/musicnn_prediction.onnx";
+          CLAP_AUDIO_MODEL_PATH = "${cfg.modelsPackage}/models/model_epoch_36.onnx";
           CLAP_TEXT_MODEL_PATH = "${cfg.modelsPackage}/models/clap_text_model.onnx";
-          DANCEABILITY_MODEL_PATH = "${cfg.modelsPackage}/models/danceability-msd-musicnn-1.onnx";
-          AGGRESSIVE_MODEL_PATH = "${cfg.modelsPackage}/models/mood_aggressive-msd-musicnn-1.onnx";
-          HAPPY_MODEL_PATH = "${cfg.modelsPackage}/models/mood_happy-msd-musicnn-1.onnx";
-          PARTY_MODEL_PATH = "${cfg.modelsPackage}/models/mood_party-msd-musicnn-1.onnx";
-          RELAXED_MODEL_PATH = "${cfg.modelsPackage}/models/mood_relaxed-msd-musicnn-1.onnx";
-          SAD_MODEL_PATH = "${cfg.modelsPackage}/models/mood_sad-msd-musicnn-1.onnx";
+          LYRICS_MODEL_DIR = "${cfg.modelsPackage}/models";
+          LYRICS_WHISPER_MODEL_DIR = "${cfg.modelsPackage}/models/whisper-small-onnx";
+          SILERO_VAD_ONNX_PATH = "${cfg.modelsPackage}/models/silero_vad.onnx";
+          LYRICS_GTE_ONNX_PATH = "${cfg.modelsPackage}/models/gte-multilingual-base-int8.onnx";
+          LYRICS_GTE_TOKENIZER_DIR = "${cfg.modelsPackage}/models/gte-multilingual-base";
           HF_HOME = "${cfg.modelsPackage}/cache/huggingface";
           HF_HUB_OFFLINE = "1";
           TRANSFORMERS_OFFLINE = "1";
 
           # GPU performance tuning (RTX 4090 24GB)
-          PER_SONG_MODEL_RELOAD = "false";  # Keep models loaded, recycle every 20 songs
+          PER_SONG_MODEL_RELOAD = lib.boolToString cfg.analysis.perSongModelReload;
           CLAP_MINI_BATCH_SIZE = "8";       # Process 8 segments at once
           USE_GPU_CLUSTERING = "true";      # RAPIDS cuML GPU-accelerated clustering
 
           # Clustering sample size: use 90th percentile of genre counts (~55K tracks vs default ~6.7K)
           STRATIFIED_SAMPLING_TARGET_PERCENTILE = "90";
           MIN_SONGS_PER_GENRE_FOR_STRATIFICATION = "500";
+          VOYAGER_EF_CONSTRUCTION = "200";
+          VOYAGER_M = "32";
 
           # CUDA runtime paths:
           # - /run/opengl-driver/lib: NVIDIA driver (libcuda.so.1) for cuML GPU detection
@@ -208,6 +223,9 @@ in
           # AI model for cluster/playlist naming
           AI_MODEL_PROVIDER = "GEMINI";
           GEMINI_MODEL_NAME = "gemini-2.5-flash";
+        } // lib.optionalAttrs cfg.analysis.forceCpu {
+          CUDA_VISIBLE_DEVICES = "-1";
+          USE_GPU_CLUSTERING = "false";
         };
 
         commonServiceConfig = {
@@ -241,6 +259,25 @@ in
         } // lib.optionalAttrs (cfg.environmentFile != null) {
           EnvironmentFile = cfg.environmentFile;
         };
+
+        # EnvironmentFile is evaluated after Environment= by systemd, so keep
+        # runtime stability knobs on ExecStart where the .env file cannot
+        # accidentally override them.
+        withRuntimeOverrides =
+          command:
+          "${pkgs.coreutils}/bin/env "
+          + lib.escapeShellArgs (
+            [
+              "PER_SONG_MODEL_RELOAD=${lib.boolToString cfg.analysis.perSongModelReload}"
+              "USE_GPU_CLUSTERING=${lib.boolToString (!cfg.analysis.forceCpu)}"
+              "VOYAGER_EF_CONSTRUCTION=200"
+              "VOYAGER_M=32"
+            ]
+            ++ lib.optionals cfg.analysis.forceCpu [
+              "CUDA_VISIBLE_DEVICES=-1"
+            ]
+          )
+          + " ${command}";
       in
       {
         # Main Flask API server
@@ -260,7 +297,7 @@ in
           environment = commonEnv;
 
           serviceConfig = commonServiceConfig // {
-            ExecStart = "${pkgs.audiomuse-ai}/bin/audiomuse-ai";
+            ExecStart = withRuntimeOverrides "${pkgs.audiomuse-ai}/bin/audiomuse-ai";
           };
         };
 
@@ -277,7 +314,7 @@ in
           environment = commonEnv;
 
           serviceConfig = commonServiceConfig // {
-            ExecStart = "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker";
+            ExecStart = withRuntimeOverrides "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker";
           };
         };
 
@@ -294,7 +331,7 @@ in
           environment = commonEnv;
 
           serviceConfig = commonServiceConfig // {
-            ExecStart = "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker";
+            ExecStart = withRuntimeOverrides "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker";
           };
         };
 
@@ -311,7 +348,7 @@ in
           environment = commonEnv;
 
           serviceConfig = commonServiceConfig // {
-            ExecStart = "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker-high";
+            ExecStart = withRuntimeOverrides "${pkgs.audiomuse-ai}/bin/audiomuse-ai-worker-high";
           };
         };
       };

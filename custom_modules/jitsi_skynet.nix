@@ -21,20 +21,24 @@ let
     "org.jitsi.jigasi.ENABLE_TRANSCRIPTION" = "true";
     "org.jitsi.jigasi.rest.jetty.host" = "127.0.0.1";
     "org.jitsi.jigasi.rest.jetty.port" = "8789";
-    "net.java.sip.communicator.impl.protocol.jabber.acc-xmpp-1.BOSH_URL_PATTERN" = "https://{host}:${toString cfg.jitsiPort}{subdomain}/http-bind?room={roomName}";
-    "org.jitsi.jigasi.xmpp.acc.BOSH_URL_PATTERN" = "https://{host}:${toString cfg.jitsiPort}{subdomain}/http-bind?room={roomName}";
-    "org.jitsi.jigasi.transcription.customService" = "org.jitsi.jigasi.transcription.WhisperTranscriptionService";
-    "org.jitsi.jigasi.transcription.whisper.websocket_url" = "ws://127.0.0.1:${toString cfg.skynetInternalPort}/streaming-whisper/ws";
+    "net.java.sip.communicator.impl.protocol.jabber.acc-xmpp-1.BOSH_URL_PATTERN" =
+      "https://{host}:${toString cfg.jitsiPort}{subdomain}/http-bind?room={roomName}";
+    "org.jitsi.jigasi.xmpp.acc.BOSH_URL_PATTERN" =
+      "https://{host}:${toString cfg.jitsiPort}{subdomain}/http-bind?room={roomName}";
+    "org.jitsi.jigasi.transcription.customService" =
+      "org.jitsi.jigasi.transcription.WhisperTranscriptionService";
+    "org.jitsi.jigasi.transcription.whisper.websocket_url" =
+      "ws://127.0.0.1:${toString cfg.skynetInternalPort}/streaming-whisper/ws";
     "org.jitsi.jigasi.transcription.SEND_JSON" = "true";
     "org.jitsi.jigasi.transcription.SEND_TXT" = "false";
   };
 
   formatJavaProperties =
-    attrs:
-    lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${name}=${value}") attrs);
+    attrs: lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${name}=${value}") attrs);
 
-  jigasiTranscriptionPropertiesFile =
-    pkgs.writeText "jigasi-transcription.properties" (formatJavaProperties jigasiTranscriptionProperties);
+  jigasiTranscriptionPropertiesFile = pkgs.writeText "jigasi-transcription.properties" (
+    formatJavaProperties jigasiTranscriptionProperties
+  );
 in
 {
   options.custom_modules.jitsi-skynet = {
@@ -120,7 +124,7 @@ in
     ];
 
     services.jitsi-meet = {
-      enable = true;
+      enable = false;
       hostName = cfg.domain;
       caddy.enable = false;
       nginx.enable = true;
@@ -181,11 +185,12 @@ in
       use-private-address-connectivity = false;
     };
 
-    services.jicofo.config.jicofo.xmpp.trusted-domains =
-      lib.mkIf cfg.enableStreamingWhisper [ cfg.domain ];
+    services.jicofo.config.jicofo.xmpp.trusted-domains = lib.mkIf cfg.enableStreamingWhisper [
+      cfg.domain
+    ];
 
     services.redis.servers.skynet = {
-      enable = true;
+      enable = false;
       bind = "127.0.0.1";
       port = cfg.redisPort;
       openFirewall = false;

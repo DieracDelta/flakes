@@ -157,6 +157,18 @@
           }
         }
 
+        # Note Note web build
+        @note_note path /note-note /note-note/*
+        handle @note_note {
+          encode zstd gzip
+          header Cache-Control "no-store"
+          @note_note_wasm path /note-note/*.wasm
+          header @note_note_wasm >Content-Type application/wasm
+          reverse_proxy https://office-desktop.tail5ca7.ts.net {
+            header_up Host {upstream_hostport}
+          }
+        }
+
         # WeebTogether matchmaker API
         @matchmaker path /matchmaker /matchmaker/*
         handle @matchmaker {

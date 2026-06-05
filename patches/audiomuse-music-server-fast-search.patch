@@ -1,0 +1,1461 @@
+diff --git a/music-server-backend/library_index.go b/music-server-backend/library_index.go
+index 357e3f4..ca1c31c 100644
+--- a/music-server-backend/library_index.go
++++ b/music-server-backend/library_index.go
+@@ -8,7 +8,7 @@ import (
+ 	"sync"
+ )
+ 
+-// This file implements Navidrome-style derived tables for artists and albums.
++// This file implements Navidrome-style derived tables for search.
+ //
+ // The `songs` table remains the single source of truth (the scanner writes only
+ // to it). `artists` and `albums` are denormalised summary tables rebuilt from
+@@ -18,8 +18,8 @@ import (
+ // "display artist" is computed once during the rebuild rather than with an
+ // N+1 query per album.
+ //
+-// Each derived table has its own FTS5 index (artists_fts / albums_fts) built
+-// with `remove_diacritics 2`, so searches are accent-insensitive (é == e).
++// Each derived table has its own FTS5 index built with `remove_diacritics 2`,
++// so searches are accent-insensitive (é == e).
+ 
+ const librarySchemaDDL = `
+ CREATE TABLE IF NOT EXISTS artists (
+@@ -52,14 +52,25 @@ CREATE TABLE IF NOT EXISTS albums (
+ CREATE INDEX IF NOT EXISTS idx_albums_name ON albums (name COLLATE NOCASE);
+ CREATE INDEX IF NOT EXISTS idx_albums_artist ON albums (artist COLLATE NOCASE);
+ CREATE INDEX IF NOT EXISTS idx_albums_id ON albums (id);
++
++CREATE TABLE IF NOT EXISTS song_search (
++	song_rowid INTEGER PRIMARY KEY,
++	id TEXT NOT NULL,
++	search_text TEXT NOT NULL DEFAULT '',
++	title TEXT NOT NULL DEFAULT '',
++	artist TEXT NOT NULL DEFAULT '',
++	album TEXT NOT NULL DEFAULT '',
++	album_artist TEXT NOT NULL DEFAULT ''
++);
++CREATE INDEX IF NOT EXISTS idx_song_search_id ON song_search (id);
+ `
+ 
+ // libraryRebuildMu serialises rebuilds so two scans finishing close together do
+ // not interleave their DELETE/INSERT work.
+ var libraryRebuildMu sync.Mutex
+ 
+-// ensureLibraryDerivedTables creates the artists/albums tables, their indexes,
+-// and the FTS5 virtual tables. FTS creation is tolerant of builds without fts5.
++// ensureLibraryDerivedTables creates the derived tables, their indexes, and the
++// FTS5 virtual tables. FTS creation is tolerant of builds without fts5.
+ func ensureLibraryDerivedTables(db *sql.DB) {
+ 	if _, err := db.Exec(librarySchemaDDL); err != nil {
+ 		log.Printf("ensureLibraryDerivedTables: failed to create tables: %v", err)
+@@ -70,10 +81,10 @@ func ensureLibraryDerivedTables(db *sql.DB) {
+ 	albumCols := map[string]string{
+ 		"artist_id": "TEXT NOT NULL DEFAULT ''", "genre": "TEXT NOT NULL DEFAULT ''",
+ 		"has_album_artist": "INTEGER NOT NULL DEFAULT 0", "max_date_added": "TEXT NOT NULL DEFAULT ''",
+-		"min_date_added": "TEXT NOT NULL DEFAULT ''",
++		"min_date_added":  "TEXT NOT NULL DEFAULT ''",
+ 		"max_last_played": "TEXT NOT NULL DEFAULT ''", "total_play_count": "INTEGER NOT NULL DEFAULT 0",
+ 		"total_duration": "INTEGER NOT NULL DEFAULT 0",
+-		"genres": "TEXT NOT NULL DEFAULT ''", "search_text": "TEXT NOT NULL DEFAULT ''",
++		"genres":         "TEXT NOT NULL DEFAULT ''", "search_text": "TEXT NOT NULL DEFAULT ''",
+ 	}
+ 	// If total_duration is newly added, the albums table predates the aggregate
+ 	// columns and its rows hold the defaults (0 / ''); flag a rebuild so
+@@ -96,6 +107,7 @@ func ensureLibraryDerivedTables(db *sql.DB) {
+ 	}
+ 	ensureDerivedFTS(db, "artists_fts", "artists")
+ 	ensureDerivedFTS(db, "albums_fts", "albums")
++	ensureSongSearchFTS(db)
+ 
+ 	if needsAggregateRebuild {
+ 		var songs int
+@@ -124,6 +136,26 @@ func derivedFTSAvailable(db *sql.DB) bool {
+ 	return n == 2
+ }
+ 
++func ensureSongSearchFTS(db *sql.DB) {
++	stmt := `CREATE VIRTUAL TABLE IF NOT EXISTS song_search_fts
++		USING fts5(search_text, content='song_search', content_rowid='song_rowid',
++		tokenize='unicode61 remove_diacritics 2')`
++	if _, err := db.Exec(stmt); err != nil {
++		log.Printf("ensureSongSearchFTS: could not create song_search_fts (fts5 may be unavailable): %v", err)
++	}
++}
++
++func songSearchFTSAvailable(db *sql.DB) bool {
++	var n int
++	_ = db.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='song_search_fts'`).Scan(&n)
++	if n != 1 {
++		return false
++	}
++	var x int
++	err := db.QueryRow(`SELECT 1 FROM song_search_fts WHERE song_search_fts MATCH 'zz_fts_probe_zz' LIMIT 1`).Scan(&x)
++	return err == nil || err == sql.ErrNoRows
++}
++
+ // albumAccumulator gathers the per-group state needed to emit one albums row.
+ type albumAccumulator struct {
+ 	groupKey       string
+@@ -145,9 +177,9 @@ type albumAccumulator struct {
+ 
+ // artistAccumulator gathers per (raw) artist state for one artists row.
+ type artistAccumulator struct {
+-	name       string
+-	songCount  int
+-	albumKeys  map[string]bool // distinct non-empty album groups for album_count
++	name      string
++	songCount int
++	albumKeys map[string]bool // distinct non-empty album groups for album_count
+ }
+ 
+ func effectiveArtist(albumArtist, artist string) string {
+@@ -290,6 +322,9 @@ func RebuildLibraryIndex(db *sql.DB) error {
+ 	if _, err := tx.Exec(`DELETE FROM albums`); err != nil {
+ 		return err
+ 	}
++	if _, err := tx.Exec(`DELETE FROM song_search`); err != nil {
++		return err
++	}
+ 
+ 	artStmt, err := tx.Prepare(`INSERT OR REPLACE INTO artists (id, name, song_count, album_count, search_text) VALUES (?,?,?,?,?)`)
+ 	if err != nil {
+@@ -326,6 +361,19 @@ func RebuildLibraryIndex(db *sql.DB) error {
+ 	}
+ 	albStmt.Close()
+ 
++	if _, err := tx.Exec(`
++		INSERT OR REPLACE INTO song_search (song_rowid, id, search_text, title, artist, album, album_artist)
++		SELECT rowid, COALESCE(id,''), TRIM(
++			COALESCE(title,'') || ' ' ||
++			COALESCE(artist,'') || ' ' ||
++			COALESCE(album,'') || ' ' ||
++			COALESCE(album_artist,'')
++		), COALESCE(title,''), COALESCE(artist,''), COALESCE(album,''), COALESCE(album_artist,'')
++		FROM songs
++		WHERE cancelled = 0`); err != nil {
++		return err
++	}
++
+ 	if err := tx.Commit(); err != nil {
+ 		return err
+ 	}
+@@ -339,6 +387,12 @@ func RebuildLibraryIndex(db *sql.DB) error {
+ 		}
+ 	}
+ 
++	if songSearchFTSAvailable(db) {
++		if _, err := db.Exec(`INSERT INTO song_search_fts(song_search_fts) VALUES('rebuild')`); err != nil {
++			log.Printf("RebuildLibraryIndex: song_search_fts rebuild failed: %v", err)
++		}
++	}
++
+ 	// Also rebuild the songs full-text index. A rescan does not re-insert songs
+ 	// that already exist, so the sync triggers never fire for them; rebuilding
+ 	// here guarantees the songs_fts index matches the songs table after any scan.
+@@ -399,10 +453,11 @@ func joinTokens(tokens map[string]bool, sep string) string {
+ // rebuildLibraryIndexIfEmpty builds the derived tables on first run (e.g. after
+ // upgrading from a version without them) when songs exist but the tables are empty.
+ func rebuildLibraryIndexIfEmpty(db *sql.DB) {
+-	var songs, albums int
++	var songs, albums, songSearch int
+ 	_ = db.QueryRow(`SELECT COUNT(*) FROM songs WHERE cancelled = 0`).Scan(&songs)
+ 	_ = db.QueryRow(`SELECT COUNT(*) FROM albums`).Scan(&albums)
+-	if songs > 0 && albums == 0 {
++	_ = db.QueryRow(`SELECT COUNT(*) FROM song_search`).Scan(&songSearch)
++	if songs > 0 && (albums == 0 || songSearch == 0) {
+ 		if err := RebuildLibraryIndex(db); err != nil {
+ 			log.Printf("rebuildLibraryIndexIfEmpty: %v", err)
+ 		}
+diff --git a/music-server-backend/library_index_test.go b/music-server-backend/library_index_test.go
+index 3905190..6c82be3 100644
+--- a/music-server-backend/library_index_test.go
++++ b/music-server-backend/library_index_test.go
+@@ -51,6 +51,24 @@ func TestRebuildLibraryIndexParity(t *testing.T) {
+ 		t.Errorf("artists table count = %d, legacy CountArtists = %d", gotArtists, wantArtists)
+ 	}
+ 
++	var gotSongSearch int
++	_ = db.QueryRow(`SELECT COUNT(*) FROM song_search`).Scan(&gotSongSearch)
++	if gotSongSearch != len(rows) {
++		t.Errorf("song_search count = %d, songs inserted = %d", gotSongSearch, len(rows))
++	}
++	if !songSearchFTSAvailable(db) {
++		t.Fatalf("song_search_fts should be available")
++	}
++	var matchedID string
++	if err := db.QueryRow(`
++		SELECT ss.id
++		FROM song_search_fts
++		JOIN song_search ss ON ss.song_rowid = song_search_fts.rowid
++		WHERE song_search_fts MATCH ?
++		LIMIT 1`, buildFTSQuery("ArtistA")).Scan(&matchedID); err != nil {
++		t.Fatalf("song_search_fts did not find ArtistA: %v", err)
++	}
++
+ 	// Display-artist parity: each albums.artist must equal getAlbumDisplayArtist.
+ 	// Collect rows fully before issuing nested queries (the default :memory:
+ 	// connection pool serves nested queries from a separate empty database).
+diff --git a/music-server-backend/subsonic_search_handlers.go b/music-server-backend/subsonic_search_handlers.go
+index be7d7ec..676d017 100644
+--- a/music-server-backend/subsonic_search_handlers.go
++++ b/music-server-backend/subsonic_search_handlers.go
+@@ -1,679 +1,578 @@
+-// Suggested path: music-server-backend/subsonic_search_handlers.go
+-package main
+-
+-import (
+-	"database/sql"
+-	"encoding/xml"
+-	"log"
+-	"strconv"
+-	"sort"
+-	"strings"
+-
+-	"github.com/gin-gonic/gin"
+-)
+-
+-// SubsonicSearchResult2 represents the structure for search2 responses.
+-type SubsonicSearchResult2 struct {
+-	XMLName      xml.Name         `xml:"searchResult2" json:"-"`
+-	Artists      []SubsonicArtist `xml:"artist" json:"artist,omitempty"`
+-	Albums       []SubsonicAlbum  `xml:"album" json:"album,omitempty"`
+-	Songs        []SubsonicSong   `xml:"song" json:"song,omitempty"`
+-	ArtistCount  int              `xml:"artistCount,attr,omitempty" json:"artistCount,omitempty"`
+-	AlbumCount   int              `xml:"albumCount,attr,omitempty" json:"albumCount,omitempty"`
+-	SongCount    int              `xml:"songCount,attr,omitempty" json:"songCount,omitempty"`
+-}
+-
+-// SubsonicSearchResult3 represents the structure for search3 responses (ID3 tags).
+-type SubsonicSearchResult3 struct {
+-	XMLName      xml.Name         `xml:"searchResult3" json:"-"`
+-	Artists      []SubsonicArtist `xml:"artist" json:"artist,omitempty"`
+-	Albums       []SubsonicAlbum  `xml:"album" json:"album,omitempty"`
+-	Songs        []SubsonicSong   `xml:"song" json:"song,omitempty"`
+-	ArtistCount  int              `xml:"artistCount,attr,omitempty" json:"artistCount,omitempty"`
+-	AlbumCount   int              `xml:"albumCount,attr,omitempty" json:"albumCount,omitempty"`
+-	SongCount    int              `xml:"songCount,attr,omitempty" json:"songCount,omitempty"`
+-}
+-
+-// subsonicSearch2 handles the search2 API endpoint (old tag format).
+-func subsonicSearch2(c *gin.Context) {
+-	_ = c.MustGet("user") // Auth is handled by middleware
+-
+-	query := c.Query("query")
+-	isShortQuery := len(query) < 3 // Show all items if query is less than 3 characters
+-
+-	artistCount, _ := strconv.Atoi(c.DefaultQuery("artistCount", "20"))
+-	artistOffset, _ := strconv.Atoi(c.DefaultQuery("artistOffset", "0"))
+-	albumCount, _ := strconv.Atoi(c.DefaultQuery("albumCount", "20"))
+-	albumOffset, _ := strconv.Atoi(c.DefaultQuery("albumOffset", "0"))
+-	songCount, _ := strconv.Atoi(c.DefaultQuery("songCount", "50"))
+-	songOffset, _ := strconv.Atoi(c.DefaultQuery("songOffset", "0"))
+-
+-	result := SubsonicSearchResult2{}
+-	searchWords := strings.Fields(query)
+-
+-	// --- Count total results (not paginated) ---
+-	// Count total artists (search artist field only)
+-	if artistCount > 0 {
+-		// derive same searchTerm logic as later query block
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			searchTerm = query
+-		}
+-		allArtists, err := QueryArtists(db, ArtistQueryOptions{
+-			SearchTerm:    searchTerm,
+-			IncludeCounts: false,
+-		})
+-		if err == nil {
+-			result.ArtistCount = len(allArtists)
+-		}
+-	}
+-
+-	// Count total albums (deduplicate by album + album_path)
+-	if albumCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			searchTerm = query
+-		}
+-		if cnt, err := CountAlbums(db, searchTerm); err == nil {
+-			result.AlbumCount = cnt
+-		}
+-	} 
+-
+-	// Count total songs
+-	if songCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			searchTerm = query
+-		}
+-		if cnt, err := CountSongs(db, searchTerm); err == nil {
+-			result.SongCount = cnt
+-		}
+-	}
+-
+-	// --- Enhanced Artist Search Logic ---
+-	if artistCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			// Pass full query so DB enforces multi-word AND semantics
+-			searchTerm = query
+-		}
+-
+-		artists, err := QueryArtists(db, ArtistQueryOptions{
+-			SearchTerm:    searchTerm,
+-			IncludeCounts: true,
+-			Limit:         artistCount,
+-			Offset:        artistOffset,
+-		})
+-		if err != nil {
+-			log.Printf("[ERROR] subsonicSearch2: Artist query failed: %v", err)
+-		} else {
+-			seenArtists := make(map[string]bool)
+-			for _, artist := range artists {
+-				key := normalizeKey(artist.Name)
+-				if seenArtists[key] {
+-					continue
+-				}
+-				seenArtists[key] = true
+-				artistID := GenerateArtistID(artist.Name)
+-				result.Artists = append(result.Artists, SubsonicArtist{
+-					ID:         artistID,
+-					Name:       artist.Name,
+-					CoverArt:   artistID,
+-					AlbumCount: artist.AlbumCount,
+-					SongCount:  artist.SongCount,
+-				})
+-			}
+-		}
+-	} 
+-
+-	// --- Enhanced Album Search Logic ---
+-	// OPTIMIZED: Use display artist computation with proper song count
+-	if albumCount > 0 {
+-		// Attempt QueryAlbums path to avoid nested DB reads
+-		var albums []AlbumResult
+-		var qerr error
+-		if isShortQuery {
+-			albums, qerr = QueryAlbums(db, AlbumQueryOptions{GroupByPath: true, IncludeGenre: true, IncludeAlbumID: true, IncludeCounts: true, IncludeDuration: true, IncludeCreated: true, Limit: albumCount, Offset: albumOffset})
+-		} else {
+-			albums, qerr = QueryAlbums(db, AlbumQueryOptions{SearchTerm: query, GroupByPath: true, IncludeGenre: true, IncludeAlbumID: true, IncludeCounts: true, IncludeDuration: true, IncludeCreated: true})
+-		}
+-		if qerr == nil {
+-			seen := make(map[string]SubsonicAlbum)
+-			order := []string{}
+-			for _, ar := range albums {
+-				albumName := strings.TrimSpace(ar.Name)
+-				albumPath := strings.TrimSpace(ar.AlbumPath)
+-				if albumName == "" && albumPath == "" { continue }
+-				displayArtist := albumDisplayArtist(db, albumName, albumPath)
+-				match := true
+-				for _, word := range searchWords {
+-					lw := strings.ToLower(word)
+-					if !strings.Contains(strings.ToLower(albumName), lw) && !strings.Contains(strings.ToLower(displayArtist), lw) { match = false; break }
+-				}
+-				if !match { continue }
+-				key := normalizeKey(albumName)
+-				candidate := SubsonicAlbum{ID: ar.AlbumID, Name: albumName, Artist: displayArtist, ArtistID: GenerateArtistID(displayArtist), Genre: ar.Genre, CoverArt: ar.AlbumID, SongCount: ar.SongCount, Duration: ar.Duration, Created: ar.Created}
+-				if existing, ok := seen[key]; ok { candIsAlbumArtist, _ := CheckAlbumHasAlbumArtist(db, albumName, albumPath); existIsAlbumArtist, _ := CheckAlbumHasAlbumArtist(db, existing.Name, ""); if candIsAlbumArtist && !existIsAlbumArtist { seen[key] = candidate } } else { seen[key] = candidate; order = append(order, key) }
+-			}
+-			start := albumOffset
+-			end := start + albumCount
+-			if start < 0 { start = 0 }
+-			if start > len(order) { start = len(order) }
+-			if end > len(order) { end = len(order) }
+-			for _, k := range order[start:end] { result.Albums = append(result.Albums, seen[k]) }
+-			goto SKIP_OLD_ALBUM_QUERY
+-		}
+-		var albumQuery string
+-		var albumArgs []interface{}
+-
+-		if isShortQuery {
+-			// Show all albums when query is short
+-			albumQuery = `
+-				SELECT
+-					album,
+-					MIN(NULLIF(album_path, '')) as album_path,
+-					COALESCE(genre, '') as genre,
+-					MIN(id) as albumId,
+-					COUNT(*) as song_count,
+-					COALESCE(SUM(duration), 0) as total_duration,
+-					MIN(date_added) as created
+-				FROM songs
+-				WHERE album != '' AND cancelled = 0
+-				GROUP BY CASE
+-					WHEN album_path IS NOT NULL AND album_path != '' THEN album_path || '|||' || album
+-					ELSE album
+-				END
+-				ORDER BY album LIMIT ? OFFSET ?`
+-			albumArgs = append(albumArgs, albumCount, albumOffset)
+-
+-			// Execute the short-path album query and build results (avoid nested queries in rows.Next())
+-			albumRows, err := db.Query(albumQuery, albumArgs...)
+-			if err != nil {
+-				log.Printf("[ERROR] subsonicSearch2: Album query failed: %v", err)
+-			} else {
+-				defer albumRows.Close()
+-				seen := make(map[string]SubsonicAlbum)
+-				order := []string{}
+-				for albumRows.Next() {
+-					var albumName, albumPath, genre string
+-					var albumID string
+-					var songCount, totalDuration int
+-					var created sql.NullString
+-					if err := albumRows.Scan(&albumName, &albumPath, &genre, &albumID, &songCount, &totalDuration, &created); err == nil {
+-						albumName = strings.TrimSpace(albumName)
+-						albumPath = strings.TrimSpace(albumPath)
+-						if albumName == "" && albumPath == "" { continue }
+-						displayArtist := albumDisplayArtist(db, albumName, albumPath)
+-						key := normalizeKey(albumName)
+-						candidate := SubsonicAlbum{ID: albumID, Name: albumName, Artist: displayArtist, ArtistID: GenerateArtistID(displayArtist), Genre: genre, CoverArt: albumID, SongCount: songCount, Duration: totalDuration, Created: created.String}
+-						if existing, ok := seen[key]; ok {
+-							candIsAlbumArtist, _ := CheckAlbumHasAlbumArtist(db, albumName, albumPath)
+-							existIsAlbumArtist, _ := CheckAlbumHasAlbumArtist(db, existing.Name, "")
+-							if candIsAlbumArtist && !existIsAlbumArtist {
+-								seen[key] = candidate
+-							}
+-						} else {
+-							seen[key] = candidate
+-							order = append(order, key)
+-						}
+-					}
+-				}
+-				start := albumOffset
+-				end := start + albumCount
+-				if start < 0 { start = 0 }
+-				if start > len(order) { start = len(order) }
+-				if end > len(order) { end = len(order) }
+-				for _, k := range order[start:end] { result.Albums = append(result.Albums, seen[k]) }
+-			}
+-		} else {
+-			// For search terms: fetch matching songs and build albums from those song groups in Go
+-			// This ensures the album listing is derived from the same candidate songs used for counting
+-			var songConditions []string
+-			var songArgs []interface{}
+-			for _, word := range searchWords {
+-				songConditions = append(songConditions, "(album LIKE ? OR artist LIKE ? OR album_artist LIKE ?)")
+-				like := "%" + word + "%"
+-				songArgs = append(songArgs, like, like, like)
+-			}
+-
+-			songQuery := `
+-				SELECT album, MIN(NULLIF(album_path, '')) as album_path, album_artist, artist, id, COALESCE(genre, '') as genre, COALESCE(duration, 0) as duration, COALESCE(date_added, '') as date_added
+-				FROM songs
+-				WHERE (` + strings.Join(songConditions, " AND ") + `) AND cancelled = 0
+-				ORDER BY album COLLATE NOCASE, id`
+-
+-			rows, err := db.Query(songQuery, songArgs...)
+-			if err != nil {
+-				log.Printf("[ERROR] subsonicSearch2: Song-based album candidate query failed: %v", err)
+-			} else {
+-				defer rows.Close()
+-				type albumGroup struct {
+-					albumName     string
+-					albumPath     string
+-					genre         string
+-					albumID       string
+-					songCount     int
+-					totalDuration int
+-					minCreated    string
+-					albumArts     map[string]bool
+-					artists       map[string]bool
+-				}
+-
+-				groups := make(map[string]*albumGroup)
+-				order := []string{}
+-
+-				for rows.Next() {
+-					var albumName, albumPath, albumArtist, artist, id, genre, dateAdded string
+-					var duration int
+-					if err := rows.Scan(&albumName, &albumPath, &albumArtist, &artist, &id, &genre, &duration, &dateAdded); err != nil {
+-						continue
+-					}
+-					albumName = strings.TrimSpace(albumName)
+-					albumPath = strings.TrimSpace(albumPath)
+-					if albumName == "" && albumPath == "" {
+-						continue
+-					}
+-					key := ""
+-					if albumPath != "" {
+-						key = albumPath + "|||" + albumName
+-					} else {
+-						key = albumName
+-					}
+-					g := groups[key]
+-					if g == nil {
+-						g = &albumGroup{albumName: albumName, albumPath: albumPath, genre: strings.TrimSpace(genre), albumArts: make(map[string]bool), artists: make(map[string]bool)}
+-						groups[key] = g
+-						order = append(order, key)
+-					}
+-					if id != "" && g.albumID == "" {
+-						g.albumID = id
+-					}
+-					if genre != "" && g.genre == "" {
+-						g.genre = genre
+-					}
+-					if albumArtist != "" && strings.ToLower(strings.TrimSpace(albumArtist)) != "unknown" {
+-						g.albumArts[strings.TrimSpace(albumArtist)] = true
+-					}
+-					if artist != "" && strings.ToLower(strings.TrimSpace(artist)) != "unknown" {
+-						g.artists[strings.TrimSpace(artist)] = true
+-					}
+-					g.songCount++
+-					g.totalDuration += duration
+-					if dateAdded != "" && (g.minCreated == "" || dateAdded < g.minCreated) {
+-						g.minCreated = dateAdded
+-					}
+-				}
+-
+-				// Build candidates and deduplicate by normalized album name, preferring album_artist-backed groups
+-				seen := make(map[string]SubsonicAlbum)
+-				orderKeys := []string{}
+-				for _, k := range order {
+-					g := groups[k]
+-					var artistList []string
+-					if len(g.albumArts) > 0 {
+-						for a := range g.albumArts { artistList = append(artistList, a) }
+-					} else {
+-						for a := range g.artists { artistList = append(artistList, a) }
+-					}
+-					sort.Strings(artistList)
+-					displayArtist := "Unknown Artist"
+-					if len(artistList) > 0 {
+-						displayArtist = strings.Join(artistList, "; ")
+-					}
+-
+-					candidate := SubsonicAlbum{ID: g.albumID, Name: g.albumName, Artist: displayArtist, ArtistID: GenerateArtistID(displayArtist), Genre: g.genre, CoverArt: g.albumID, SongCount: g.songCount, Duration: g.totalDuration, Created: g.minCreated}
+-
+-					nk := normalizeKey(g.albumName)
+-					if existing, ok := seen[nk]; ok {
+-						if len(g.albumArts) > 0 && (existing.Artist == "Unknown Artist" || existing.Artist == "") {
+-							seen[nk] = candidate
+-						}
+-					} else {
+-						seen[nk] = candidate
+-						orderKeys = append(orderKeys, nk)
+-					}
+-				}
+-
+-				// paginate ordered results
+-				start := albumOffset
+-				end := start + albumCount
+-				if start < 0 { start = 0 }
+-				if start > len(orderKeys) { start = len(orderKeys) }
+-				if end > len(orderKeys) { end = len(orderKeys) }
+-				for _, k := range orderKeys[start:end] {
+-					result.Albums = append(result.Albums, seen[k])
+-				}
+-			}
+-		}
+-	}
+-
+-SKIP_OLD_ALBUM_QUERY:
+-
+-	// --- Enhanced Song Search Logic ---
+-	if songCount > 0 {
+-		user := c.MustGet("user").(User)
+-		searchTerm := ""
+-		if !isShortQuery && query != "" {
+-			// Pass full query so DB enforces multi-word AND semantics
+-			searchTerm = query
+-		}
+-
+-		songs, err := QuerySongs(db, SongQueryOptions{
+-			SearchTerm:     searchTerm,
+-			IncludeStarred: true,
+-			IncludeGenre:   true,
+-			UserID:         user.ID,
+-			Limit:          songCount,
+-			Offset:         songOffset,
+-			OrderBy:        "s.artist, s.title",
+-		})
+-		if err != nil {
+-			log.Printf("[ERROR] subsonicSearch2: Song query failed: %v", err)
+-		} else {
+-			for _, songFromDb := range songs {
+-
+-				song := SubsonicSong{
+-					ID:        songFromDb.ID,
+-					CoverArt:  songFromDb.ID,
+-					Title:     songFromDb.Title,
+-					Artist:    songFromDb.Artist,
+-					ArtistID:  GenerateArtistID(songFromDb.Artist),
+-					Album:     songFromDb.Album,
+-					Duration:  songFromDb.Duration,
+-					PlayCount: songFromDb.PlayCount,
+-					Genre:     songFromDb.Genre,
+-					Starred:   songFromDb.Starred,
+-					LastPlayed: songFromDb.LastPlayed,
+-				}
+-				result.Songs = append(result.Songs, song)
+-			}
+-		}
+-	}
+-
+-	// Ensure slices are non-nil so JSON response includes empty arrays (not omitted/null).
+-	if result.Artists == nil {
+-		result.Artists = []SubsonicArtist{}
+-	}
+-	if result.Albums == nil {
+-		result.Albums = []SubsonicAlbum{}
+-	}
+-	if result.Songs == nil {
+-		result.Songs = []SubsonicSong{}
+-	}
+-
+-	response := newSubsonicResponse(&result)
+-	subsonicRespond(c, response)
+-}
+-
+-// subsonicSearch3 handles the search3 API endpoint (ID3 tag format).
+-func subsonicSearch3(c *gin.Context) {
+-	user := c.MustGet("user").(User)
+-
+-	query := c.Query("query")
+-	isShortQuery := len(query) < 3 // Show all items if query is less than 3 characters
+-
+-	artistCount, _ := strconv.Atoi(c.DefaultQuery("artistCount", "20"))
+-	artistOffset, _ := strconv.Atoi(c.DefaultQuery("artistOffset", "0"))
+-	albumCount, _ := strconv.Atoi(c.DefaultQuery("albumCount", "20"))
+-	albumOffset, _ := strconv.Atoi(c.DefaultQuery("albumOffset", "0"))
+-	songCount, _ := strconv.Atoi(c.DefaultQuery("songCount", "50"))
+-	songOffset, _ := strconv.Atoi(c.DefaultQuery("songOffset", "0"))
+-
+-	result := SubsonicSearchResult3{}
+-
+-	searchWords := strings.Fields(query)
+-
+-	// --- Count total results (not paginated) ---
+-	// These counts go through the FTS5-backed helpers (CountArtists/CountAlbums/
+-	// CountSongs). The previous implementation fetched every matching row into Go
+-	// and de-duplicated in memory, which on a large library could pull hundreds of
+-	// thousands of rows for a common term; the COUNT(DISTINCT ...) + FTS join keeps
+-	// the work inside SQLite and returns a single number.
+-	// Count total artists (artist tag only)
+-	if artistCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			searchTerm = query
+-		}
+-		if cnt, err := CountArtists(db, searchTerm, false); err == nil {
+-			result.ArtistCount = cnt
+-		}
+-	}
+-
+-	// Count total albums
+-	if albumCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery {
+-			searchTerm = query
+-		}
+-		if cnt, err := CountAlbums(db, searchTerm); err == nil {
+-			result.AlbumCount = cnt
+-		}
+-	}
+-
+-	// Count total songs
+-	if songCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery {
+-			searchTerm = query
+-		}
+-		if cnt, err := CountSongs(db, searchTerm); err == nil {
+-			result.SongCount = cnt
+-		}
+-	}
+-
+-	// --- Artist Search ---
+-	// OPTIMIZED: Single query with album count aggregation (no N+1 queries)
+-	if artistCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" && query != "*" {
+-			// Pass full query so DB enforces multi-word AND semantics
+-			searchTerm = query
+-		}
+-
+-		artists, err := QueryArtists(db, ArtistQueryOptions{
+-			SearchTerm:    searchTerm,
+-			IncludeCounts: true,
+-			Limit:         artistCount,
+-			Offset:        artistOffset,
+-		})
+-		if err != nil {
+-			log.Printf("[ERROR] subsonicSearch3: Artist query failed: %v", err)
+-		} else {
+-			for _, artist := range artists {
+-				artistID := GenerateArtistID(artist.Name)
+-				result.Artists = append(result.Artists, SubsonicArtist{
+-					ID:         artistID,
+-					Name:       artist.Name,
+-					CoverArt:   artistID,
+-					AlbumCount: artist.AlbumCount,
+-					SongCount:  artist.SongCount,
+-				})
+-			}
+-		}
+-	}
+-
+-	// --- Album Search ---
+-	// OPTIMIZED: Include song count in query
+-	if albumCount > 0 {
+-		var albumQuery string
+-		var albumArgs []interface{}
+-
+-		if isShortQuery {
+-			// Show all albums when query is short
+-			albumQuery = `
+-				SELECT
+-					album,
+-					MIN(NULLIF(album_path, '')) as albumPath,
+-					COALESCE(genre, '') as genre,
+-					MIN(id) as albumId,
+-					COUNT(*) as song_count,
+-					COALESCE(SUM(duration), 0) as total_duration,
+-					MIN(date_added) as created
+-				FROM songs
+-				WHERE album != '' AND cancelled = 0
+-				GROUP BY CASE
+-					WHEN album_path IS NOT NULL AND album_path != '' THEN album_path || '|||' || album
+-					ELSE album
+-				END
+-				ORDER BY album COLLATE NOCASE
+-				LIMIT ? OFFSET ?`
+-			albumArgs = append(albumArgs, albumCount, albumOffset)
+-		} else {
+-			// Filter by search terms (match album name, artist, or album_artist)
+-			var albumConditions []string
+-			for _, word := range searchWords {
+-				// Match on album name, artist, OR album_artist to show albums where the artist appears in ANY song
+-				albumConditions = append(albumConditions, "(album LIKE ? OR artist LIKE ? OR album_artist LIKE ?)")
+-				likeWord := "%" + word + "%"
+-				albumArgs = append(albumArgs, likeWord, likeWord, likeWord)
+-			}
+-			// Fetch candidates filtered by album name, artist, or album_artist
+-			albumQuery = `
+-				SELECT
+-					album,
+-					MIN(NULLIF(album_path, '')) as albumPath,
+-					COALESCE(genre, '') as genre,
+-					MIN(id) as albumId,
+-					COUNT(*) as song_count,
+-					COALESCE(SUM(duration), 0) as total_duration,
+-					MIN(date_added) as created
+-				FROM songs
+-				WHERE (` + strings.Join(albumConditions, " AND ") + `) AND cancelled = 0
+-				GROUP BY CASE
+-					WHEN album_path IS NOT NULL AND album_path != '' THEN album_path || '|||' || album
+-					ELSE album
+-				END
+-				ORDER BY album COLLATE NOCASE`
+-		}
+-
+-		albumRows, err := db.Query(albumQuery, albumArgs...)
+-		if err != nil {
+-			log.Printf("[ERROR] subsonicSearch3: Album query failed: %v", err)
+-		} else {
+-			defer albumRows.Close()
+-			// Deduplicate albums preferring entries backed by album_artist when duplicates exist
+-			seenAlbums := make(map[string]SubsonicAlbum)
+-			orderAlbums := []string{}
+-			candidates := []SubsonicAlbum{}
+-			for albumRows.Next() {
+-				var albumName, genre, albumPath string
+-				var albumID string
+-				var songCount, totalDuration int
+-				var created sql.NullString
+-				if err := albumRows.Scan(&albumName, &albumPath, &genre, &albumID, &songCount, &totalDuration, &created); err == nil {
+-					// Compute display artist for this album
+-					displayArtist := albumDisplayArtist(db, albumName, strings.TrimSpace(albumPath))
+-					// Ensure album matches search words by album name or display artist (case-insensitive)
+-					match := true
+-					for _, word := range searchWords {
+-						lw := strings.ToLower(word)
+-						if !strings.Contains(strings.ToLower(albumName), lw) && !strings.Contains(strings.ToLower(displayArtist), lw) {
+-							match = false
+-							break
+-						}
+-					}
+-					// Debug: log when searching for 'unknown' so we can inspect why albums are matching
+-					if strings.Contains(strings.ToLower(query), "unknown") {
+-						log.Printf("DEBUG search: query='%s' searchWords=%v album='%s' displayArtist='%s' match=%t", query, searchWords, albumName, displayArtist, match)
+-					}
+-					if !match {
+-						continue
+-					}
+-					candidate := SubsonicAlbum{
+-						ID:        albumID,
+-						Name:      albumName,
+-						Artist:    displayArtist,
+-						ArtistID:  GenerateArtistID(displayArtist),
+-						Genre:     genre,
+-						CoverArt:  albumID,
+-						SongCount: songCount,
+-						Duration:  totalDuration,
+-						Created:   created.String,
+-					}
+-					candidates = append(candidates, candidate)
+-				}
+-			}
+-			// Deduplicate candidates by album name (preserve first occurrence), preferring album_artist-backed entries
+-			for _, candidate := range candidates {
+-				key := normalizeKey(candidate.Name)
+-				if existing, ok := seenAlbums[key]; ok {
+-					candIsAlbumArtist, _ := AlbumExists(db, candidate.Name, candidate.Artist)
+-					existIsAlbumArtist, _ := AlbumExists(db, existing.Name, existing.Artist)
+-					if candIsAlbumArtist && !existIsAlbumArtist {
+-						seenAlbums[key] = candidate
+-					}
+-				} else {
+-					seenAlbums[key] = candidate
+-					orderAlbums = append(orderAlbums, key)
+-				}
+-			}
+-			// Apply pagination
+-			start := albumOffset
+-			if start < 0 {
+-				start = 0
+-			}
+-			end := start + albumCount
+-			if end > len(orderAlbums) {
+-				end = len(orderAlbums)
+-			}
+-			for _, k := range orderAlbums[start:end] {
+-				result.Albums = append(result.Albums, seenAlbums[k])
+-			}
+-		}
+-	}
+-
+-	// --- Song Search ---
+-	if songCount > 0 {
+-		searchTerm := ""
+-		if !isShortQuery && query != "" {
+-			// Pass full query so DB enforces multi-word AND semantics
+-			searchTerm = query
+-		}
+-
+-		songs, err := QuerySongs(db, SongQueryOptions{
+-			SearchTerm:     searchTerm,
+-			IncludeStarred: true,
+-			IncludeGenre:   true,
+-			UserID:         user.ID,
+-			Limit:          songCount,
+-			Offset:         songOffset,
+-			OrderBy:        "s.artist, s.album, s.title COLLATE NOCASE",
+-		})
+-		if err != nil {
+-			log.Printf("[ERROR] subsonicSearch3: Song query failed: %v", err)
+-		} else {
+-			for _, songResult := range songs {
+-
+-				song := SubsonicSong{
+-					ID:        songResult.ID,
+-					Title:     songResult.Title,
+-					Artist:    songResult.Artist,
+-					ArtistID:  GenerateArtistID(songResult.Artist),
+-					Album:     songResult.Album,
+-					Genre:     songResult.Genre,
+-					Duration:  songResult.Duration,
+-					PlayCount: songResult.PlayCount,
+-					CoverArt:  songResult.ID,
+-					Starred:   songResult.Starred,
+-					LastPlayed: songResult.LastPlayed,
+-				}
+-				result.Songs = append(result.Songs, song)
+-			}
+-		}
+-	}
+-
+-	// Ensure slices are non-nil
+-	if result.Artists == nil {
+-		result.Artists = []SubsonicArtist{}
+-	}
+-	if result.Albums == nil {
+-		result.Albums = []SubsonicAlbum{}
+-	}
+-	if result.Songs == nil {
+-		result.Songs = []SubsonicSong{}
+-	}
+-
+-	response := newSubsonicResponse(&result)
+-	subsonicRespond(c, response)
+-}
++package main
++
++import (
++	"database/sql"
++	"encoding/xml"
++	"log"
++	"strconv"
++	"strings"
++	"sync"
++
++	"github.com/gin-gonic/gin"
++)
++
++// SubsonicSearchResult2 represents the structure for search2 responses.
++type SubsonicSearchResult2 struct {
++	XMLName     xml.Name         `xml:"searchResult2" json:"-"`
++	Artists     []SubsonicArtist `xml:"artist" json:"artist,omitempty"`
++	Albums      []SubsonicAlbum  `xml:"album" json:"album,omitempty"`
++	Songs       []SubsonicSong   `xml:"song" json:"song,omitempty"`
++	ArtistCount int              `xml:"artistCount,attr,omitempty" json:"artistCount,omitempty"`
++	AlbumCount  int              `xml:"albumCount,attr,omitempty" json:"albumCount,omitempty"`
++	SongCount   int              `xml:"songCount,attr,omitempty" json:"songCount,omitempty"`
++}
++
++// SubsonicSearchResult3 represents the structure for search3 responses (ID3 tags).
++type SubsonicSearchResult3 struct {
++	XMLName     xml.Name         `xml:"searchResult3" json:"-"`
++	Artists     []SubsonicArtist `xml:"artist" json:"artist,omitempty"`
++	Albums      []SubsonicAlbum  `xml:"album" json:"album,omitempty"`
++	Songs       []SubsonicSong   `xml:"song" json:"song,omitempty"`
++	ArtistCount int              `xml:"artistCount,attr,omitempty" json:"artistCount,omitempty"`
++	AlbumCount  int              `xml:"albumCount,attr,omitempty" json:"albumCount,omitempty"`
++	SongCount   int              `xml:"songCount,attr,omitempty" json:"songCount,omitempty"`
++}
++
++type subsonicSearchParams struct {
++	Query        string
++	SearchTerm   string
++	ArtistCount  int
++	ArtistOffset int
++	AlbumCount   int
++	AlbumOffset  int
++	SongCount    int
++	SongOffset   int
++}
++
++type fastSearchResults struct {
++	Artists []ArtistResult
++	Albums  []AlbumResult
++	Songs   []SongResult
++}
++
++func parseSubsonicSearchParams(c *gin.Context) subsonicSearchParams {
++	query := strings.TrimSpace(c.Query("query"))
++	p := subsonicSearchParams{
++		Query:        query,
++		ArtistCount:  parseNonNegativeInt(c.DefaultQuery("artistCount", "20")),
++		ArtistOffset: parseNonNegativeInt(c.DefaultQuery("artistOffset", "0")),
++		AlbumCount:   parseNonNegativeInt(c.DefaultQuery("albumCount", "20")),
++		AlbumOffset:  parseNonNegativeInt(c.DefaultQuery("albumOffset", "0")),
++		SongCount:    parseNonNegativeInt(c.DefaultQuery("songCount", "50")),
++		SongOffset:   parseNonNegativeInt(c.DefaultQuery("songOffset", "0")),
++	}
++	if query != "" && query != "*" && len(query) >= 2 {
++		p.SearchTerm = query
++	}
++	return p
++}
++
++func parseNonNegativeInt(s string) int {
++	n, _ := strconv.Atoi(s)
++	if n < 0 {
++		return 0
++	}
++	return n
++}
++
++func runFastSubsonicSearch(c *gin.Context) fastSearchResults {
++	user := c.MustGet("user").(User)
++	params := parseSubsonicSearchParams(c)
++
++	ensureLibraryDerivedTables(db)
++	rebuildLibraryIndexIfEmpty(db)
++
++	var results fastSearchResults
++	run := func() {
++		if params.ArtistCount > 0 {
++			artists, err := fastSearchArtists(db, params.SearchTerm, params.ArtistCount, params.ArtistOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: artist query failed: %v", err)
++			} else {
++				results.Artists = artists
++			}
++		}
++		if params.AlbumCount > 0 {
++			albums, err := fastSearchAlbums(db, params.SearchTerm, params.AlbumCount, params.AlbumOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: album query failed: %v", err)
++			} else {
++				results.Albums = albums
++			}
++		}
++		if params.SongCount > 0 {
++			songs, err := fastSearchSongs(db, params.SearchTerm, user.ID, params.SongCount, params.SongOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: song query failed: %v", err)
++			} else {
++				results.Songs = songs
++			}
++		}
++	}
++
++	if sqliteMainDatabaseIsMemory(db) {
++		run()
++		return results
++	}
++
++	var wg sync.WaitGroup
++	if params.ArtistCount > 0 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			artists, err := fastSearchArtists(db, params.SearchTerm, params.ArtistCount, params.ArtistOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: artist query failed: %v", err)
++				return
++			}
++			results.Artists = artists
++		}()
++	}
++	if params.AlbumCount > 0 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			albums, err := fastSearchAlbums(db, params.SearchTerm, params.AlbumCount, params.AlbumOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: album query failed: %v", err)
++				return
++			}
++			results.Albums = albums
++		}()
++	}
++	if params.SongCount > 0 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			songs, err := fastSearchSongs(db, params.SearchTerm, user.ID, params.SongCount, params.SongOffset)
++			if err != nil {
++				log.Printf("[ERROR] search: song query failed: %v", err)
++				return
++			}
++			results.Songs = songs
++		}()
++	}
++	wg.Wait()
++	return results
++}
++
++func sqliteMainDatabaseIsMemory(d *sql.DB) bool {
++	rows, err := d.Query(`PRAGMA database_list`)
++	if err != nil {
++		return false
++	}
++	defer rows.Close()
++	for rows.Next() {
++		var seq int
++		var name, file string
++		if err := rows.Scan(&seq, &name, &file); err != nil {
++			continue
++		}
++		if name == "main" {
++			return file == ""
++		}
++	}
++	return false
++}
++
++func fastSearchArtists(d *sql.DB, term string, limit, offset int) ([]ArtistResult, error) {
++	if limit <= 0 {
++		return nil, nil
++	}
++	var rows *sql.Rows
++	var err error
++	if term != "" && ftsAvailable(d) && derivedFTSAvailable(d) {
++		rows, err = d.Query(`
++			SELECT a.name, a.song_count, a.album_count
++			FROM artists_fts
++			JOIN artists a ON a.rowid = artists_fts.rowid
++			WHERE artists_fts MATCH ?
++			ORDER BY bm25(artists_fts), a.name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, buildFTSQuery(term), limit, offset)
++	} else if term != "" {
++		pattern := "%" + term + "%"
++		rows, err = d.Query(`
++			SELECT name, song_count, album_count
++			FROM artists
++			WHERE search_text LIKE ? OR name LIKE ?
++			ORDER BY name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, pattern, pattern, limit, offset)
++	} else {
++		rows, err = d.Query(`
++			SELECT name, song_count, album_count
++			FROM artists
++			ORDER BY name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, limit, offset)
++	}
++	if err != nil {
++		return nil, err
++	}
++	defer rows.Close()
++
++	var artists []ArtistResult
++	for rows.Next() {
++		var a ArtistResult
++		if err := rows.Scan(&a.Name, &a.SongCount, &a.AlbumCount); err != nil {
++			return nil, err
++		}
++		artists = append(artists, a)
++	}
++	return artists, rows.Err()
++}
++
++func fastSearchAlbums(d *sql.DB, term string, limit, offset int) ([]AlbumResult, error) {
++	if limit <= 0 {
++		return nil, nil
++	}
++	var rows *sql.Rows
++	var err error
++	if term != "" && ftsAvailable(d) && derivedFTSAvailable(d) {
++		rows, err = d.Query(`
++			SELECT a.name, a.album_path, a.artist, a.genre, a.id, a.song_count, a.total_duration, COALESCE(a.min_date_added, '')
++			FROM albums_fts
++			JOIN albums a ON a.rowid = albums_fts.rowid
++			WHERE albums_fts MATCH ?
++			ORDER BY bm25(albums_fts), a.name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, buildFTSQuery(term), limit, offset)
++	} else if term != "" {
++		pattern := "%" + term + "%"
++		rows, err = d.Query(`
++			SELECT name, album_path, artist, genre, id, song_count, total_duration, COALESCE(min_date_added, '')
++			FROM albums
++			WHERE search_text LIKE ? OR name LIKE ? OR artist LIKE ?
++			ORDER BY name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, pattern, pattern, pattern, limit, offset)
++	} else {
++		rows, err = d.Query(`
++			SELECT name, album_path, artist, genre, id, song_count, total_duration, COALESCE(min_date_added, '')
++			FROM albums
++			ORDER BY name COLLATE NOCASE
++			LIMIT ? OFFSET ?`, limit, offset)
++	}
++	if err != nil {
++		return nil, err
++	}
++	defer rows.Close()
++
++	var albums []AlbumResult
++	for rows.Next() {
++		var a AlbumResult
++		if err := rows.Scan(&a.Name, &a.AlbumPath, &a.Artist, &a.Genre, &a.AlbumID, &a.SongCount, &a.Duration, &a.Created); err != nil {
++			return nil, err
++		}
++		albums = append(albums, a)
++	}
++	return albums, rows.Err()
++}
++
++func fastSearchSongs(d *sql.DB, term string, userID, limit, offset int) ([]SongResult, error) {
++	if limit <= 0 {
++		return nil, nil
++	}
++	if term == "" {
++		return QuerySongs(d, SongQueryOptions{
++			SearchTerm:     term,
++			IncludeStarred: true,
++			IncludeGenre:   true,
++			UserID:         userID,
++			Limit:          limit,
++			Offset:         offset,
++			OrderBy:        "s.artist, s.album, s.title COLLATE NOCASE",
++		})
++	}
++
++	if songSearchFTSAvailable(d) {
++		if len([]rune(term)) == 2 {
++			return fastSearchSongsFromIndexUnranked(d, term, userID, limit, offset)
++		}
++		return fastSearchSongsFromIndex(d, term, userID, limit, offset)
++	}
++
++	if !ftsAvailable(d) {
++		return QuerySongs(d, SongQueryOptions{
++			SearchTerm:     term,
++			IncludeStarred: true,
++			IncludeGenre:   true,
++			UserID:         userID,
++			Limit:          limit,
++			Offset:         offset,
++			OrderBy:        "s.artist, s.album, s.title COLLATE NOCASE",
++		})
++	}
++
++	rows, err := d.Query(`
++		WITH ranked AS (
++			SELECT s.rowid, bm25(songs_fts) AS rank, s.title AS title_sort
++			FROM songs_fts
++			JOIN songs s ON s.rowid = songs_fts.rowid
++			WHERE songs_fts MATCH ? AND s.cancelled = 0
++			ORDER BY rank, title_sort COLLATE NOCASE
++			LIMIT ? OFFSET ?
++		)
++		SELECT s.id, s.title, s.artist, s.album, s.path, s.duration, s.play_count,
++		       s.last_played, COALESCE(s.genre, '') AS genre,
++		       CASE WHEN ss.song_id IS NOT NULL THEN 1 ELSE 0 END AS starred
++		FROM ranked
++		JOIN songs s ON s.rowid = ranked.rowid
++		LEFT JOIN starred_songs ss ON s.id = ss.song_id AND ss.user_id = ?
++		ORDER BY ranked.rank, ranked.title_sort COLLATE NOCASE`, buildFTSQuery(term), limit, offset, userID)
++	if err != nil {
++		return nil, err
++	}
++	defer rows.Close()
++
++	var songs []SongResult
++	for rows.Next() {
++		var s SongResult
++		var title, artist, album, path, lastPlayed, genre sql.NullString
++		var duration, playCount, starred sql.NullInt64
++		if err := rows.Scan(&s.ID, &title, &artist, &album, &path, &duration, &playCount, &lastPlayed, &genre, &starred); err != nil {
++			return nil, err
++		}
++		if title.Valid {
++			s.Title = title.String
++		}
++		if artist.Valid {
++			s.Artist = artist.String
++		}
++		if album.Valid {
++			s.Album = album.String
++		}
++		if path.Valid {
++			s.Path = path.String
++		}
++		if duration.Valid {
++			s.Duration = int(duration.Int64)
++		}
++		if playCount.Valid {
++			s.PlayCount = int(playCount.Int64)
++		}
++		if lastPlayed.Valid {
++			s.LastPlayed = lastPlayed.String
++		}
++		if genre.Valid {
++			s.Genre = genre.String
++		}
++		s.Starred = starred.Valid && starred.Int64 == 1
++		songs = append(songs, s)
++	}
++	return songs, rows.Err()
++}
++
++func fastSearchSongsFromIndex(d *sql.DB, term string, userID, limit, offset int) ([]SongResult, error) {
++	rows, err := d.Query(`
++		WITH ranked AS (
++			SELECT ss.song_rowid, bm25(song_search_fts) AS rank, ss.title AS title_sort
++			FROM song_search_fts
++			JOIN song_search ss ON ss.song_rowid = song_search_fts.rowid
++			WHERE song_search_fts MATCH ?
++			ORDER BY rank, title_sort COLLATE NOCASE
++			LIMIT ? OFFSET ?
++		)
++		SELECT s.id, s.title, s.artist, s.album, s.path, s.duration, s.play_count,
++		       s.last_played, COALESCE(s.genre, '') AS genre,
++		       CASE WHEN st.song_id IS NOT NULL THEN 1 ELSE 0 END AS starred
++		FROM ranked
++		JOIN songs s ON s.rowid = ranked.song_rowid
++		LEFT JOIN starred_songs st ON s.id = st.song_id AND st.user_id = ?
++		ORDER BY ranked.rank, ranked.title_sort COLLATE NOCASE`, buildFTSQuery(term), limit, offset, userID)
++	if err != nil {
++		return nil, err
++	}
++	defer rows.Close()
++	return scanFastSearchSongs(rows)
++}
++
++func fastSearchSongsFromIndexUnranked(d *sql.DB, term string, userID, limit, offset int) ([]SongResult, error) {
++	prefix := strings.ToLower(term) + "%"
++	contains := "%" + strings.ToLower(term) + "%"
++	ftsQuery := buildFTSQuery(term)
++	rows, err := d.Query(`
++		WITH artist_rank AS (
++			SELECT a.name, bm25(artists_fts) AS rank
++			FROM artists_fts
++			JOIN artists a ON a.rowid = artists_fts.rowid
++			WHERE artists_fts MATCH ?
++			ORDER BY rank, a.name COLLATE NOCASE
++			LIMIT 500
++		),
++		song_candidates AS (
++			SELECT
++				ss.song_rowid,
++				ar.rank AS artist_rank,
++				CASE
++					WHEN lower(ss.title) LIKE ? THEN 0
++					WHEN lower(ss.album) LIKE ? THEN 1
++					WHEN lower(ss.artist) LIKE ? THEN 2
++					WHEN lower(ss.album_artist) LIKE ? THEN 3
++					WHEN lower(ss.title) LIKE ? THEN 4
++					WHEN lower(ss.album) LIKE ? THEN 5
++					WHEN lower(ss.artist) LIKE ? THEN 6
++					WHEN lower(ss.album_artist) LIKE ? THEN 7
++					ELSE 8
++				END AS field_priority,
++				ss.artist AS artist_sort,
++				ss.title AS title_sort,
++				ss.album AS album_sort
++			FROM song_search_fts
++			JOIN song_search ss ON ss.song_rowid = song_search_fts.rowid
++			LEFT JOIN artist_rank ar ON ar.name = ss.artist
++			WHERE song_search_fts MATCH ?
++		),
++		ranked AS (
++			SELECT
++				song_rowid,
++				artist_rank,
++				field_priority,
++				artist_sort,
++				title_sort,
++				album_sort
++			FROM song_candidates
++			ORDER BY
++				CASE WHEN artist_rank IS NULL THEN 1 ELSE 0 END,
++				artist_rank,
++				field_priority,
++				artist_sort COLLATE NOCASE,
++				title_sort COLLATE NOCASE,
++				album_sort COLLATE NOCASE
++			LIMIT ? OFFSET ?
++		)
++		SELECT s.id, s.title, s.artist, s.album, s.path, s.duration, s.play_count,
++		       s.last_played, COALESCE(s.genre, '') AS genre,
++		       CASE WHEN st.song_id IS NOT NULL THEN 1 ELSE 0 END AS starred
++		FROM ranked
++		JOIN songs s ON s.rowid = ranked.song_rowid
++		LEFT JOIN starred_songs st ON s.id = st.song_id AND st.user_id = ?
++		ORDER BY
++		         CASE WHEN ranked.artist_rank IS NULL THEN 1 ELSE 0 END,
++		         ranked.artist_rank,
++		         ranked.field_priority,
++		         ranked.artist_sort COLLATE NOCASE,
++		         ranked.title_sort COLLATE NOCASE, ranked.album_sort COLLATE NOCASE`,
++		ftsQuery,
++		prefix, prefix, prefix, prefix,
++		contains, contains, contains, contains,
++		ftsQuery, limit, offset, userID)
++	if err != nil {
++		return nil, err
++	}
++	defer rows.Close()
++	return scanFastSearchSongs(rows)
++}
++
++func scanFastSearchSongs(rows *sql.Rows) ([]SongResult, error) {
++	var songs []SongResult
++	for rows.Next() {
++		var s SongResult
++		var title, artist, album, path, lastPlayed, genre sql.NullString
++		var duration, playCount, starred sql.NullInt64
++		if err := rows.Scan(&s.ID, &title, &artist, &album, &path, &duration, &playCount, &lastPlayed, &genre, &starred); err != nil {
++			return nil, err
++		}
++		if title.Valid {
++			s.Title = title.String
++		}
++		if artist.Valid {
++			s.Artist = artist.String
++		}
++		if album.Valid {
++			s.Album = album.String
++		}
++		if path.Valid {
++			s.Path = path.String
++		}
++		if duration.Valid {
++			s.Duration = int(duration.Int64)
++		}
++		if playCount.Valid {
++			s.PlayCount = int(playCount.Int64)
++		}
++		if lastPlayed.Valid {
++			s.LastPlayed = lastPlayed.String
++		}
++		if genre.Valid {
++			s.Genre = genre.String
++		}
++		s.Starred = starred.Valid && starred.Int64 == 1
++		songs = append(songs, s)
++	}
++	return songs, rows.Err()
++}
++
++// subsonicSearch2 handles the search2 API endpoint (old tag format).
++func subsonicSearch2(c *gin.Context) {
++	results := runFastSubsonicSearch(c)
++	result := SubsonicSearchResult2{
++		Artists: mapArtistsForSearch(results.Artists),
++		Albums:  mapAlbumsForSearch(results.Albums),
++		Songs:   mapSongsForSearch(results.Songs),
++	}
++	response := newSubsonicResponse(&result)
++	subsonicRespond(c, response)
++}
++
++// subsonicSearch3 handles the search3 API endpoint (ID3 tag format).
++func subsonicSearch3(c *gin.Context) {
++	results := runFastSubsonicSearch(c)
++	result := SubsonicSearchResult3{
++		Artists: mapArtistsForSearch(results.Artists),
++		Albums:  mapAlbumsForSearch(results.Albums),
++		Songs:   mapSongsForSearch(results.Songs),
++	}
++	response := newSubsonicResponse(&result)
++	subsonicRespond(c, response)
++}
++
++func mapArtistsForSearch(artists []ArtistResult) []SubsonicArtist {
++	out := make([]SubsonicArtist, 0, len(artists))
++	for _, artist := range artists {
++		artistID := GenerateArtistID(artist.Name)
++		out = append(out, SubsonicArtist{
++			ID:         artistID,
++			Name:       artist.Name,
++			CoverArt:   artistID,
++			AlbumCount: artist.AlbumCount,
++			SongCount:  artist.SongCount,
++		})
++	}
++	return out
++}
++
++func mapAlbumsForSearch(albums []AlbumResult) []SubsonicAlbum {
++	out := make([]SubsonicAlbum, 0, len(albums))
++	for _, album := range albums {
++		artistID := GenerateArtistID(album.Artist)
++		out = append(out, SubsonicAlbum{
++			ID:        album.AlbumID,
++			Name:      album.Name,
++			Artist:    album.Artist,
++			ArtistID:  artistID,
++			Genre:     album.Genre,
++			CoverArt:  album.AlbumID,
++			SongCount: album.SongCount,
++			Duration:  album.Duration,
++			Created:   album.Created,
++		})
++	}
++	return out
++}
++
++func mapSongsForSearch(songs []SongResult) []SubsonicSong {
++	out := make([]SubsonicSong, 0, len(songs))
++	for _, song := range songs {
++		out = append(out, SubsonicSong{
++			ID:         song.ID,
++			Title:      song.Title,
++			Artist:     song.Artist,
++			ArtistID:   GenerateArtistID(song.Artist),
++			Album:      song.Album,
++			Genre:      song.Genre,
++			Duration:   song.Duration,
++			PlayCount:  song.PlayCount,
++			CoverArt:   song.ID,
++			Starred:    song.Starred,
++			LastPlayed: song.LastPlayed,
++		})
++	}
++	return out
++}

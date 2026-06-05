@@ -1,0 +1,150 @@
+--- a/music-server-backend/subsonic_song_metadata.go
++++ b/music-server-backend/subsonic_song_metadata.go
+@@ -1,12 +1,18 @@
+ package main
+ 
+ import (
++	"database/sql"
+ 	"os"
+ 	"path/filepath"
+ 	"strings"
+ )
+ 
+ func subsonicSongFromResult(result SongResult) SubsonicSong {
++	coverArtID := result.ID
++	if albumCoverArtID, ok := resolveAlbumCoverArtIDForSong(result.ID); ok {
++		coverArtID = albumCoverArtID
++	}
++
+ 	s := SubsonicSong{
+ 		ID:         result.ID,
+ 		Title:      result.Title,
+@@ -16,7 +22,7 @@
+ 		Genre:      result.Genre,
+ 		Duration:   result.Duration,
+ 		PlayCount:  result.PlayCount,
+-		CoverArt:   result.ID,
++		CoverArt:   coverArtID,
+ 		Starred:    result.Starred,
+ 		LastPlayed: result.LastPlayed,
+ 	}
+@@ -24,12 +30,51 @@
+ 	return s
+ }
+ 
++func resolveAlbumCoverArtIDForSong(songID string) (string, bool) {
++	if strings.TrimSpace(songID) == "" {
++		return "", false
++	}
++
++	var coverArtID string
++	err := db.QueryRow(`
++		SELECT a.id
++		FROM songs s
++		JOIN albums a
++		  ON a.name = COALESCE(s.album, '')
++		 AND a.album_path = COALESCE(s.album_path, '')
++		WHERE s.id = ?
++		  AND s.cancelled = 0
++		  AND a.id != ''
++		LIMIT 1`, songID).Scan(&coverArtID)
++	if err == nil && strings.TrimSpace(coverArtID) != "" {
++		return coverArtID, true
++	}
++	if err != nil && err != sql.ErrNoRows {
++		return "", false
++	}
++
++	err = db.QueryRow(`
++		SELECT a.id
++		FROM songs s
++		JOIN albums a
++		  ON a.name = COALESCE(s.album, '')
++		WHERE s.id = ?
++		  AND s.cancelled = 0
++		  AND a.id != ''
++		ORDER BY CASE WHEN a.album_path = COALESCE(s.album_path, '') THEN 0 ELSE 1 END
++		LIMIT 1`, songID).Scan(&coverArtID)
++	return coverArtID, err == nil && strings.TrimSpace(coverArtID) != ""
++}
++
+ func enrichSubsonicSong(song *SubsonicSong, path string) {
+ 	if path == "" {
+ 		return
+ 	}
+ 
+ 	song.Path = path
++	if coverArtID, ok := resolveAlbumCoverArtIDForSong(song.ID); ok {
++		song.CoverArt = coverArtID
++	}
+ 
+ 	suffix := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+ 	if suffix != "" {
+--- a/music-server-backend/subsonic_music_handlers.go
++++ b/music-server-backend/subsonic_music_handlers.go
+@@ -1373,17 +1373,30 @@
+ }
+ 
+ func handleAlbumArt(c *gin.Context, songID string, size int) {
++	if serveAlbumArtForSong(c, songID, size, map[string]bool{}) {
++		return
++	}
++
++	log.Printf("[COVER ART] No cover art found for song ID %s", songID)
++	c.Status(http.StatusNotFound)
++}
++
++func serveAlbumArtForSong(c *gin.Context, songID string, size int, visited map[string]bool) bool {
++	if visited[songID] {
++		return false
++	}
++	visited[songID] = true
++
+ 	path, err := QuerySongPath(db, songID)
+ 	if err != nil {
+-		c.Status(http.StatusNotFound)
+-		return
++		return false
+ 	}
+ 	log.Printf("[COVER ART] Found path for song ID %s: %s", songID, path)
+ 
+ 	file, err := os.Open(path)
+ 	if err != nil {
+-		c.Status(http.StatusInternalServerError)
+-		return
++		log.Printf("[COVER ART] Could not open file for song ID %s: %v", songID, err)
++		return false
+ 	}
+ 	defer file.Close()
+ 
+@@ -1394,7 +1407,7 @@
+ 		pic := meta.Picture()
+ 		log.Printf("[COVER ART] Found embedded picture in %s", path)
+ 		resizeAndServeImage(c, bytes.NewReader(pic.Data), pic.MIMEType, size)
+-		return
++		return true
+ 	}
+ 
+ 	albumDir := filepath.Dir(path)
+@@ -1404,12 +1417,18 @@
+ 		if err == nil {
+ 			defer localFile.Close()
+ 			resizeAndServeImage(c, localFile, http.DetectContentType(nil), size)
+-			return
++			return true
+ 		}
+ 	}
+ 
+-	log.Printf("[COVER ART] No cover art found for song ID %s", songID)
+-	c.Status(http.StatusNotFound)
++	if fallbackID, ok := resolveAlbumCoverArtIDForSong(songID); ok && fallbackID != songID {
++		log.Printf("[COVER ART] Falling back from song ID %s to album cover ID %s", songID, fallbackID)
++		if serveAlbumArtForSong(c, fallbackID, size, visited) {
++			return true
++		}
++	}
++
++	return false
+ }
+ 
+ func handleArtistArt(c *gin.Context, artistName string, size int) {

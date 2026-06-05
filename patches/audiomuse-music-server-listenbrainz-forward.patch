@@ -1,0 +1,102 @@
+diff --git a/music-server-backend/subsonic_music_handlers.go b/music-server-backend/subsonic_music_handlers.go
+index 6b66fad..d3b2c25 100644
+--- a/music-server-backend/subsonic_music_handlers.go
++++ b/music-server-backend/subsonic_music_handlers.go
+@@ -909,6 +909,8 @@ func subsonicScrobble(c *gin.Context) {
+ 		if err != nil {
+ 			log.Printf("Error inserting play history for user '%s' on song '%s': %v", user.Username, songID, err)
+ 		}
++
++		forwardListenBrainzScrobble(songID, playedAt)
+ 	}
+ 
+ 	// Keep a lightweight now-playing view for Subsonic clients such as multi-scrobbler.
+@@ -936,6 +938,88 @@ func subsonicScrobble(c *gin.Context) {
+ 	subsonicRespond(c, newSubsonicResponse(nil))
+ }
+ 
++func forwardListenBrainzScrobble(songID string, playedAt time.Time) {
++	endpoint := strings.TrimSpace(os.Getenv("MULTI_SCROBBLER_LISTENBRAINZ_URL"))
++	if endpoint == "" {
++		return
++	}
++
++	var title, artist, album string
++	var duration int
++	err := db.QueryRow(`
++		SELECT title, artist, album, COALESCE(duration, 0)
++		FROM songs
++		WHERE id = ? AND cancelled = 0
++	`, songID).Scan(&title, &artist, &album, &duration)
++	if err != nil {
++		log.Printf("Error querying song '%s' for ListenBrainz forwarding: %v", songID, err)
++		return
++	}
++
++	additionalInfo := map[string]interface{}{
++		"media_player":              "audiomuse-ai-music-server",
++		"submission_client":         "audiomuse-ai-music-server",
++		"submission_client_version": "nix",
++		"origin_url":                "audiomuse-ai-music-server://song/" + songID,
++	}
++	if duration > 0 {
++		additionalInfo["duration"] = duration
++	}
++	if artist != "" {
++		additionalInfo["artist_names"] = []string{artist}
++	}
++
++	trackMetadata := map[string]interface{}{
++		"artist_name":     artist,
++		"track_name":      title,
++		"additional_info": additionalInfo,
++	}
++	if album != "" {
++		trackMetadata["release_name"] = album
++	}
++
++	payload := map[string]interface{}{
++		"listen_type": "single",
++		"payload": []map[string]interface{}{
++			{
++				"listened_at":     playedAt.Unix(),
++				"track_metadata": trackMetadata,
++			},
++		},
++	}
++
++	body, err := json.Marshal(payload)
++	if err != nil {
++		log.Printf("Error encoding ListenBrainz scrobble for song '%s': %v", songID, err)
++		return
++	}
++
++	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
++	if err != nil {
++		log.Printf("Error creating ListenBrainz forwarding request for song '%s': %v", songID, err)
++		return
++	}
++	req.Header.Set("Content-Type", "application/json")
++	if token := strings.TrimSpace(os.Getenv("MULTI_SCROBBLER_LISTENBRAINZ_TOKEN")); token != "" {
++		req.Header.Set("Authorization", "Token "+token)
++	}
++
++	client := &http.Client{Timeout: 5 * time.Second}
++	resp, err := client.Do(req)
++	if err != nil {
++		log.Printf("Error forwarding ListenBrainz scrobble for song '%s': %v", songID, err)
++		return
++	}
++	defer resp.Body.Close()
++	_, _ = io.Copy(io.Discard, resp.Body)
++
++	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
++		log.Printf("ListenBrainz forwarding for song '%s' returned HTTP %d", songID, resp.StatusCode)
++		return
++	}
++	log.Printf("Forwarded ListenBrainz scrobble for song '%s'", songID)
++}
++
+ func subsonicGetNowPlaying(c *gin.Context) {
+ 	now := time.Now()
+ 

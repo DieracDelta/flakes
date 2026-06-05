@@ -161,6 +161,17 @@
     ];
   };
 
+  # Music backup LV on backup-vg.
+  fileSystems."/storage/music-backup" = {
+    device = "/dev/disk/by-label/music-backup";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd"
+      "noatime"
+      "nofail"
+    ];
+  };
+
   # User partitions (btrfs for easy resize + compression)
   fileSystems."/mnt/siraben-ext" = {
     device = "/dev/storage-vg/siraben";

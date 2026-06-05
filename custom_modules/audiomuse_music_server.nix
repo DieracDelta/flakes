@@ -7,6 +7,7 @@
 with lib;
 let
   cfg = config.services.audiomuse-ai-music-server;
+  sqlString = value: replaceStrings [ "'" ] [ "''" ] (toString value);
 in
 {
   options.services.audiomuse-ai-music-server = {
@@ -59,6 +60,28 @@ in
       type = types.nullOr types.path;
       default = null;
       description = "Optional environment file, for example containing AUDIO_MUSE_AI_TOKEN.";
+    };
+
+    listenBrainzForwarding = {
+      enable = mkEnableOption "forward completed scrobbles to a ListenBrainz-compatible endpoint";
+
+      url = mkOption {
+        type = types.str;
+        default = "http://127.0.0.1:${toString config.custom_modules.multi-scrobbler.port}/1/submit-listens";
+        description = "ListenBrainz-compatible submit-listens endpoint for forwarded AudioMuse scrobbles.";
+      };
+
+      token = mkOption {
+        type = types.str;
+        default = "local-multi-scrobbler-listenbrainz";
+        description = "Token sent to the ListenBrainz-compatible endpoint.";
+      };
+
+      tokenFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = "Optional environment file containing the ListenBrainz endpoint token variable.";
+      };
     };
 
     caddy = {
@@ -114,7 +137,38 @@ in
         DATABASE_PATH = "${cfg.dataDir}/music.db";
       } // optionalAttrs (cfg.audiomuseCoreUrl != null) {
         AUDIOMUSE_AI_CORE_URL = cfg.audiomuseCoreUrl;
+      } // optionalAttrs cfg.listenBrainzForwarding.enable {
+        MULTI_SCROBBLER_LISTENBRAINZ_URL = cfg.listenBrainzForwarding.url;
+        MULTI_SCROBBLER_LISTENBRAINZ_TOKEN = cfg.listenBrainzForwarding.token;
       };
+
+      preStart = ''
+        set -euo pipefail
+
+        ${pkgs.sqlite}/bin/sqlite3 "${cfg.dataDir}/music.db" <<'SQL'
+        CREATE TABLE IF NOT EXISTS configuration (
+          key TEXT PRIMARY KEY NOT NULL,
+          value TEXT
+        );
+
+        ${optionalString (cfg.audiomuseCoreUrl != null) ''
+        INSERT INTO configuration (key, value)
+        VALUES ('audiomuse_ai_core_url', '${sqlString cfg.audiomuseCoreUrl}')
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        WHERE configuration.value IS NULL OR length(configuration.value) = 0;
+        ''}
+
+        CREATE TABLE IF NOT EXISTS library_paths (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          path TEXT UNIQUE NOT NULL,
+          song_count INTEGER NOT NULL DEFAULT 0,
+          last_scan_ended TEXT
+        );
+
+        INSERT OR IGNORE INTO library_paths (path)
+        VALUES ('${sqlString cfg.musicDir}');
+        SQL
+      '';
 
       serviceConfig = {
         Type = "simple";
@@ -131,8 +185,10 @@ in
         ProtectHome = true;
         ReadWritePaths = [ cfg.dataDir ];
         ReadOnlyPaths = [ cfg.musicDir ];
-      } // optionalAttrs (cfg.environmentFile != null) {
-        EnvironmentFile = cfg.environmentFile;
+      } // optionalAttrs (cfg.environmentFile != null || (cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null)) {
+        EnvironmentFile =
+          (optional (cfg.environmentFile != null) cfg.environmentFile)
+          ++ (optional (cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null) cfg.listenBrainzForwarding.tokenFile);
       };
     };
 

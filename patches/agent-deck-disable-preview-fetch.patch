@@ -1,8 +1,7 @@
 diff --git a/internal/ui/home.go b/internal/ui/home.go
-index 6529522..d51f444 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -2302,6 +2302,11 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
+@@ -2724,6 +2687,11 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
  	}
  }
  
@@ -14,7 +13,7 @@ index 6529522..d51f444 100644
  // fetchPreviewDebounced returns a command that triggers preview fetch after debounce delay.
  // PERFORMANCE: Prevents rapid subprocess spawning during keyboard navigation.
  func (h *Home) fetchPreviewDebounced(sessionID string, windowIndex int) tea.Cmd {
-@@ -4247,6 +4252,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -4841,6 +4809,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		}
  
  		if msg.remoteName != "" {
@@ -25,7 +24,7 @@ index 6529522..d51f444 100644
  			var cmds []tea.Cmd
  
  			// Preview fetch
-@@ -4273,16 +4282,19 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -4867,16 +4839,19 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  
  		if inst != nil {
  			var cmds []tea.Cmd
@@ -53,7 +52,7 @@ index 6529522..d51f444 100644
  			}
  
  			// Analytics fetch (for Claude/Gemini sessions with analytics enabled)
-@@ -4665,28 +4677,30 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -5288,28 +5263,30 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		// Remote previews use a longer TTL to avoid frequent SSH calls.
  		const remotePreviewCacheTTL = 10 * time.Second
  		var previewCmd tea.Cmd
@@ -102,4 +101,4 @@ index 6529522..d51f444 100644
 +				}
  			}
  		}
- 		cmds := []tea.Cmd{h.tick(), previewCmd, remoteFetchCmd}
+ 		cmds := []tea.Cmd{h.tick(), previewCmd, remoteFetchCmd, remoteLatencyCmd}

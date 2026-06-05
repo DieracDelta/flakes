@@ -1,0 +1,212 @@
+diff --git a/client/api/api.ts b/client/api/api.ts
+index 3bcd31c..b729b90 100644
+--- a/client/api/api.ts
++++ b/client/api/api.ts
+@@ -30,6 +30,18 @@ interface getInterestArgs {
+   track_id: number;
+ }
+ 
++const BASE_URL = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
++
++function apiPath(path: string): string {
++  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) {
++    return path;
++  }
++  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
++  return `${BASE_URL}${normalizedPath}`;
++}
++
++export { apiPath };
++
+ async function handleJson<T>(r: Response): Promise<T> {
+   if (!r.ok) {
+     const err = await r.json();
+@@ -51,7 +63,7 @@ export async function apiFetch<T>(
+     const qs = searchParams.toString();
+     if (qs) url += "?" + qs;
+   }
+-  const r = await fetch(url);
++  const r = await fetch(apiPath(url));
+   return handleJson<T>(r);
+ }
+ 
+@@ -76,7 +88,7 @@ function imageUrl(id: string, size: string) {
+   if (!id) {
+     id = "default";
+   }
+-  return `/image/${size}/${id}`;
++  return apiPath(`/image/${size}/${id}`);
+ }
+ function replaceImage(
+   type: string,
+diff --git a/client/app/components/modals/About.tsx b/client/app/components/modals/About.tsx
+index 3f32166..a5fd012 100644
+--- a/client/app/components/modals/About.tsx
++++ b/client/app/components/modals/About.tsx
+@@ -27,7 +27,7 @@ export default function About() {
+       <div className="w-full bg p-6 rounded-sm flex flex-col items-center gap-4">
+         <div className="inline-flex items-center">
+           <img
+-            src="/web-app-manifest-192x192.png"
++            src={`${import.meta.env.BASE_URL}web-app-manifest-192x192.png`}
+             alt="koito logo"
+             style={{ width: 70 }}
+           />
+diff --git a/client/app/entry.client.tsx b/client/app/entry.client.tsx
+index 08ab4ec..426ca02 100644
+--- a/client/app/entry.client.tsx
++++ b/client/app/entry.client.tsx
+@@ -1,3 +1,4 @@
++import "./subpath";
+ import { startTransition, StrictMode } from "react";
+ import { hydrateRoot } from "react-dom/client";
+ import { HydratedRouter } from "react-router/dom";
+diff --git a/client/app/root.tsx b/client/app/root.tsx
+index 45011c6..e09792d 100644
+--- a/client/app/root.tsx
++++ b/client/app/root.tsx
+@@ -59,18 +59,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
+         <link
+           rel="icon"
+           type="image/png"
+-          href="/favicon-96x96.png"
++          href={`${import.meta.env.BASE_URL}favicon-96x96.png`}
+           sizes="96x96"
+         />
+-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+-        <link rel="shortcut icon" href="/favicon.ico" />
++        <link
++          rel="icon"
++          type="image/svg+xml"
++          href={`${import.meta.env.BASE_URL}favicon.svg`}
++        />
++        <link rel="shortcut icon" href={`${import.meta.env.BASE_URL}favicon.ico`} />
+         <link
+           rel="apple-touch-icon"
+           sizes="180x180"
+-          href="/apple-touch-icon.png"
++          href={`${import.meta.env.BASE_URL}apple-touch-icon.png`}
+         />
+         <meta name="apple-mobile-web-app-title" content="Koito" />
+-        <link rel="manifest" href="/site.webmanifest" />
++        <link rel="manifest" href={`${import.meta.env.BASE_URL}site.webmanifest`} />
+         <Meta />
+         <Links />
+       </head>
+diff --git a/client/app/subpath.ts b/client/app/subpath.ts
+new file mode 100644
+index 0000000..e0fad1c
+--- /dev/null
++++ b/client/app/subpath.ts
+@@ -0,0 +1,39 @@
++const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
++const koitoRootPaths = ["/apis/", "/image/", "/images/"];
++
++function shouldPrefix(path: string): boolean {
++  return koitoRootPaths.some((rootPath) => path.startsWith(rootPath));
++}
++
++function withBasePath(path: string): string {
++  if (!basePath || !shouldPrefix(path)) {
++    return path;
++  }
++  if (path === basePath || path.startsWith(`${basePath}/`)) {
++    return path;
++  }
++  return `${basePath}${path}`;
++}
++
++if (typeof window !== "undefined") {
++  const nativeFetch = window.fetch.bind(window);
++
++  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
++    if (typeof input === "string") {
++      return nativeFetch(withBasePath(input), init);
++    }
++
++    if (input instanceof URL && input.origin === window.location.origin) {
++      input = new URL(withBasePath(input.pathname) + input.search + input.hash, input.origin);
++      return nativeFetch(input, init);
++    }
++
++    if (input instanceof Request && input.url.startsWith(window.location.origin)) {
++      const url = new URL(input.url);
++      const nextUrl = new URL(withBasePath(url.pathname) + url.search + url.hash, url.origin);
++      input = new Request(nextUrl, input);
++    }
++
++    return nativeFetch(input, init);
++  };
++}
+diff --git a/internal/catalog/images.go b/internal/catalog/images.go
+index 808f8dd..1fb8594 100644
+--- a/internal/catalog/images.go
++++ b/internal/catalog/images.go
+@@ -178,12 +178,16 @@ func BuildImageList(imageid *uuid.UUID) models.ImageList {
+ 	if imageid == nil || *imageid == uuid.Nil {
+ 		imageid = &uuid.Nil
+ 	}
++	imageUrl := func(size imagecache.ImageSize) string {
++		return fmt.Sprintf("%s/image/%s/%s.webp", cfg.PublicBasePath(), imageid.String(), size)
++	}
++
+ 	return models.ImageList{
+-		XS:     fmt.Sprintf("/image/%s/%s.webp", imageid.String(), imagecache.ImageSizeXS),
+-		Small:  fmt.Sprintf("/image/%s/%s.webp", imageid.String(), imagecache.ImageSizeSmall),
+-		Medium: fmt.Sprintf("/image/%s/%s.webp", imageid.String(), imagecache.ImageSizeMedium),
+-		Large:  fmt.Sprintf("/image/%s/%s.webp", imageid.String(), imagecache.ImageSizeLarge),
+-		XL:     fmt.Sprintf("/image/%s/%s.webp", imageid.String(), imagecache.ImageSizeXL),
++		XS:     imageUrl(imagecache.ImageSizeXS),
++		Small:  imageUrl(imagecache.ImageSizeSmall),
++		Medium: imageUrl(imagecache.ImageSizeMedium),
++		Large:  imageUrl(imagecache.ImageSizeLarge),
++		XL:     imageUrl(imagecache.ImageSizeXL),
+ 	}
+ }
+ 
+diff --git a/internal/cfg/cfg.go b/internal/cfg/cfg.go
+index 57353e9..14baf8d 100644
+--- a/internal/cfg/cfg.go
++++ b/internal/cfg/cfg.go
+@@ -50,6 +50,7 @@ const (
+ 	ARTIST_SEPARATORS_ENV          = "KOITO_ARTIST_SEPARATORS_REGEX"
+ 	LOGIN_GATE_ENV                 = "KOITO_LOGIN_GATE"
+ 	FORCE_TZ                       = "KOITO_FORCE_TZ"
++	PUBLIC_BASE_PATH_ENV           = "KOITO_PUBLIC_BASE_PATH"
+ )
+ 
+ type config struct {
+@@ -89,6 +90,7 @@ type config struct {
+ 	artistSeparators       []*regexp.Regexp
+ 	loginGate              bool
+ 	forceTZ                *time.Location
++	publicBasePath         string
+ }
+ 
+ var (
+@@ -197,6 +199,11 @@ func loadConfig(getenv func(string) string, version string) (*config, error) {
+ 		cfg.configDir = "/etc/koito"
+ 	}
+ 
++	cfg.publicBasePath = strings.TrimRight(getenv(PUBLIC_BASE_PATH_ENV), "/")
++	if cfg.publicBasePath == "/" {
++		cfg.publicBasePath = ""
++	}
++
+ 	rawHosts := getenv(ALLOWED_HOSTS_ENV)
+ 	cfg.allowedHosts = strings.Split(rawHosts, ",")
+ 	cfg.allowAllHosts = cfg.allowedHosts[0] == "*"
+diff --git a/internal/cfg/getters.go b/internal/cfg/getters.go
+index b095ea6..b56792c 100644
+--- a/internal/cfg/getters.go
++++ b/internal/cfg/getters.go
+@@ -204,3 +204,9 @@ func ForceTZ() *time.Location {
+ 	defer lock.RUnlock()
+ 	return globalConfig.forceTZ
+ }
++
++func PublicBasePath() string {
++	lock.RLock()
++	defer lock.RUnlock()
++	return globalConfig.publicBasePath
++}

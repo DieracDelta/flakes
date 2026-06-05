@@ -11,6 +11,7 @@ let
   cfg = config.custom_modules.music;
   musicLibraryDir = "/var/lib/musiclibrary";
   mediaGroup = "jellyfin";
+  sqlString = value: replaceStrings [ "'" ] [ "''" ] (toString value);
 in
 {
   options.custom_modules.music.enable = mkOption {
@@ -39,19 +40,47 @@ in
     services.audiomuse-ai.enable = true;
     services.audiomuse-ai.musicDir = "/var/lib/musiclibrary";
     services.audiomuse-ai.environmentFile = "/var/lib/audiomuse-ai/.env";
+    services.audiomuse-ai.analysis.perSongModelReload = false;
 
     # AudioMuse-AI MusicServer - Open Subsonic-compatible server and web UI
     services.audiomuse-ai-music-server = {
       enable = true;
-      musicDir = "/var/lib/musiclibrary";
+      musicDir = "/storage/media/musiclibrary";
       environmentFile = "/var/lib/audiomuse-ai/.env";
       audiomuseCoreUrl = "http://127.0.0.1:${toString config.services.audiomuse-ai.port}";
+      listenBrainzForwarding.enable = config.custom_modules.multi-scrobbler.listenBrainzEndpoint.enable;
     };
+    environment.systemPackages = [
+      pkgs.audiomuse-ai-music-server-import-koito-history
+    ];
 
     services.navidrome.settings.BaseUrl = "/navidrome";
+    services.navidrome.settings."ListenBrainz.Enabled" = true;
+    services.navidrome.settings."ListenBrainz.BaseURL" = "http://127.0.0.1:${toString config.custom_modules.multi-scrobbler.port}/1/";
     services.navidrome.settings.Plugins.Enabled = true;
     services.navidrome.settings.Plugins.Folder = "${config.services.navidrome.package}/share/plugins";
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
+    systemd.services.navidrome.preStart = mkIf config.custom_modules.multi-scrobbler.listenBrainzEndpoint.enable ''
+      set -euo pipefail
+
+      db=/var/lib/navidrome/navidrome.db
+      if [ ! -f "$db" ]; then
+        exit 0
+      fi
+
+      tables="$(${pkgs.sqlite}/bin/sqlite3 "$db" "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN ('user', 'user_props');")"
+      if [ "$tables" != "2" ]; then
+        exit 0
+      fi
+
+      ${pkgs.sqlite}/bin/sqlite3 "$db" <<'SQL'
+      INSERT INTO user_props (user_id, key, value)
+      SELECT id, 'ListenBrainzSessionKey', '${sqlString config.custom_modules.multi-scrobbler.listenBrainzEndpoint.token}'
+      FROM "user"
+      WHERE true
+      ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value;
+      SQL
+    '';
 
     services.jellyfin.enable = false;
     users.groups.jellyfin = { };

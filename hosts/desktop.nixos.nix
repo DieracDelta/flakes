@@ -520,6 +520,10 @@ in
     enable = true;
     port = 9078;
     baseUrl = "https://office-desktop.tail5ca7.ts.net/scrobbler";
+    listenBrainzEndpoint = {
+      enable = true;
+      token = "local-multi-scrobbler-listenbrainz";
+    };
   };
 
   services.openstreetmap = {
