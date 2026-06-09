@@ -1043,7 +1043,7 @@ let
     src = "${audiomuse-ai-music-server-src}/music-server-frontend";
 
     npmDepsHash = "sha256-K/MxewrLTNrLJnrRS4AXzqTzLhH46KIOr6KEvr1bhnY=";
-    nodejs = final.nodejs_22;
+    nodejs = final.nodejs;
 
     postPatch = ''
       cp ${./audiomuse-music-server-frontend-package-lock.json} package-lock.json
@@ -2201,20 +2201,20 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
     };
   };
 
-  multi-scrobbler = final.buildNpmPackage {
+  multi-scrobbler = (final.buildNpmPackage.override { nodejs = final.nodejs; }) {
     pname = "multi-scrobbler";
-    version = "0.10.8-subpath";
+    version = "0.14.1-subpath";
 
     src = final.fetchFromGitHub {
-      owner = "DieracDelta";
+      owner = "FoxxMD";
       repo = "multi-scrobbler";
-      rev = "jr/multi-scrobbler";
-      hash = "sha256-GOBOFOqKQq9PMtvZI+0GSHmRn1eDIsgguhWQE6jJTkc=";
+      rev = "1b1770ff297f77f0a8159794f27f3452aac94cd6";
+      hash = "sha256-WrNheETW6snvtitL2IOcOQWBZgfLOIPO/x5Y8Q6lmTc=";
     };
 
-    npmDepsHash = "sha256-bmxtrQ7qEi/3dz2KTkqG4r90ohxYDKTRYsxmCux6UEg=";
+    npmDepsHash = "sha256-K6zKmkjoBcshZ9mWeM1BiBFtM8/ekf9A1S1xwJ/p7PA=";
 
-    nodejs = final.nodejs_22;
+    nodejs = final.nodejs;
 
     # Subpath deployment - set base URL for frontend build
     # Multi-scrobbler's vite.config.ts reads BASE_URL and sets Vite's `base` option
@@ -2228,17 +2228,10 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
             substituteInPlace vite.config.ts \
               --replace-fail 'baseUrlStr = baseUrl.toString();' 'baseUrlStr = baseUrl.pathname + "/";'
 
-            # Skip runtime schema generation - schemas are pre-generated and ts-json-schema-generator
-            # fails in Nix runtime because it requires TypeScript type checking
-            substituteInPlace src/backend/index.ts \
-              --replace-fail "initLogger.info('Generating schema definitions...');" "// Schema generation skipped - using pre-generated schemas" \
-              --replace-fail "createVegaGenerator()" "// createVegaGenerator() - skipped" \
-              --replace-fail "initLogger.info('Schema definitions generated');" "// Schema definitions loaded from pre-generated files"
-
             # Fix static file serving - serve dist directly instead of relying on ViteExpress
             substituteInPlace src/backend/server/index.ts \
-              --replace-fail "//app.use(express.static(buildDir));" "app.use(express.static(path.resolve(projectDir, 'dist')));"
-
+              --replace-fail "//app.use(express.static(buildDir));" "app.use('/assets', express.static(path.resolve(projectDir, 'dist/assets'), { fallthrough: false }));
+        app.use(express.static(path.resolve(projectDir, 'dist')));"
             # Don't let ViteExpress override the base path at runtime - we handle it at build time
             # This ensures Caddy can strip /scrobbler/ prefix and Express serves at /
             substituteInPlace src/backend/server/index.ts \
@@ -2291,7 +2284,7 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
       cat > $out/bin/multi-scrobbler <<EOF
       #!${final.runtimeShell}
       cd $out/lib/multi-scrobbler
-      exec ${final.nodejs_22}/bin/node --import tsx src/backend/index.ts "\$@"
+      exec ${final.nodejs}/bin/node --import tsx src/backend/index.ts "\$@"
       EOF
       chmod +x $out/bin/multi-scrobbler
 

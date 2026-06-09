@@ -105,8 +105,12 @@
     port = 2022;
   };
 
-  # Open firewall for ET (not opened automatically by the service module)
-  networking.firewall.allowedTCPPorts = [ 2022 ];
+  # Open firewall for HTTP(S) and ET (not opened automatically by the service module)
+  networking.firewall.allowedTCPPorts = [
+    80
+    443
+    2022
+  ];
   # WeebTogether game server (UDP)
   networking.firewall.allowedUDPPorts = [ 7777 ];
 
@@ -114,6 +118,20 @@
   # Tailscale Funnel handles HTTPS termination, Caddy listens locally
   services.caddy = {
     enable = true;
+    virtualHosts."ironmain.dev" = {
+      extraConfig = ''
+        bind 10.0.1.206
+        root * ${../ironmain_website}
+        encode zstd gzip
+        file_server
+      '';
+    };
+    virtualHosts."www.ironmain.dev" = {
+      extraConfig = ''
+        bind 10.0.1.206
+        redir https://ironmain.dev{uri}
+      '';
+    };
     virtualHosts.":8080" = {
       extraConfig = ''
         # Gonic music server

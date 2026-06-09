@@ -165,7 +165,28 @@ in
       };
 
       preStart =
-        optionalString listenBrainzEndpoint.enable ''
+        ''
+          set -euo pipefail
+
+          app_cfg_file=${stateDir}/config.json
+          app_base_file=$(mktemp)
+          app_tmp_file=$(mktemp)
+
+          cleanup_app_config() {
+            rm -f "$app_base_file" "$app_tmp_file"
+          }
+          trap cleanup_app_config EXIT
+
+          if [ -s "$app_cfg_file" ]; then
+            jq 'if type == "object" then . else {} end' "$app_cfg_file" > "$app_base_file"
+          else
+            printf '{}\n' > "$app_base_file"
+          fi
+
+          jq '.logging = ((.logging // {}) + { file: false })' "$app_base_file" > "$app_tmp_file"
+          install -m 0600 "$app_tmp_file" "$app_cfg_file"
+        ''
+        + optionalString listenBrainzEndpoint.enable ''
           set -euo pipefail
 
           cfg_file=${stateDir}/endpointlz.json
