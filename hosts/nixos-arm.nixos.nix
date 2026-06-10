@@ -4,9 +4,12 @@
 {
   imports = [
     ./hw/oci_arm.nix
+    ../custom_modules/mailserver.nix
   ];
 
   system.stateVersion = "25.11";
+
+  custom_modules.mailserver.enable = true;
 
   # Disable documentation to reduce closure size
   documentation.enable = false;
@@ -105,10 +108,14 @@
     port = 2022;
   };
 
-  # Open firewall for HTTP(S) and ET (not opened automatically by the service module)
+  # Open firewall for HTTP(S), mail, and ET (not opened automatically by the service module)
   networking.firewall.allowedTCPPorts = [
+    25
     80
     443
+    465
+    587
+    993
     2022
   ];
   # WeebTogether game server (UDP)

@@ -47,6 +47,8 @@ let
       };
     }
     inputs.bpftop.nixosModules.default
+    ../custom_modules/mailserver-no-rspamd.nix
+    inputs.simple-nixos-mailserver.nixosModules.default
     # inputs.nix-btm.nixosModules.default
   ];
 
