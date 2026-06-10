@@ -7,7 +7,9 @@ let
     (name: fileType:
       (fileType == "regular") &&
       (hasSuffix ".nix" name)
-      && (name != "default.nix"))
+      && (name != "default.nix")
+      && (name != "mailserver.nix")
+      && (name != "mailserver-no-rspamd.nix"))
     (readDir ./.);
   fullyQualifiedFiles = (mapAttrsToList (name: _v: ./. + (concatStrings [ "/" name ]))) dirs;
 in
