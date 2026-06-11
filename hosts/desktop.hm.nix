@@ -1,5 +1,7 @@
 { ... }:
 {
+  imports = [ ../home/rmux.nix ];
+
   profiles = {
     emacs.enable = true;
     dev.enable = true;
