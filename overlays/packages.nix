@@ -1785,6 +1785,8 @@ tmuxOverlay
       ../patches/agent-deck-remove-csiureader.patch
       ../patches/agent-deck-add-psi.patch
       ../patches/agent-deck-disable-preview-fetch.patch
+      ../patches/agent-deck-disable-preview-generation.patch
+      ../patches/agent-deck-disable-menu-polling.patch
     ];
 
     postPatch = ''

@@ -1,0 +1,590 @@
+diff --git a/internal/ui/home.go b/internal/ui/home.go
+index c298787..faca920 100644
+--- a/internal/ui/home.go
++++ b/internal/ui/home.go
+@@ -85,6 +85,11 @@ const (
+ 	// At 2s: 2-5 CapturePane() calls/sec = minimal CPU overhead
+ 	tickInterval = 2 * time.Second
+ 
++	// sessionListOnlyMode keeps the TUI focused on session selection. It disables
++	// background listeners, status polling, previews, remote refreshes, update
++	// checks, and attach-return probes that are not needed to switch sessions.
++	sessionListOnlyMode = true
++
+ 	// logOutputDebounce limits how often a single session can trigger
+ 	// UpdateStatus() from tmux %output events.
+ 	// A higher value avoids expensive status parsing loops for very chatty sessions
+@@ -1063,7 +1068,7 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	// Initialize notification manager if enabled in config and tmux status injection is allowed.
+ 	// All instances manage the notification bar (they share SQLite state, so produce identical output)
+ 	notifSettings := session.GetNotificationsSettings()
+-	if notifSettings.Enabled && h.manageTmuxNotifications {
++	if !sessionListOnlyMode && notifSettings.Enabled && h.manageTmuxNotifications {
+ 		h.notificationsEnabled = true
+ 		h.notificationManager = session.NewNotificationManager(notifSettings.MaxShown, notifSettings.ShowAll, notifSettings.Minimal)
+ 
+@@ -1077,66 +1082,70 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	// This is unconditional — the status-right always shows the detach hint
+ 	_ = tmux.BindMouseStatusRightDetach()
+ 
+-	// Initialize event-driven status detection
+-	// Output callback: invoked when PipeManager detects %output from a session
+-	outputCallback := func(sessionName string) {
+-		h.instancesMu.RLock()
+-		for _, inst := range h.instances {
+-			if inst.GetTmuxSession() != nil && inst.GetTmuxSession().Name == sessionName {
+-				h.logActivityMu.Lock()
+-				lastUpdate := h.lastLogActivity[inst.ID]
+-				if time.Since(lastUpdate) < logOutputDebounce {
++	if sessionListOnlyMode {
++		close(h.statusWorkerDone)
++	} else {
++		// Initialize event-driven status detection
++		// Output callback: invoked when PipeManager detects %output from a session
++		outputCallback := func(sessionName string) {
++			h.instancesMu.RLock()
++			for _, inst := range h.instances {
++				if inst.GetTmuxSession() != nil && inst.GetTmuxSession().Name == sessionName {
++					h.logActivityMu.Lock()
++					lastUpdate := h.lastLogActivity[inst.ID]
++					if time.Since(lastUpdate) < logOutputDebounce {
++						h.logActivityMu.Unlock()
++						break
++					}
++					h.lastLogActivity[inst.ID] = time.Now()
+ 					h.logActivityMu.Unlock()
+-					break
+-				}
+-				h.lastLogActivity[inst.ID] = time.Now()
+-				h.logActivityMu.Unlock()
+ 
+-				select {
+-				case h.logUpdateChan <- inst:
+-				default:
++					select {
++					case h.logUpdateChan <- inst:
++					default:
++					}
++					break
+ 				}
+-				break
+ 			}
++			h.instancesMu.RUnlock()
+ 		}
+-		h.instancesMu.RUnlock()
+-	}
+ 
+-	// Control mode pipes: event-driven, zero-subprocess status detection
+-	pm := tmux.NewPipeManager(h.ctx, outputCallback)
++		// Control mode pipes: event-driven, zero-subprocess status detection
++		pm := tmux.NewPipeManager(h.ctx, outputCallback)
+ 
+-	// Window change callback: refresh window cache immediately when tabs are added/closed
+-	pm.SetWindowChangeCallback(func() {
+-		tmux.RefreshSessionCache()
+-	})
++		// Window change callback: refresh window cache immediately when tabs are added/closed
++		pm.SetWindowChangeCallback(func() {
++			tmux.RefreshSessionCache()
++		})
+ 
+-	tmux.SetPipeManager(pm)
++		tmux.SetPipeManager(pm)
+ 
+-	// Connect pipes for all existing running sessions in background
+-	safego.Go(pipeUILog, "startup_pipe_connect", func() {
+-		time.Sleep(500 * time.Millisecond) // Let TUI render first
+-		h.instancesMu.RLock()
+-		instances := make([]*session.Instance, len(h.instances))
+-		copy(instances, h.instances)
+-		h.instancesMu.RUnlock()
++		// Connect pipes for all existing running sessions in background
++		safego.Go(pipeUILog, "startup_pipe_connect", func() {
++			time.Sleep(500 * time.Millisecond) // Let TUI render first
++			h.instancesMu.RLock()
++			instances := make([]*session.Instance, len(h.instances))
++			copy(instances, h.instances)
++			h.instancesMu.RUnlock()
+ 
+-		for _, inst := range instances {
+-			if ts := inst.GetTmuxSession(); ts != nil && ts.Exists() {
+-				if err := pm.Connect(ts.Name, inst.TmuxSocketName); err != nil {
+-					pipeUILog.Debug("startup_pipe_connect_failed",
+-						slog.String("session", ts.Name),
+-						slog.String("error", err.Error()))
++			for _, inst := range instances {
++				if ts := inst.GetTmuxSession(); ts != nil && ts.Exists() {
++					if err := pm.Connect(ts.Name, inst.TmuxSocketName); err != nil {
++						pipeUILog.Debug("startup_pipe_connect_failed",
++							slog.String("session", ts.Name),
++							slog.String("error", err.Error()))
++					}
+ 				}
+ 			}
+-		}
+-		pipeUILog.Debug("startup_pipes_connected", slog.Int("count", pm.ConnectedCount()))
+-	})
++			pipeUILog.Debug("startup_pipes_connected", slog.Int("count", pm.ConnectedCount()))
++		})
+ 
+-	// Start background status worker (Priority 1C)
+-	go h.statusWorker()
++		// Start background status worker (Priority 1C)
++		go h.statusWorker()
+ 
+-	// Start log worker pool (Priority 2)
+-	h.startLogWorkers()
++		// Start log worker pool (Priority 2)
++		h.startLogWorkers()
++	}
+ 
+ 	// Initialize global search
+ 	// DISABLED: Global search opens 884+ directory watchers and loads 4.4 GB of JSONL
+@@ -1162,7 +1171,7 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	// Initialize storage watcher for auto-reload
+ 	// Polls SQLite metadata for external changes (CLI commands, other instances)
+ 	// and triggers reload with state preservation
+-	if storage != nil {
++	if !sessionListOnlyMode && storage != nil {
+ 		watcher, err := NewStorageWatcher(storage.GetDB())
+ 		if err != nil {
+ 			uiLog.Warn("storage_watcher_init_failed", slog.String("error", err.Error()))
+@@ -1174,7 +1183,7 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 
+ 	// Hook-based status detection (Claude Code lifecycle hooks)
+ 	userConfig, _ := session.LoadUserConfig()
+-	hooksEnabled := userConfig == nil || userConfig.Claude.GetHooksEnabled()
++	hooksEnabled := !sessionListOnlyMode && (userConfig == nil || userConfig.Claude.GetHooksEnabled())
+ 	if hooksEnabled {
+ 		configDir := session.GetClaudeConfigDir()
+ 		alreadyInstalled := session.CheckClaudeHooksInstalled(configDir)
+@@ -1222,26 +1231,28 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	// No user prompt needed — config.yaml is Hermes's own config file, not a
+ 	// shared settings file. The shared hook watcher (h.hookWatcher) covers all
+ 	// tools, so start it here if Claude hooks didn't already start it.
+-	if hermesCmd := strings.TrimSpace(session.GetToolCommand("hermes")); hermesCmd != "" {
+-		// GetToolCommand may return a full command string with arguments
+-		// (e.g. "hermes --gateway-url=..."). LookPath needs the binary name only.
+-		// Trim first because Fields("") and Fields("   ") both return [], and
+-		// indexing [0] on an empty slice panics.
+-		if hermesFields := strings.Fields(hermesCmd); len(hermesFields) > 0 {
+-			hermesBin := hermesFields[0]
+-			if _, err := exec.LookPath(hermesBin); err == nil {
+-				hermesConfigDir := session.GetHermesConfigDir()
+-				if !session.CheckHermesHooksInstalled(hermesConfigDir) {
+-					if _, err := session.InjectHermesHooks(hermesConfigDir); err != nil {
+-						uiLog.Warn("hermes_hooks_inject_failed", slog.String("error", err.Error()))
+-					} else {
+-						uiLog.Info("hermes_hooks_installed", slog.String("config_dir", hermesConfigDir))
++	if !sessionListOnlyMode {
++		if hermesCmd := strings.TrimSpace(session.GetToolCommand("hermes")); hermesCmd != "" {
++			// GetToolCommand may return a full command string with arguments
++			// (e.g. "hermes --gateway-url=..."). LookPath needs the binary name only.
++			// Trim first because Fields("") and Fields("   ") both return [], and
++			// indexing [0] on an empty slice panics.
++			if hermesFields := strings.Fields(hermesCmd); len(hermesFields) > 0 {
++				hermesBin := hermesFields[0]
++				if _, err := exec.LookPath(hermesBin); err == nil {
++					hermesConfigDir := session.GetHermesConfigDir()
++					if !session.CheckHermesHooksInstalled(hermesConfigDir) {
++						if _, err := session.InjectHermesHooks(hermesConfigDir); err != nil {
++							uiLog.Warn("hermes_hooks_inject_failed", slog.String("error", err.Error()))
++						} else {
++							uiLog.Info("hermes_hooks_installed", slog.String("config_dir", hermesConfigDir))
++						}
+ 					}
+-				}
+-				if h.hookWatcher == nil {
+-					if hookWatcher, err := session.NewStatusFileWatcher(nil); err == nil {
+-						h.hookWatcher = hookWatcher
+-						go hookWatcher.Start()
++					if h.hookWatcher == nil {
++						if hookWatcher, err := session.NewStatusFileWatcher(nil); err == nil {
++							h.hookWatcher = hookWatcher
++							go hookWatcher.Start()
++						}
+ 					}
+ 				}
+ 			}
+@@ -1249,7 +1260,7 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	}
+ 
+ 	// Start system theme watcher if configured
+-	if session.GetTheme() == "system" {
++	if !sessionListOnlyMode && session.GetTheme() == "system" {
+ 		h.themeWatcher = NewThemeWatcher(ctx)
+ 	}
+ 
+@@ -1258,10 +1269,12 @@ func NewHomeWithProfileAndMode(profile string) *Home {
+ 	// Also initializes lastLogMaintenance and lastLogCheck so periodic checks start from now
+ 	h.lastLogMaintenance = time.Now()
+ 	h.lastLogCheck = time.Now()
+-	safego.Go(uiLog, "startup_log_maintenance", func() {
+-		logSettings := session.GetLogSettings()
+-		tmux.RunLogMaintenance(logSettings.MaxSizeMB, logSettings.MaxLines, logSettings.RemoveOrphans)
+-	})
++	if !sessionListOnlyMode {
++		safego.Go(uiLog, "startup_log_maintenance", func() {
++			logSettings := session.GetLogSettings()
++			tmux.RunLogMaintenance(logSettings.MaxSizeMB, logSettings.MaxLines, logSettings.RemoveOrphans)
++		})
++	}
+ 
+ 	// v1.7.60: one-shot nav-discoverability hint. Reuses the maintenance-banner
+ 	// slot so no extra layout math is needed. Dismisses via the existing ESC
+@@ -1649,6 +1662,33 @@ func (h *Home) rebuildFlatItems() {
+ 	h.jumpBuffer = ""
+ 
+ 	allItems := h.groupTree.Flatten()
++	if sessionListOnlyMode {
++		groupsOnly := make([]session.Item, 0, len(allItems))
++		for _, item := range allItems {
++			if item.Type == session.ItemTypeGroup {
++				groupsOnly = append(groupsOnly, item)
++			}
++		}
++		h.flatItems = groupsOnly
++
++		rootNum := 0
++		for i := range h.flatItems {
++			if h.flatItems[i].Type == session.ItemTypeGroup && h.flatItems[i].Level == 0 {
++				rootNum++
++				h.flatItems[i].RootGroupNum = rootNum
++			}
++		}
++
++		h.lastClickIndex = -1
++		if h.cursor >= len(h.flatItems) {
++			h.cursor = len(h.flatItems) - 1
++		}
++		if h.cursor < 0 {
++			h.cursor = 0
++		}
++		h.syncViewport()
++		return
++	}
+ 
+ 	// Apply status filter if active
+ 	if h.statusFilter != "" {
+@@ -1808,6 +1848,29 @@ func (h *Home) syncViewport() {
+ 		h.viewOffset = 0
+ 		return
+ 	}
++	if sessionListOnlyMode {
++		maxVisible := h.height - 2
++		if maxVisible < 1 {
++			maxVisible = 1
++		}
++		if h.cursor < h.viewOffset {
++			h.viewOffset = h.cursor
++		}
++		if h.cursor >= h.viewOffset+maxVisible {
++			h.viewOffset = h.cursor - maxVisible + 1
++		}
++		maxOffset := len(h.flatItems) - maxVisible
++		if maxOffset < 0 {
++			maxOffset = 0
++		}
++		if h.viewOffset > maxOffset {
++			h.viewOffset = maxOffset
++		}
++		if h.viewOffset < 0 {
++			h.viewOffset = 0
++		}
++		return
++	}
+ 
+ 	// Calculate visible height for session list
+ 	// MUST match the calculation in View() exactly!
+@@ -2042,31 +2105,36 @@ func (h *Home) Init() tea.Cmd {
+ 	}
+ 
+ 	// Start system stats collection
+-	if h.sysStatsCollector != nil {
++	if !sessionListOnlyMode && h.sysStatsCollector != nil {
+ 		h.sysStatsCollector.Start()
+ 	}
+ 
+ 	cmds := []tea.Cmd{
+ 		h.loadSessions,
+-
+-		h.tick(),
+-		h.reviverTick(),
+-		h.checkForUpdate(),
+-		h.fetchRemoteSessions,
++	}
++	if !sessionListOnlyMode {
++		cmds = append(cmds,
++			h.tick(),
++			h.reviverTick(),
++			h.checkForUpdate(),
++			h.fetchRemoteSessions,
++		)
+ 	}
+ 
+ 	// Start listening for storage changes
+-	if h.storageWatcher != nil {
++	if !sessionListOnlyMode && h.storageWatcher != nil {
+ 		cmds = append(cmds, listenForReloads(h.storageWatcher))
+ 	}
+ 
+ 	// Start listening for OS theme changes
+-	if h.themeWatcher != nil {
++	if !sessionListOnlyMode && h.themeWatcher != nil {
+ 		cmds = append(cmds, listenForThemeChange(h.themeWatcher))
+ 	}
+ 
+ 	// Start watcher engine (D-07: lifecycle tied to TUI startup)
+-	cmds = append(cmds, h.startWatcherEngine())
++	if !sessionListOnlyMode {
++		cmds = append(cmds, h.startWatcherEngine())
++	}
+ 
+ 	return tea.Batch(cmds...)
+ }
+@@ -2441,7 +2509,7 @@ func (h *Home) loadSessions() tea.Msg {
+ 
+ 	// Initialize pool AFTER sessions are loaded
+ 	userConfig, configErr := session.LoadUserConfig()
+-	if configErr == nil && userConfig != nil && userConfig.MCPPool.Enabled {
++	if !sessionListOnlyMode && configErr == nil && userConfig != nil && userConfig.MCPPool.Enabled {
+ 		pool, poolErr := session.InitializeGlobalPool(h.ctx, userConfig, instances)
+ 		if poolErr != nil {
+ 			mcpUILog.Warn("pool_init_failed", slog.String("error", poolErr.Error()))
+@@ -2848,6 +2916,9 @@ func (h *Home) selectedRemotePreviewTarget() (string, string, string, bool) {
+ // fetchSelectedPreview debounces a preview fetch for the currently selected item.
+ // Handles both session and window items transparently.
+ func (h *Home) fetchSelectedPreview() tea.Cmd {
++	if sessionListOnlyMode {
++		return nil
++	}
+ 	inst, _, winIdx := h.selectedPreviewTarget()
+ 	if inst == nil {
+ 		remoteName, remoteSessionID, _, ok := h.selectedRemotePreviewTarget()
+@@ -3012,6 +3083,10 @@ func (h *Home) getSessionRenderSnapshot() map[string]sessionRenderState {
+ }
+ 
+ func (h *Home) refreshSessionRenderSnapshot(instances []*session.Instance) {
++	if sessionListOnlyMode {
++		h.sessionRenderSnapshot.Store(map[string]sessionRenderState{})
++		return
++	}
+ 	if instances == nil {
+ 		h.instancesMu.RLock()
+ 		instances = make([]*session.Instance, len(h.instances))
+@@ -3210,6 +3285,9 @@ func (h *Home) backgroundStatusUpdate() {
+ 			notifLog.Error("background_update_panic", slog.Any("panic", r))
+ 		}
+ 	}()
++	if sessionListOnlyMode {
++		return
++	}
+ 
+ 	totalStart := time.Now()
+ 	if hotUntil := h.navigationHotUntil.Load(); hotUntil > 0 && time.Now().UnixNano() < hotUntil {
+@@ -3475,6 +3553,9 @@ func (h *Home) syncNotificationsBackground() {
+ 			notifLog.Error("sync_notifications_panic", slog.Any("panic", r))
+ 		}
+ 	}()
++	if sessionListOnlyMode {
++		return
++	}
+ 
+ 	if !h.manageTmuxNotifications || !h.notificationsEnabled || h.notificationManager == nil {
+ 		return
+@@ -3636,6 +3717,9 @@ func (h *Home) updateKeyBindings() {
+ // triggerStatusUpdate sends a non-blocking request to the background worker
+ // If the worker is busy, the request is dropped (next tick will retry)
+ func (h *Home) triggerStatusUpdate() {
++	if sessionListOnlyMode {
++		return
++	}
+ 	// Build list of session IDs from flatItems for visible detection
+ 	flatItemIDs := make([]string, 0, len(h.flatItems))
+ 	for _, item := range h.flatItems {
+@@ -3665,6 +3749,9 @@ func (h *Home) triggerStatusUpdate() {
+ }
+ 
+ func (h *Home) refreshAttachedSessionStatus(sessionID string) {
++	if sessionListOnlyMode {
++		return
++	}
+ 	if strings.TrimSpace(sessionID) == "" {
+ 		return
+ 	}
+@@ -3722,6 +3809,9 @@ func (h *Home) publishCurrentSessionStates() {
+ // Performance: With 10 sessions, updating all takes ~1-2s of cumulative time per tick.
+ // With batching (3 visible + 2 non-visible per tick), we keep each tick under 100ms.
+ func (h *Home) processStatusUpdate(req statusUpdateRequest) {
++	if sessionListOnlyMode {
++		return
++	}
+ 	const batchSize = 2 // Reduced from 5 to 2 - fewer CapturePane() calls per tick
+ 	if hotUntil := h.navigationHotUntil.Load(); hotUntil > 0 && time.Now().UnixNano() < hotUntil {
+ 		return
+@@ -4072,9 +4162,11 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			// Collect OpenCode detection commands for restored sessions without IDs
+ 			// Using tea.Cmd pattern ensures save is triggered after detection completes
+ 			var detectionCmds []tea.Cmd
+-			for _, inst := range h.instances {
+-				if inst.Tool == "opencode" && inst.OpenCodeSessionID == "" {
+-					detectionCmds = append(detectionCmds, h.detectOpenCodeSessionCmd(inst))
++			if !sessionListOnlyMode {
++				for _, inst := range h.instances {
++					if inst.Tool == "opencode" && inst.OpenCodeSessionID == "" {
++						detectionCmds = append(detectionCmds, h.detectOpenCodeSessionCmd(inst))
++					}
+ 				}
+ 			}
+ 			h.instancesMu.Unlock()
+@@ -4184,7 +4276,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 				h.saveInstances()
+ 			}
+ 			// Trigger immediate preview fetch for initial selection (mutex-protected)
+-			if selected := h.getSelectedSession(); selected != nil {
++			if selected := h.getSelectedSession(); selected != nil && !sessionListOnlyMode {
+ 				h.previewCacheMu.Lock()
+ 				h.previewFetchingID = selected.ID
+ 				h.previewCacheMu.Unlock()
+@@ -4830,7 +4922,9 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			return h, tea.EnableMouseCellMotion
+ 		}
+ 
+-		h.followAttachReturnCwd(msg)
++		if !sessionListOnlyMode {
++			h.followAttachReturnCwd(msg)
++		}
+ 
+ 		// PERFORMANCE FIX: Skip save on attach return for 10 seconds
+ 		// Saving can also be blocking (JSON serialization + file write).
+@@ -4847,14 +4941,20 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		// input line render above the real viewport bottom and run off the
+ 		// right edge), and schedule a delayed repaint for any pane-title/content
+ 		// cache changes that settle just after tmux restores the outer client.
+-		return h, tea.Batch(
++		cmds := []tea.Cmd{
+ 			tea.EnableMouseCellMotion,
+ 			RestoreLegacyKeyboardCmd(os.Stdout),
+ 			tea.WindowSize(),
+-			tea.Tick(attachReturnRefreshDelay, func(time.Time) tea.Msg { return attachReturnRefreshMsg{} }),
+-		)
++		}
++		if !sessionListOnlyMode {
++			cmds = append(cmds, tea.Tick(attachReturnRefreshDelay, func(time.Time) tea.Msg { return attachReturnRefreshMsg{} }))
++		}
++		return h, tea.Batch(cmds...)
+ 
+ 	case attachReturnRefreshMsg:
++		if sessionListOnlyMode {
++			return h, nil
++		}
+ 		selectedBefore := h.captureSelectedItemIdentity()
+ 		tmux.RefreshSessionCache()
+ 		tmux.RefreshPaneInfoCache()
+@@ -5186,6 +5286,15 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 		return h, nil
+ 
+ 	case tickMsg:
++		if sessionListOnlyMode {
++			if h.err != nil && !h.errTime.IsZero() && time.Since(h.errTime) > 5*time.Second {
++				h.clearError()
++			}
++			if h.fullRepaint {
++				return h, tea.ClearScreen
++			}
++			return h, nil
++		}
+ 		var remoteFetchCmd tea.Cmd
+ 		var remoteLatencyCmd tea.Cmd
+ 
+@@ -6145,6 +6254,9 @@ func (h *Home) hasModalVisible() bool {
+ func (h *Home) markNavigationAndFetchPreview() tea.Cmd {
+ 	h.lastNavigationTime = time.Now()
+ 	h.isNavigating = true
++	if sessionListOnlyMode {
++		return nil
++	}
+ 	return h.fetchSelectedPreview()
+ }
+ 
+@@ -11115,6 +11227,9 @@ func (h *Home) View() string {
+ 	if h.showCostDashboard {
+ 		return h.costDashboard.View()
+ 	}
++	if sessionListOnlyMode {
++		return h.renderGroupSwitcherView()
++	}
+ 
+ 	// Reuse viewBuilder to reduce allocations (reset and pre-allocate)
+ 	h.viewBuilder.Reset()
+@@ -11383,6 +11498,70 @@ func (h *Home) View() string {
+ 	return clampViewToViewport(b.String(), h.width, h.height)
+ }
+ 
++func (h *Home) renderGroupSwitcherView() string {
++	var b strings.Builder
++	title := "Agent Deck"
++	if h.profile != "" && h.profile != session.DefaultProfile {
++		title += " [" + h.profile + "]"
++	}
++	if h.groupScope != "" {
++		title += " [" + h.groupScopeDisplayName() + "]"
++	}
++	b.WriteString(cellTruncate(title, max(0, h.width), ""))
++	b.WriteString("\n")
++
++	available := h.height - 1
++	if available < 1 {
++		return clampViewToViewport(b.String(), h.width, h.height)
++	}
++	if len(h.flatItems) == 0 {
++		b.WriteString(cellTruncate("No groups", max(0, h.width), ""))
++		return clampViewToViewport(b.String(), h.width, h.height)
++	}
++
++	maxVisible := available
++	if h.viewOffset > 0 && maxVisible > 0 {
++		b.WriteString(cellTruncate(fmt.Sprintf("  +%d above", h.viewOffset), max(0, h.width), ""))
++		b.WriteString("\n")
++		maxVisible--
++	}
++
++	visible := 0
++	for i := h.viewOffset; i < len(h.flatItems) && visible < maxVisible; i++ {
++		item := h.flatItems[i]
++		if item.Type != session.ItemTypeGroup || item.Group == nil {
++			continue
++		}
++
++		marker := " "
++		if i == h.cursor {
++			marker = ">"
++		}
++		icon := "-"
++		if item.Group.Expanded {
++			icon = "v"
++		} else {
++			icon = ">"
++		}
++		hotkey := ""
++		if item.Level == 0 && item.RootGroupNum >= 1 && item.RootGroupNum <= 9 {
++			hotkey = fmt.Sprintf("%d ", item.RootGroupNum)
++		}
++		indent := strings.Repeat("  ", max(0, item.Level))
++		line := fmt.Sprintf("%s %s%s%s %s", marker, indent, hotkey, icon, item.Group.Name)
++		b.WriteString(cellTruncate(line, max(0, h.width), ""))
++		b.WriteString("\n")
++		visible++
++	}
++
++	remaining := len(h.flatItems) - (h.viewOffset + visible)
++	if remaining > 0 && visible < available {
++		b.WriteString(cellTruncate(fmt.Sprintf("  +%d below", remaining), max(0, h.width), ""))
++	}
++
++	return clampViewToViewport(b.String(), h.width, h.height)
++}
++
+ // renderPanelTitle creates a styled section title with underline
+ func (h *Home) renderPanelTitle(title string, width int) string {
+ 	// Truncate title if it exceeds width

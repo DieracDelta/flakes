@@ -10,15 +10,6 @@ let
     else "dark";
 in
 {
-  home.packages = [ pkgs.tmux-revive ];
-
-  # Declarative tmux-revive runtime config (used even outside tmux plugin context)
-  xdg.configFile."tmux-revive-llms/config.toml".text = ''
-    codex_resume_template = "nix run \"github:sadjow/codex-nix\" -- resume {id}"
-    claude_resume_template = "nix run \"github:sadjow/claude-code-nix\" -- --resume {id}"
-    notify_mode = "tmux+log"
-  '';
-
   programs.tmux = {
     enable = true;
     historyLimit = 1000000;
@@ -31,18 +22,6 @@ in
       {
         plugin = tmuxPlugins.search-panes;
         extraConfig = "set -g @open_search_panes_key 'g'";
-      }
-      {
-        plugin = tmuxPlugins.revive-llms;
-        extraConfig = ''
-          set -g @revive-save-key 'e'
-          set -g @revive-restore-key 'v'
-          set -g @revive-auto-restore 'on'
-          set -g @revive-auto-save-interval-minutes '15'
-          set -g @revive-codex-resume-template 'nix run "github:sadjow/codex-nix" -- resume {id}'
-          set -g @revive-claude-resume-template 'nix run "github:sadjow/claude-code-nix" -- --resume {id}'
-          set -g @revive-notify-mode 'tmux+log'
-        '';
       }
     ];
   };

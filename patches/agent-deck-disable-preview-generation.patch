@@ -1,0 +1,32 @@
+diff --git a/internal/ui/home.go b/internal/ui/home.go
+--- a/internal/ui/home.go
++++ b/internal/ui/home.go
+@@ -2679,6 +2679,8 @@ func remotePreviewCacheKey(remoteName, sessionID string) string {
+ const (
+ 	remotePreviewMaxLines = 200
+ 	remotePreviewMaxBytes = 16 * 1024
++
++	disablePreviewGeneration = true
+ )
+ 
+ func truncateRemotePreviewContent(content string) string {
+@@ -2715,6 +2717,9 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
+ 		return nil
+ 	}
+ 	return func() tea.Msg {
++		if disablePreviewGeneration {
++			return previewFetchedMsg{previewKey: key}
++		}
+ 		var content string
+ 		var err error
+ 		if windowIndex >= 0 {
+@@ -2767,6 +2772,9 @@ func (h *Home) fetchRemotePreviewDebounced(remoteName, sessionID string) tea.Cmd
+ 
+ func (h *Home) fetchRemotePreview(remoteName, sessionID, key string) tea.Cmd {
+ 	return func() tea.Msg {
++		if disablePreviewGeneration {
++			return previewFetchedMsg{previewKey: key}
++		}
+ 		config, err := session.LoadUserConfig()
+ 		if err != nil || config == nil || config.Remotes == nil {
+ 			return previewFetchedMsg{previewKey: key, err: fmt.Errorf("failed to load remote config")}
