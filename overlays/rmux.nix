@@ -32,6 +32,8 @@ final: _prev: {
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-delta-preserve-cursor.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-osc52-clipboard.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-control-space-prefix.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-prefix-table-before-copy-mode.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-selection-style.patch}
       substituteInPlace Cargo.toml \
         --replace-fail \
           $'[dependencies.rmux-core]\nversion = "0.5.0"' \

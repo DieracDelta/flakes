@@ -1,0 +1,37 @@
+diff --git a/src/renderer/pane_screen.rs b/src/renderer/pane_screen.rs
+index 2c759ef..2aa10e7 100644
+--- a/src/renderer/pane_screen.rs
++++ b/src/renderer/pane_screen.rs
+@@ -1,10 +1,12 @@
+ use rmux_core::style::{Style, StyleCell};
+ use rmux_core::{
+-    text_width as tmux_text_width, GridRenderOptions, OptionStore, Pane, Screen,
+-    ScreenCaptureRange, Session, Utf8Config,
++    formats::FormatContext, text_width as tmux_text_width, GridRenderOptions, OptionStore, Pane,
++    Screen, ScreenCaptureRange, Session, Utf8Config,
+ };
+ use rmux_proto::OptionName;
+ 
++use crate::format_runtime::{render_runtime_template, RuntimeFormatContext};
++
+ use super::{cursor_position_bytes, visible_pane_geometry, StatusGeometry};
+ 
+ pub(crate) fn render_pane_screen(
+@@ -71,7 +73,16 @@ pub(crate) fn styled_pane_screen(
+         pane.index(),
+         OptionName::CopyModeSelectionStyle,
+     ) {
+-        styled_screen.overlay_style_on_selected(style);
++        let context = FormatContext::from_session(session)
++            .with_window(session.active_window_index(), session.window(), true, false)
++            .with_window_pane(session.window(), pane);
++        let runtime = RuntimeFormatContext::new(context)
++            .with_options(options)
++            .with_session(session)
++            .with_window(session.active_window_index(), session.window())
++            .with_pane(pane);
++        let expanded = render_runtime_template(style, &runtime, true);
++        styled_screen.overlay_style_on_selected(&expanded);
+     }
+     styled_screen
+ }

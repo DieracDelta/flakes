@@ -1,0 +1,93 @@
+diff --git a/src/handler_pane/attached_input.rs b/src/handler_pane/attached_input.rs
+index 0139bc2..3600059 100644
+--- a/src/handler_pane/attached_input.rs
++++ b/src/handler_pane/attached_input.rs
+@@ -14,7 +14,9 @@ use super::pane_io_encoding::{
+ use super::pane_prompt_input::{decode_prompt_input_event, is_extended_key_prefix};
+ use super::{io_other, resolve_input_target, AttachedKeyDispatch};
+ use crate::input_keys::{decode_extended_key, decode_mouse, ExtendedKeyDecode, MouseDecode};
+-use crate::key_table::{decode_attached_key, AttachedKeyDecode};
++use crate::key_table::{
++    decode_attached_key, matches_prefix_key, session_option_key, AttachedKeyDecode,
++};
+ use crate::mouse::{classify_mouse_event, layout_for_session};
+ use crate::pane_io::{AttachControl, OverlayFrame};
+ 
+@@ -97,6 +99,44 @@ impl RequestHandler {
+             .attached_input_target(attach_pid)
+             .await
+             .map_err(io_other)?;
++        if self.attached_key_table_active(attach_pid).await? {
++            let handled = self
++                .dispatch_attached_key_inner(
++                    &target,
++                    AttachedKeyDispatch {
++                        attach_pid,
++                        requester_pid: attach_pid,
++                        current_target: Some(Target::Pane(target.clone())),
++                        mouse_target: None,
++                        key,
++                        attached_live_input: true,
++                    },
++                )
++                .await
++                .map_err(io_other)?;
++            if handled {
++                return Ok(true);
++            }
++        }
++        if self.attached_key_is_prefix(attach_pid, key).await? {
++            let handled = self
++                .dispatch_attached_key_inner(
++                    &target,
++                    AttachedKeyDispatch {
++                        attach_pid,
++                        requester_pid: attach_pid,
++                        current_target: Some(Target::Pane(target.clone())),
++                        mouse_target: None,
++                        key,
++                        attached_live_input: true,
++                    },
++                )
++                .await
++                .map_err(io_other)?;
++            if handled {
++                return Ok(true);
++            }
++        }
+         if self
+             .handle_attached_copy_mode_key_event(attach_pid, target.clone(), decode_prompt_key(key))
+             .await
+@@ -140,6 +184,32 @@ impl RequestHandler {
+         Ok(false)
+     }
+ 
++    async fn attached_key_table_active(&self, attach_pid: u32) -> io::Result<bool> {
++        let active_attach = self.active_attach.lock().await;
++        let active = active_attach
++            .by_pid
++            .get(&attach_pid)
++            .ok_or_else(|| io_other(RmuxError::Server("attached client disappeared".to_owned())))?;
++        Ok(active.key_table_name.is_some())
++    }
++
++    async fn attached_key_is_prefix(
++        &self,
++        attach_pid: u32,
++        key: rmux_core::KeyCode,
++    ) -> io::Result<bool> {
++        let session_name = self
++            .attached_session_name(attach_pid)
++            .await
++            .map_err(io_other)?;
++        let state = self.state.lock().await;
++        Ok(matches_prefix_key(
++            key,
++            session_option_key(&state, &session_name, OptionName::Prefix),
++            session_option_key(&state, &session_name, OptionName::Prefix2),
++        ))
++    }
++
+     #[async_recursion::async_recursion]
+     async fn handle_attached_prompt_input(
+         &self,
