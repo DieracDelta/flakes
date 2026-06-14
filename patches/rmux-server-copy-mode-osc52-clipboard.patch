@@ -1,0 +1,138 @@
+diff --git a/src/handler_buffer.rs b/src/handler_buffer.rs
+index 47db647..4b62709 100644
+--- a/src/handler_buffer.rs
++++ b/src/handler_buffer.rs
+@@ -405,7 +405,7 @@ impl RequestHandler {
+         Ok(buffer_name)
+     }
+
+-    async fn copy_bytes_to_attached_clipboard(
++    pub(in crate::handler) async fn copy_bytes_to_attached_clipboard(
+         &self,
+         requester_pid: u32,
+         command_name: &str,
+diff --git a/src/handler_copy_mode.rs b/src/handler_copy_mode.rs
+index 0273d4c..92c76d3 100644
+--- a/src/handler_copy_mode.rs
++++ b/src/handler_copy_mode.rs
+@@ -313,7 +313,8 @@ impl RequestHandler {
+                 }
+             };
+             if let Some(transfer) = outcome.transfer {
+-                self.apply_copy_mode_transfer(&context, transfer).await?;
++                self.apply_copy_mode_transfer(requester_pid, &context, transfer)
++                    .await?;
+             }
+             if outcome.cancel {
+                 break;
+@@ -333,13 +334,19 @@ impl RequestHandler {
+
+     async fn apply_copy_mode_transfer(
+         &self,
++        requester_pid: u32,
+         context: &CopyModeCommandContext,
+         transfer: CopyModeTransfer,
+     ) -> Result<(), RmuxError> {
++        let stores_buffer = transfer.buffer_target.is_some();
+         if let Some(buffer_target) = transfer.buffer_target.clone() {
+             self.store_copy_mode_buffer(buffer_target, transfer.append, &transfer.data)
+                 .await?;
+         }
++        if stores_buffer {
++            self.copy_bytes_to_attached_clipboard(requester_pid, "copy-mode", &transfer.data)
++                .await;
++        }
+         if let Some(command) = self
+             .resolve_copy_mode_pipe_command(transfer.pipe_command.as_ref())
+             .await
+diff --git a/src/handler_copy_mode_tests.rs b/src/handler_copy_mode_tests.rs
+index e9b9adb..562ef65 100644
+--- a/src/handler_copy_mode_tests.rs
++++ b/src/handler_copy_mode_tests.rs
+@@ -6,6 +6,8 @@ use std::{
+
+ use super::super::RequestHandler;
+ use super::session_name;
++use crate::outer_terminal::OuterTerminalContext;
++use crate::pane_io::AttachControl;
+ use rmux_core::{input::InputParser, Screen};
+ use rmux_proto::{
+     CapturePaneRequest, CopyModeRequest, ListPanesRequest, NewSessionRequest, OptionScopeSelector,
+@@ -157,6 +159,19 @@ fn platform_copy_mode_arg(arg: &str) -> String {
+     }
+ }
+
++fn take_attach_write(
++    control_rx: &mut tokio::sync::mpsc::UnboundedReceiver<AttachControl>,
++) -> Vec<u8> {
++    for _ in 0..16 {
++        match control_rx.try_recv() {
++            Ok(AttachControl::Write(bytes)) => return bytes,
++            Ok(_) => continue,
++            Err(error) => panic!("expected attach write, got {error:?}"),
++        }
++    }
++    panic!("expected attach write, only saw non-write controls");
++}
++
+ fn unique_copy_pipe_output_path(label: &str) -> PathBuf {
+     let nanos = SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+@@ -476,6 +491,57 @@ async fn copy_mode_copy_selection_and_cancel_writes_buffer() {
+     assert!(String::from_utf8_lossy(output.stdout()).contains("needle"));
+ }
+
++#[tokio::test]
++async fn copy_mode_copy_selection_and_cancel_writes_attached_clipboard() {
++    let handler = RequestHandler::new();
++    let session = session_name("clipboard");
++    let target = create_session(
++        &handler,
++        session.as_ref(),
++        TerminalSize { cols: 40, rows: 4 },
++    )
++    .await;
++    let requester_pid = std::process::id();
++    let (control_tx, mut control_rx) = tokio::sync::mpsc::unbounded_channel();
++    handler
++        .register_attach_with_terminal_context(
++            requester_pid,
++            session,
++            control_tx,
++            OuterTerminalContext::from_pairs(&[("TERM", "xterm-256color")]),
++        )
++        .await;
++
++    replace_transcript_contents(
++        &handler,
++        &target,
++        TerminalSize { cols: 40, rows: 4 },
++        b"alpha\r\nneedle value\r\nomega\r\n",
++    )
++    .await;
++    wait_for_capture(&handler, &target, "needle", false).await;
++
++    assert!(matches!(
++        enter_copy_mode(&handler, &target, false).await,
++        Response::CopyMode(_)
++    ));
++    assert!(matches!(
++        send_copy_mode_command(&handler, &target, &["search-backward", "--", "needle"]).await,
++        Response::SendKeys(_)
++    ));
++    assert!(matches!(
++        send_copy_mode_command(&handler, &target, &["select-word"]).await,
++        Response::SendKeys(_)
++    ));
++    assert!(matches!(
++        send_copy_mode_command(&handler, &target, &["copy-selection-and-cancel"]).await,
++        Response::SendKeys(_)
++    ));
++
++    let bytes = take_attach_write(&mut control_rx);
++    assert_eq!(bytes, b"\x1b]52;;bmVlZGxl\x07");
++}
++
+ #[tokio::test]
+ async fn copy_pipe_without_command_uses_copy_command_option() {
+     let handler = RequestHandler::new();

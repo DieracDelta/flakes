@@ -1,0 +1,32 @@
+diff --git a/src/key_table.rs b/src/key_table.rs
+index 7e2fbf1..c9079e5 100644
+--- a/src/key_table.rs
++++ b/src/key_table.rs
+@@ -293,6 +293,8 @@ fn decode_ss3_key(input: &[u8]) -> AttachedKeyDecode {
+
+ fn control_byte_key(byte: u8) -> Option<KeyCode> {
+     match byte {
++        0x00 => key_string_lookup_string("C-Space")
++            .or_else(|| key_string_lookup_string("C-@")),
+         b'\r' | b'\n' => key_string_lookup_string("Enter"),
+         b'\t' => key_string_lookup_string("Tab"),
+         0x7f | 0x08 => key_string_lookup_string("BSpace"),
+@@ -309,6 +311,18 @@ mod tests {
+     use super::{decode_attached_key, AttachedKeyDecode};
+     use rmux_core::{key_code_lookup_bits, key_string_lookup_string};
+
++    #[test]
++    fn attached_nul_decodes_as_control_space() {
++        let AttachedKeyDecode::Matched { size, key } = decode_attached_key(b"\x00", None) else {
++            panic!("expected attached NUL decode");
++        };
++        assert_eq!(size, 1);
++        let expected = key_string_lookup_string("C-Space")
++            .or_else(|| key_string_lookup_string("C-@"))
++            .expect("C-Space or C-@ parses");
++        assert_eq!(key_code_lookup_bits(key), key_code_lookup_bits(expected));
++    }
++
+     #[test]
+     fn attached_escape_prefix_decodes_meta_printable_digits() {
+         let AttachedKeyDecode::Matched { size, key } = decode_attached_key(b"\x1b1", None) else {

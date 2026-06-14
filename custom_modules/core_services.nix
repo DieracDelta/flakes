@@ -799,7 +799,23 @@ in
         item = "nofile";
         value = "1048576";
       }
+      {
+        domain = "*";
+        type = "soft";
+        item = "nice";
+        value = "-10";
+      }
+      {
+        domain = "*";
+        type = "hard";
+        item = "nice";
+        value = "-10";
+      }
     ];
+    systemd.user.extraConfig = ''
+      DefaultLimitNICE=-10
+    '';
+    systemd.services."user@".serviceConfig.LimitNICE = "-10";
     programs.gamescope.enable = true;
 
     programs.mosh.enable = true;

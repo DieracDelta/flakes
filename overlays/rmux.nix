@@ -30,6 +30,8 @@ final: _prev: {
       cp -R ${rmuxServerSrc} vendor/rmux-server-0.5.0
       chmod -R u+w vendor/rmux-server-0.5.0
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-delta-preserve-cursor.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-osc52-clipboard.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-control-space-prefix.patch}
       substituteInPlace Cargo.toml \
         --replace-fail \
           $'[dependencies.rmux-core]\nversion = "0.5.0"' \
