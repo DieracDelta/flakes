@@ -1,0 +1,24 @@
+diff --git a/src/main.rs b/src/main.rs
+index ca2ff78..ca2ff78 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -237,7 +237,10 @@ fn run_hidden_daemon(args: InternalDaemonArgs) -> io::Result<()> {
+         config = config.with_web_frontend(frontend);
+     }
+     #[cfg(unix)]
+-    let runtime = Builder::new_current_thread().enable_all().build()?;
++    let runtime = Builder::new_multi_thread()
++        .worker_threads(hidden_daemon_worker_threads())
++        .enable_all()
++        .build()?;
+     #[cfg(windows)]
+     let runtime = Builder::new_multi_thread()
+         .worker_threads(hidden_daemon_worker_threads())
+@@ -251,7 +254,6 @@ fn run_hidden_daemon(args: InternalDaemonArgs) -> io::Result<()> {
+     })
+ }
+ 
+-#[cfg(windows)]
+ fn hidden_daemon_worker_threads() -> usize {
+     std::thread::available_parallelism()
+         .map(usize::from)

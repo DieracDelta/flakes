@@ -7,10 +7,40 @@ final: _prev: {
       inherit pname version;
       hash = "sha256-yNICXGviqCTzVGzjJtN/hkENsZHe3wXC1HGj/1Qkk5U=";
     };
+    rmuxServerSrc = final.fetchCrate {
+      pname = "rmux-server";
+      inherit version;
+      hash = "sha256-W49oB0M+sjHHd5o6JUpQRLWnj6rVJnuFfNGctSTUyUw=";
+    };
+    rmuxCoreSrc = final.fetchCrate {
+      pname = "rmux-core";
+      inherit version;
+      hash = "sha256-sz4fO0y2sZGYC/EOjQetfyhnis4TQ90S0JSfOHEjI30=";
+    };
 
     cargoHash = "sha256-jovAKziYEqs4EQuXxD59RKt2BkWDr+DKf0cKOAZ7YZ0=";
     buildNoDefaultFeatures = true;
     doCheck = false;
+    postPatch = ''
+      mkdir -p vendor
+      patch -p1 < ${../patches/rmux-daemon-multithread-runtime.patch}
+      cp -R ${rmuxCoreSrc} vendor/rmux-core-0.5.0
+      chmod -R u+w vendor/rmux-core-0.5.0
+      patch -d vendor/rmux-core-0.5.0 -p1 < ${../patches/rmux-core-kitty-keyboard.patch}
+      cp -R ${rmuxServerSrc} vendor/rmux-server-0.5.0
+      chmod -R u+w vendor/rmux-server-0.5.0
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-delta-preserve-cursor.patch}
+      substituteInPlace Cargo.toml \
+        --replace-fail \
+          $'[dependencies.rmux-core]\nversion = "0.5.0"' \
+          $'[dependencies.rmux-core]\nversion = "0.5.0"\npath = "vendor/rmux-core-0.5.0"' \
+        --replace-fail \
+          $'[dev-dependencies.rmux-core]\nversion = "0.5.0"' \
+          $'[dev-dependencies.rmux-core]\nversion = "0.5.0"\npath = "vendor/rmux-core-0.5.0"' \
+        --replace-fail \
+          $'[dependencies.rmux-server]\nversion = "0.5.0"\ndefault-features = false' \
+          $'[dependencies.rmux-server]\nversion = "0.5.0"\npath = "vendor/rmux-server-0.5.0"\ndefault-features = false'
+    '';
 
     meta = with final.lib; {
       description = "Rust terminal multiplexer";

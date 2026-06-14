@@ -1,0 +1,84 @@
+diff --git a/src/input/commands.rs b/src/input/commands.rs
+index 9c3e12c..9c3e12c 100644
+--- a/src/input/commands.rs
++++ b/src/input/commands.rs
+@@ -113,6 +113,10 @@ pub enum CsiCommand {
+     Winops,
+     /// RCP — Restore Cursor Position (u).
+     Rcp,
++    /// Kitty keyboard progressive enhancement query (?u).
++    KittyKeyboardQuery,
++    /// Kitty keyboard progressive enhancement flags (>u).
++    KittyKeyboardFlags,
+ }
+ 
+ /// OSC command numbers.
+diff --git a/src/input/dispatch.rs b/src/input/dispatch.rs
+index 37f8b75..37f8b75 100644
+--- a/src/input/dispatch.rs
++++ b/src/input/dispatch.rs
+@@ -421,6 +421,18 @@ pub fn dispatch_csi(parser: &mut InputParser, writer: &mut dyn ScreenWriter, cmd
+             }
+             writer.set_cursor_position(parser.saved.cx, parser.saved.cy);
+         }
++        CsiCommand::KittyKeyboardQuery => {
++            parser.reply("\x1b[?1u");
++        }
++        CsiCommand::KittyKeyboardFlags => {
++            let flags = parser.param_list.get(0, 0, 0);
++            if flags > 0 {
++                writer.mode_clear(mode::EXTENDED_KEY_MODES);
++                writer.mode_set(mode::MODE_KEYS_EXTENDED_2);
++            } else {
++                writer.mode_clear(mode::EXTENDED_KEY_MODES);
++            }
++        }
+         CsiCommand::Decscusr => {
+             let style = parser.param_list.get(0, 0, 0);
+             writer.set_cursor_style(style);
+diff --git a/src/input/tables.rs b/src/input/tables.rs
+index 1c794c3..1c794c3 100644
+--- a/src/input/tables.rs
++++ b/src/input/tables.rs
+@@ -303,6 +303,16 @@ pub(crate) static CSI_TABLE: &[TableEntry<CsiCommand>] = &[
+         interm: b"",
+         cmd: CsiCommand::Rcp,
+     },
++    TableEntry {
++        ch: b'u',
++        interm: b"?",
++        cmd: CsiCommand::KittyKeyboardQuery,
++    },
++    TableEntry {
++        ch: b'u',
++        interm: b">",
++        cmd: CsiCommand::KittyKeyboardFlags,
++    },
+ ];
+ 
+ /// Look up a CSI command by final character and intermediate buffer.
+diff --git a/src/input/tests/extended_timers_utf8.rs b/src/input/tests/extended_timers_utf8.rs
+index d32c273..d32c273 100644
+--- a/src/input/tests/extended_timers_utf8.rs
++++ b/src/input/tests/extended_timers_utf8.rs
+@@ -10,6 +10,20 @@ fn modset_extended_keys_mode_2() {
+     assert!(w.has_call("mode_set(0x40000)")); // MODE_KEYS_EXTENDED_2
+ }
+ 
++#[test]
++fn kitty_keyboard_query_reports_disambiguate_support() {
++    let (p, _w) = parse(b"\x1b[?u");
++    let replies = String::from_utf8_lossy(&p.reply_buf);
++    assert_eq!(replies.as_ref(), "\x1b[?1u");
++}
++
++#[test]
++fn kitty_keyboard_flags_enable_extended_keys_mode_2() {
++    let (_p, w) = parse(b"\x1b[>1u");
++    assert!(w.has_call("mode_clear(0x48000)")); // EXTENDED_KEY_MODES
++    assert!(w.has_call("mode_set(0x40000)")); // MODE_KEYS_EXTENDED_2
++}
++
+ #[test]
+ fn modoff_clears_extended_keys() {
+     let (_p, w) = parse(b"\x1b[>4n");

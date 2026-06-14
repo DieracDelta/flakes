@@ -28,6 +28,55 @@ let
   forgejoRunnerMemoryMax = "32G";
   forgejoRunnerNixConfig = "build-users-group =";
   forgejoDockerJobOptions = "--cpus=8 --cpuset-cpus=0-7 --memory=12g --memory-swap=12g --env \"NIX_CONFIG=${forgejoRunnerNixConfig}\" --volume psi-code-nix:/nix";
+  forgejoActionsCachePrune = pkgs.writeShellScript "forgejo-actions-cache-prune" ''
+    set -euo pipefail
+
+    prune_dirs_older_than() {
+      local cache_dir="$1"
+      local age="$2"
+
+      if [ ! -d "$cache_dir" ]; then
+        return 0
+      fi
+
+      ${pkgs.fd}/bin/fd \
+        --hidden \
+        --no-ignore \
+        --type directory \
+        --exact-depth 1 \
+        --changed-before "$age" \
+        . "$cache_dir" \
+        -X ${pkgs.coreutils}/bin/rm -rf --
+    }
+
+    prune_entries_older_than() {
+      local cache_dir="$1"
+      local age="$2"
+
+      if [ ! -d "$cache_dir" ]; then
+        return 0
+      fi
+
+      ${pkgs.fd}/bin/fd \
+        --hidden \
+        --no-ignore \
+        --exact-depth 1 \
+        --changed-before "$age" \
+        . "$cache_dir" \
+        -X ${pkgs.coreutils}/bin/rm -rf --
+    }
+
+    prune_dirs_older_than /var/cache/forgejo-actions/ironmain/cargo-crap-target 2days
+    prune_entries_older_than /var/cache/forgejo-actions/ironmain/tmp 1day
+
+    for cache_dir in \
+      /var/cache/forgejo-actions/ironmain/cargo-target \
+      /var/cache/forgejo-actions/ironmain/frontend-cargo-target \
+      /var/cache/forgejo-actions/ironmain/isa-metadata-cargo-target \
+      /var/cache/forgejo-actions/ironmain/next; do
+      prune_dirs_older_than "$cache_dir" 14days
+    done
+  '';
   forgejoMcpDaemon = pkgs.writeShellScript "forgejo-mcp-daemon" ''
     set -euo pipefail
 
@@ -433,6 +482,25 @@ in
       ExecStart = "${pkgs.docker}/bin/docker volume create --label forgejo-ci=psi-code --label keep=true psi-code-nix";
     };
   };
+  systemd.services.forgejo-actions-cache-prune = {
+    description = "Prune old Forgejo Actions CI caches";
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root";
+      ExecStart = forgejoActionsCachePrune;
+    };
+  };
+
+  systemd.timers.forgejo-actions-cache-prune = {
+    description = "Daily prune of old Forgejo Actions CI caches";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+      RandomizedDelaySec = "30m";
+    };
+  };
+
   systemd.tmpfiles.rules = [
     "a+ /home/jrestivo - - - - u:gitea-runner:--x"
     "Z /var/lib/gitea-runner 0755 gitea-runner gitea-runner -"
@@ -443,9 +511,12 @@ in
     "d /var/cache/forgejo-actions/ironmain 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/cargo-home 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/cargo-target 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/cargo-crap-target 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/frontend-cargo-target 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/isa-metadata-cargo-target 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/lake 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/next 0775 gitea-runner gitea-runner -"
+    "d /var/cache/forgejo-actions/ironmain/tmp 0775 gitea-runner gitea-runner -"
   ];
 
   virtualisation.docker = {

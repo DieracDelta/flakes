@@ -64,6 +64,8 @@ let
 
   # Jitsi Skynet AI services
   skynet = import ./skynet.nix;
+
+  codex-rmux = import ./codex-rmux.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -98,4 +100,5 @@ in
   inputs.claude-code-nix-local.overlays.default
   inputs.hermes-agent.overlays.default
   inputs.codex-nix.overlays.default
+  codex-rmux
 ]

@@ -1,0 +1,181 @@
+diff --git a/src/outer_terminal/defaults.rs b/src/outer_terminal/defaults.rs
+index 9c1baad..14c88e4 100644
+--- a/src/outer_terminal/defaults.rs
++++ b/src/outer_terminal/defaults.rs
+@@ -11,8 +11,8 @@ pub(super) const DEFAULT_ENBP: &str = "\x1b[?2004h";
+ pub(super) const DEFAULT_DSBP: &str = "\x1b[?2004l";
+ pub(super) const DEFAULT_ENFCS: &str = "\x1b[?1004h";
+ pub(super) const DEFAULT_DSFCS: &str = "\x1b[?1004l";
+-pub(super) const DEFAULT_ENEKS: &str = "\x1b[>4;2m";
+-pub(super) const DEFAULT_DSEKS: &str = "\x1b[>4m";
++pub(super) const DEFAULT_ENEKS: &str = "\x1b[>4;2m\x1b[>1u";
++pub(super) const DEFAULT_DSEKS: &str = "\x1b[<1u\x1b[>4m";
+ pub(super) const DEFAULT_ENMG: &str = "\x1b[?69h";
+ pub(super) const DEFAULT_DSMG: &str = "\x1b[?69l";
+ pub(super) const DEFAULT_SYNC: &str = "\x1b[?2026%?%p1%{1}%-%tl%eh%;";
+diff --git a/src/outer_terminal/tests.rs b/src/outer_terminal/tests.rs
+index 04a2076..5bb8e6f 100644
+--- a/src/outer_terminal/tests.rs
++++ b/src/outer_terminal/tests.rs
+@@ -175,12 +175,14 @@ fn attach_sequences_follow_focus_and_extended_key_options() {
+     assert!(start.contains(MOUSE_ENABLE_SEQUENCE));
+     assert!(start.contains("\u{1b}[?1004h"));
+     assert!(start.contains("\u{1b}[>4;2m"));
++    assert!(start.contains("\u{1b}[>1u"));
+     assert!(stop.contains("\u{1b}[?2004l"));
+     assert!(stop.contains("\u{1b}[?1000l"));
+     assert!(stop.contains("\u{1b}[?1002l"));
+     assert!(stop.contains("\u{1b}[?1006l"));
+     assert!(stop.contains(MOUSE_DISABLE_SEQUENCE));
+     assert!(stop.contains("\u{1b}[?1004l"));
++    assert!(stop.contains("\u{1b}[<1u"));
+     assert!(stop.contains("\u{1b}[>4m"));
+     assert!(stop.ends_with("\u{1b}[?1049l\u{1b}[23;0;0t"));
+ }
+diff --git a/src/handler_pane/attached_input/live.rs b/src/handler_pane/attached_input/live.rs
+index f1bc3f4..bf60436 100644
+--- a/src/handler_pane/attached_input/live.rs
++++ b/src/handler_pane/attached_input/live.rs
+@@ -220,6 +220,13 @@ impl RequestHandler {
+                         .await?;
+                     forwarded_to_pane = true;
+                 }
++                if let Some((size, sequence)) = shift_enter_modified_sequence(slice) {
++                    self.write_attached_bytes(attach_pid, &sequence).await?;
++                    forwarded_to_pane = true;
++                    offset += size;
++                    raw_start = offset;
++                    continue;
++                }
+                 match decode_extended_key(slice, backspace) {
+                     ExtendedKeyDecode::Matched { size, key } => {
+                         if raw_start < offset && is_enter_key(key) {
+@@ -419,3 +426,61 @@ impl RequestHandler {
+         Ok(Some(forwarded))
+     }
+ }
++
++fn shift_enter_modified_sequence(input: &[u8]) -> Option<(usize, Vec<u8>)> {
++    if input.starts_with(b"\x1b[27;2;13~") {
++        return Some((10, b"\x1b[13;2u".to_vec()));
++    }
++    if !input.starts_with(b"\x1b[") {
++        return None;
++    }
++
++    let end = input
++        .iter()
++        .take(64)
++        .position(|byte| *byte == b'u')?;
++    let payload = std::str::from_utf8(&input[2..end]).ok()?;
++    let mut parts = payload.split(';');
++    if parts.next()? != "13" {
++        return None;
++    }
++    let modifier = parts.next()?;
++    if parts.next().is_some() {
++        return None;
++    }
++    let modifier_value = modifier.split(':').next()?.parse::<u16>().ok()?;
++    let has_shift = modifier_value
++        .checked_sub(1)
++        .is_some_and(|bits| bits & 1 != 0);
++    if !has_shift {
++        return None;
++    }
++
++    Some((end + 1, input[..end + 1].to_vec()))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::shift_enter_modified_sequence;
++
++    #[test]
++    fn shift_enter_sequences_preserve_modified_enter() {
++        assert_eq!(
++            shift_enter_modified_sequence(b"\x1b[13;2u"),
++            Some((7, b"\x1b[13;2u".to_vec()))
++        );
++        assert_eq!(
++            shift_enter_modified_sequence(b"\x1b[13;2:1u"),
++            Some((9, b"\x1b[13;2:1u".to_vec()))
++        );
++        assert_eq!(
++            shift_enter_modified_sequence(b"\x1b[13;2:3u"),
++            Some((9, b"\x1b[13;2:3u".to_vec()))
++        );
++        assert_eq!(
++            shift_enter_modified_sequence(b"\x1b[27;2;13~"),
++            Some((10, b"\x1b[13;2u".to_vec()))
++        );
++        assert_eq!(shift_enter_modified_sequence(b"\x1b[13;5u"), None);
++    }
++}
+diff --git a/src/renderer/pane_delta.rs b/src/renderer/pane_delta.rs
+index e7d3011..64d4b13 100644
+--- a/src/renderer/pane_delta.rs
++++ b/src/renderer/pane_delta.rs
+@@ -136,7 +136,7 @@ impl PaneRenderSnapshot {
+         if !frame.is_empty() {
+             frame.extend_from_slice(b"\x1b[0m\x1b[u");
+         }
+-        if self.cursor != next.cursor {
++        if !frame.is_empty() || self.cursor != next.cursor {
+             frame.extend_from_slice(&next.cursor);
+         }
+ 
+@@ -213,6 +213,27 @@ mod tests {
+         );
+     }
+ 
++    #[test]
++    fn pane_delta_restores_cursor_after_line_change_when_cursor_is_unchanged() {
++        let session = Session::new(session_name("alpha"), TerminalSize { cols: 10, rows: 4 });
++        let pane = session.window().active_pane().expect("active pane");
++        let options = OptionStore::new();
++        let before = screen_with(b"abc\x1b[1;1H");
++        let after = screen_with(b"zbc\x1b[1;1H");
++        let before = PaneRenderSnapshot::capture(&session, &options, pane, &before)
++            .expect("before snapshot");
++        let after =
++            PaneRenderSnapshot::capture(&session, &options, pane, &after).expect("after snapshot");
++
++        let PaneRenderDelta::Incremental(delta) = before.diff_to(&after) else {
++            panic!("line update should not require a full refresh");
++        };
++        let text = String::from_utf8(delta.frame().to_vec()).expect("delta is utf8");
++
++        assert!(text.contains("zbc"));
++        assert!(text.ends_with("\u{1b}[1;1H"));
++    }
++
+     #[test]
+     fn pane_delta_renders_new_prompt_lines_incrementally() {
+         let session = Session::new(session_name("alpha"), TerminalSize { cols: 10, rows: 4 });
+diff --git a/src/renderer/pane_screen.rs b/src/renderer/pane_screen.rs
+index 2c759ef..a630097 100644
+--- a/src/renderer/pane_screen.rs
++++ b/src/renderer/pane_screen.rs
+@@ -52,6 +52,21 @@ pub(crate) fn render_pane_screen(
+         frame.extend_from_slice(&line);
+     }
+     frame.extend_from_slice(b"\x1b[0m\x1b[u");
++    let (cursor_x, cursor_y) = screen.cursor_position();
++    frame.extend_from_slice(
++        cursor_position_bytes(
++            pane_geometry
++                .y()
++                .saturating_add(geometry.content_y_offset)
++                .saturating_add(
++                    cursor_y.min(u32::from(pane_geometry.rows().saturating_sub(1))) as u16,
++                ),
++            pane_geometry.x().saturating_add(
++                cursor_x.min(u32::from(pane_geometry.cols().saturating_sub(1))) as u16,
++            ),
++        )
++        .as_slice(),
++    );
+     frame
+ }
+ 
