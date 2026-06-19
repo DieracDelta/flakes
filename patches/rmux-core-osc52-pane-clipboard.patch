@@ -1,0 +1,93 @@
+diff --git a/crates/rmux-core/src/screen/writer.rs b/crates/rmux-core/src/screen/writer.rs
+index 1fcb594..48d5e4d 100644
+--- a/crates/rmux-core/src/screen/writer.rs
++++ b/crates/rmux-core/src/screen/writer.rs
+@@ -530,7 +530,9 @@ impl ScreenWriter for Screen {
+     fn osc_fg_colour(&mut self, _data: &str, _end: InputEndType) {}
+     fn osc_bg_colour(&mut self, _data: &str, _end: InputEndType) {}
+     fn osc_cursor_colour(&mut self, _data: &str, _end: InputEndType) {}
+-    fn osc_clipboard(&mut self, _data: &str, _end: InputEndType) {}
++    fn osc_clipboard(&mut self, data: &str, _end: InputEndType) {
++        self.push_terminal_passthrough(TerminalPassthrough::clipboard(data.as_bytes().to_vec()));
++    }
+     fn osc_reset_palette(&mut self, _data: &str) {}
+     fn osc_reset_fg(&mut self) {}
+     fn osc_reset_bg(&mut self) {}
+diff --git a/crates/rmux-core/src/terminal/mod.rs b/crates/rmux-core/src/terminal/mod.rs
+index e7b8b2b..443298f 100644
+--- a/crates/rmux-core/src/terminal/mod.rs
++++ b/crates/rmux-core/src/terminal/mod.rs
+@@ -249,6 +249,16 @@ mod tests {
+         assert!(parser.take_terminal_passthrough().is_empty());
+     }
+ 
++    #[test]
++    fn clipboard_passthrough_drains_once() {
++        let mut parser = TerminalParser::new(size(20, 4), 10);
++        parser.feed(b"\x1b]52;c;aGk=\x07");
++        let passthroughs = parser.take_terminal_passthrough();
++        assert_eq!(passthroughs.len(), 1);
++        assert_eq!(passthroughs[0].payload(), b"c;aGk=");
++        assert!(parser.take_terminal_passthrough().is_empty());
++    }
++
+     #[test]
+     fn resize_propagates_to_screen() {
+         let mut parser = TerminalParser::new(size(5, 2), 10);
+diff --git a/crates/rmux-core/src/terminal_passthrough.rs b/crates/rmux-core/src/terminal_passthrough.rs
+index f749094..61c3f58 100644
+--- a/crates/rmux-core/src/terminal_passthrough.rs
++++ b/crates/rmux-core/src/terminal_passthrough.rs
+@@ -19,6 +19,8 @@ pub enum TerminalPassthroughKind {
+     KittyGraphics,
+     /// SIXEL graphics protocol, encoded as a DCS payload.
+     Sixel,
++    /// OSC 52 clipboard write, encoded as the OSC payload after `52;`.
++    Clipboard,
+ }
+ 
+ impl TerminalPassthrough {
+@@ -44,6 +46,17 @@ impl TerminalPassthrough {
+         }
+     }
+ 
++    /// Creates an OSC 52 clipboard passthrough event.
++    #[must_use]
++    pub fn clipboard(payload: impl Into<Vec<u8>>) -> Self {
++        Self {
++            kind: TerminalPassthroughKind::Clipboard,
++            cursor_x: 0,
++            cursor_y: 0,
++            payload: Arc::from(payload.into()),
++        }
++    }
++
+     /// Returns the passthrough protocol family.
+     #[must_use]
+     pub const fn kind(&self) -> TerminalPassthroughKind {
+@@ -86,6 +99,13 @@ impl TerminalPassthrough {
+                 sequence.extend_from_slice(b"\x1b\\");
+                 sequence
+             }
++            TerminalPassthroughKind::Clipboard => {
++                let mut sequence = Vec::with_capacity(self.payload.len() + 5);
++                sequence.extend_from_slice(b"\x1b]52;");
++                sequence.extend_from_slice(&self.payload);
++                sequence.push(0x07);
++                sequence
++            }
+         }
+     }
+ }
+@@ -107,4 +127,11 @@ mod tests {
+ 
+         assert_eq!(passthrough.render_sequence(), b"\x1bPq#0!10~\x1b\\");
+     }
++
++    #[test]
++    fn renders_clipboard_osc_sequence() {
++        let passthrough = TerminalPassthrough::clipboard(b"c;aGk=".to_vec());
++
++        assert_eq!(passthrough.render_sequence(), b"\x1b]52;c;aGk=\x07");
++    }
+ }

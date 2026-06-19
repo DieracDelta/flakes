@@ -1,0 +1,207 @@
+diff --git a/crates/rmux-server/src/outer_terminal.rs b/crates/rmux-server/src/outer_terminal.rs
+index 2c4ef49..dcb260e 100644
+--- a/crates/rmux-server/src/outer_terminal.rs
++++ b/crates/rmux-server/src/outer_terminal.rs
+@@ -371,6 +371,20 @@ impl OuterTerminal {
+         Some(rendered.into_bytes())
+     }
+ 
++    pub(crate) fn encode_clipboard_osc52_payload(&self, payload: &[u8]) -> Option<Vec<u8>> {
++        if !self.clipboard_writes_enabled {
++            return None;
++        }
++        let template = self.clipboard_template.as_deref()?;
++        let payload = std::str::from_utf8(payload).ok()?;
++        let (selector, encoded) = payload.split_once(';')?;
++        if encoded.is_empty() || encoded == "?" || !is_base64_payload(encoded) {
++            return None;
++        }
++        let rendered = render_string_string_template(template, selector, encoded);
++        Some(rendered.into_bytes())
++    }
++
+     fn focus_sequence(&self) -> Option<String> {
+         self.focus_events_enabled
+             .then(|| self.enable_focus.clone())
+@@ -469,6 +483,12 @@ impl OuterTerminal {
+     }
+ }
+ 
++fn is_base64_payload(value: &str) -> bool {
++    value
++        .bytes()
++        .all(|byte| matches!(byte, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/' | b'='))
++}
++
+ fn copy_environment_value(environment: &HashMap<String, String>, name: &str) -> Option<String> {
+     environment
+         .get(name)
+diff --git a/crates/rmux-server/src/outer_terminal/tests.rs b/crates/rmux-server/src/outer_terminal/tests.rs
+index 04a2076..d9327f3 100644
+--- a/crates/rmux-server/src/outer_terminal/tests.rs
++++ b/crates/rmux-server/src/outer_terminal/tests.rs
+@@ -333,6 +333,35 @@ fn clipboard_encoding_honours_feature_and_set_clipboard_option() {
+     assert!(disabled.encode_clipboard_set(b"hi").is_none());
+ }
+ 
++#[test]
++fn clipboard_osc52_payload_preserves_selector_and_rejects_queries() {
++    let mut options = OptionStore::new();
++    options
++        .set(
++            ScopeSelector::Global,
++            OptionName::SetClipboard,
++            "external".to_owned(),
++            SetOptionMode::Replace,
++        )
++        .expect("set-clipboard set succeeds");
++    let terminal = OuterTerminal::resolve(
++        &options,
++        OuterTerminalContext::from_pairs(&[("TERM", "xterm-256color")]),
++    );
++
++    let encoded = String::from_utf8(
++        terminal
++            .encode_clipboard_osc52_payload(b"c;aGk=")
++            .expect("clipboard write is available"),
++    )
++    .expect("utf8");
++    assert_eq!(encoded, "\u{1b}]52;c;aGk=\u{7}");
++    assert!(terminal.encode_clipboard_osc52_payload(b"c;?").is_none());
++    assert!(terminal
++        .encode_clipboard_osc52_payload(b"c;\x1b]52;c;evil")
++        .is_none());
++}
++
+ #[test]
+ fn sync_wrapper_brackets_render_frames_when_supported() {
+     let mut options = OptionStore::new();
+diff --git a/crates/rmux-server/src/pane_io/passthrough.rs b/crates/rmux-server/src/pane_io/passthrough.rs
+index ce5ea5a..078fca3 100644
+--- a/crates/rmux-server/src/pane_io/passthrough.rs
++++ b/crates/rmux-server/src/pane_io/passthrough.rs
+@@ -11,17 +11,28 @@ pub(super) fn render_passthroughs(
+     }
+ 
+     let mut frame = Vec::new();
++    let mut cursor_saved = false;
+     for passthrough in passthroughs {
++        if matches!(passthrough.kind(), TerminalPassthroughKind::Clipboard) {
++            if let Some(sequence) = target
++                .outer_terminal
++                .encode_clipboard_osc52_payload(passthrough.payload())
++            {
++                frame.extend_from_slice(&sequence);
++            }
++            continue;
++        }
+         if !passthrough_enabled(target, passthrough.kind()) {
+             continue;
+         }
+-        if frame.is_empty() {
++        if !cursor_saved {
++            cursor_saved = true;
+             frame.extend_from_slice(b"\x1b[s");
+         }
+         append_cursor_position(&mut frame, target.active_pane_geometry, passthrough);
+         frame.extend_from_slice(&passthrough.render_sequence());
+     }
+-    if !frame.is_empty() {
++    if cursor_saved {
+         frame.extend_from_slice(b"\x1b[u");
+     }
+     frame
+@@ -31,6 +42,7 @@ fn passthrough_enabled(target: &OpenAttachTarget, kind: TerminalPassthroughKind)
+     match kind {
+         TerminalPassthroughKind::KittyGraphics => target.kitty_graphics_passthrough,
+         TerminalPassthroughKind::Sixel => target.sixel_passthrough,
++        TerminalPassthroughKind::Clipboard => true,
+     }
+ }
+ 
+@@ -51,7 +63,7 @@ fn append_cursor_position(
+ #[cfg(test)]
+ mod tests {
+     use rmux_core::{OptionStore, PaneGeometry, TerminalPassthrough};
+-    use rmux_proto::SessionName;
++    use rmux_proto::{OptionName, ScopeSelector, SessionName, SetOptionMode};
+     use rmux_pty::PtyPair;
+ 
+     use super::{append_cursor_position, render_passthroughs};
+@@ -103,6 +115,76 @@ mod tests {
+         assert_eq!(frame, b"\x1b[s\x1b[9;7H\x1b_Gf=100;AAAA\x1b\\\x1b[u");
+     }
+ 
++    #[test]
++    fn render_passthroughs_forwards_clipboard_osc52_when_enabled() {
++        let mut options = OptionStore::default();
++        options
++            .set(
++                ScopeSelector::Global,
++                OptionName::SetClipboard,
++                "on".to_owned(),
++                SetOptionMode::Replace,
++            )
++            .expect("set-clipboard set succeeds");
++        let pty = PtyPair::open().expect("open pty pair");
++        let pane_output = pane_output_channel();
++        let target = OpenAttachTarget {
++            session_name: SessionName::new("alpha").expect("valid session name"),
++            _pane_master: pty.into_master(),
++            pane_output: Some(pane_output.subscribe()),
++            render_frame: Vec::new(),
++            outer_terminal: OuterTerminal::resolve(
++                &options,
++                OuterTerminalContext::from_pairs(&[("TERM", "xterm-256color")]),
++            ),
++            cursor_style: 0,
++            active_pane_geometry: PaneGeometry::new(5, 6, 80, 24),
++            kitty_graphics_passthrough: false,
++            sixel_passthrough: false,
++            persistent_overlay_state_id: None,
++            live_pane: None,
++        };
++
++        let frame = render_passthroughs(&target, &[TerminalPassthrough::clipboard(b"c;aGk=")]);
++
++        assert_eq!(frame, b"\x1b]52;c;aGk=\x07");
++    }
++
++    #[test]
++    fn render_passthroughs_suppresses_clipboard_osc52_when_disabled() {
++        let mut options = OptionStore::default();
++        options
++            .set(
++                ScopeSelector::Global,
++                OptionName::SetClipboard,
++                "off".to_owned(),
++                SetOptionMode::Replace,
++            )
++            .expect("set-clipboard set succeeds");
++        let pty = PtyPair::open().expect("open pty pair");
++        let pane_output = pane_output_channel();
++        let target = OpenAttachTarget {
++            session_name: SessionName::new("alpha").expect("valid session name"),
++            _pane_master: pty.into_master(),
++            pane_output: Some(pane_output.subscribe()),
++            render_frame: Vec::new(),
++            outer_terminal: OuterTerminal::resolve(
++                &options,
++                OuterTerminalContext::from_pairs(&[("TERM", "xterm-256color")]),
++            ),
++            cursor_style: 0,
++            active_pane_geometry: PaneGeometry::new(5, 6, 80, 24),
++            kitty_graphics_passthrough: false,
++            sixel_passthrough: false,
++            persistent_overlay_state_id: None,
++            live_pane: None,
++        };
++
++        let frame = render_passthroughs(&target, &[TerminalPassthrough::clipboard(b"c;aGk=")]);
++
++        assert!(frame.is_empty());
++    }
++
+     #[test]
+     fn render_passthroughs_anchors_kitty_dimension_payloads_at_pane_cursor() {
+         let pty = PtyPair::open().expect("open pty pair");

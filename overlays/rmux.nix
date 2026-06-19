@@ -27,13 +27,20 @@ final: _prev: {
       cp -R ${rmuxCoreSrc} vendor/rmux-core-0.5.0
       chmod -R u+w vendor/rmux-core-0.5.0
       patch -d vendor/rmux-core-0.5.0 -p1 < ${../patches/rmux-core-kitty-keyboard.patch}
+      patch -d vendor/rmux-core-0.5.0 -p3 < ${../patches/rmux-core-osc52-pane-clipboard.patch}
       cp -R ${rmuxServerSrc} vendor/rmux-server-0.5.0
       chmod -R u+w vendor/rmux-server-0.5.0
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-delta-preserve-cursor.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-osc52-clipboard.patch}
+      patch -d vendor/rmux-server-0.5.0 -p3 < ${../patches/rmux-server-pane-osc52-clipboard.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-control-space-prefix.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-prefix-table-before-copy-mode.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-selection-style.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-attach-latency-session-lock.patch}
+      substituteInPlace vendor/rmux-server-0.5.0/Cargo.toml \
+        --replace-fail \
+          $'[dependencies.rmux-core]\nversion = "0.5.0"' \
+          $'[dependencies.rmux-core]\nversion = "0.5.0"\npath = "../rmux-core-0.5.0"'
       substituteInPlace Cargo.toml \
         --replace-fail \
           $'[dependencies.rmux-core]\nversion = "0.5.0"' \

@@ -1,0 +1,389 @@
+diff --git a/src/handler_session.rs b/src/handler_session.rs
+index 1d2d486..a55352e 100644
+--- a/src/handler_session.rs
++++ b/src/handler_session.rs
+@@ -134,6 +134,7 @@ impl RequestHandler {
+             .or_else(|| rmux_proto::ProcessCommand::from_legacy_command(command.as_deref()));
+         let requested_name = request.session_name;
+         let socket_path = self.socket_path();
++        let mut pending_initial_terminal = None;
+         let response = {
+             let mut state = self.state.lock().await;
+             let creation_options = resolve_session_creation_options(
+@@ -234,18 +235,21 @@ impl RequestHandler {
+                 .map(|created| created.template_session.is_none())
+                 .unwrap_or(true);
+             if needs_terminal {
+-                match state.insert_initial_session_terminal(
++                match state.prepare_initial_session_terminal(
+                     &session_name,
+                     InitialPaneSpawnOptions {
+                         socket_path: &socket_path,
+                         spawn_environment: spawn_environment.as_ref(),
+                         environment_overrides: environment_overrides.as_deref(),
+                         command: process_command.as_ref(),
+-                        pane_alert_callback: Some(self.pane_alert_callback()),
+-                        pane_exit_callback: Some(self.pane_exit_callback()),
++                        pane_alert_callback: None,
++                        pane_exit_callback: None,
+                     },
+                 ) {
+-                    Ok(()) => {}
++                    Ok(prepared) => {
++                        pending_initial_terminal =
++                            Some((session_name.clone(), process_command.clone(), prepared));
++                    }
+                     Err(error) => {
+                         let _removed = state.sessions.remove_session(&session_name);
+                         return Response::Error(ErrorResponse { error });
+@@ -264,6 +268,32 @@ impl RequestHandler {
+             return response;
+         };
+         let session_name = success.session_name.clone();
++        if let Some((spawn_session_name, process_command, prepared)) = pending_initial_terminal {
++            let opened = match prepared.open(&spawn_session_name, process_command.as_ref()) {
++                Ok(opened) => opened,
++                Err(error) => {
++                    let mut state = self.state.lock().await;
++                    let _removed = state.sessions.remove_session(&spawn_session_name);
++                    return Response::Error(ErrorResponse { error });
++                }
++            };
++            let insert_result = {
++                let mut state = self.state.lock().await;
++                state.insert_prepared_initial_session_terminal(
++                    &spawn_session_name,
++                    prepared,
++                    opened,
++                    process_command.as_ref(),
++                    Some(self.pane_alert_callback()),
++                    Some(self.pane_exit_callback()),
++                )
++            };
++            if let Err(error) = insert_result {
++                let mut state = self.state.lock().await;
++                let _removed = state.sessions.remove_session(&spawn_session_name);
++                return Response::Error(ErrorResponse { error });
++            }
++        }
+         if !detached && (request.detach_other_clients || request.kill_other_clients) {
+             self.detach_other_attach_clients_for_session(
+                 &session_name,
+diff --git a/src/pane_io.rs b/src/pane_io.rs
+index 1d729f3..4f1a276 100644
+--- a/src/pane_io.rs
++++ b/src/pane_io.rs
+@@ -14,6 +14,7 @@ use tokio::sync::mpsc;
+ use tokio::sync::watch;
+ 
+ const READ_BUFFER_SIZE: usize = 8192;
++const MAX_COALESCED_PANE_OUTPUTS: usize = 256;
+ mod attach_transport;
+ mod control;
+ mod deferred_passthrough;
+@@ -683,17 +684,41 @@ pub(crate) async fn forward_attach(
+                         current_target.pane_output = None;
+                         continue;
+                     };
+-                    let (bytes, passthroughs) = match item {
+-                        OutputCursorItem::Event(event) => event.into_parts(),
+-                        OutputCursorItem::Gap(_) => {
+-                            pane_refresh.schedule_now();
+-                            continue;
++                    let mut passthroughs = Vec::new();
++                    let mut needs_full_refresh = false;
++                    let mut pane_output_closed = false;
++                    for item in std::iter::once(item).chain(
++                        current_target
++                            .pane_output
++                            .as_mut()
++                            .map(|pane_output| {
++                                pane_output.try_recv_batch(MAX_COALESCED_PANE_OUTPUTS)
++                            })
++                            .unwrap_or_default(),
++                    ) {
++                        match item {
++                            OutputCursorItem::Event(event) => {
++                                let (bytes, event_passthroughs) = event.into_parts();
++                                if bytes.is_empty() {
++                                    pane_output_closed = true;
++                                    break;
++                                }
++                                passthroughs.extend(event_passthroughs);
++                            }
++                            OutputCursorItem::Gap(_) => {
++                                needs_full_refresh = true;
++                            }
+                         }
+-                    };
+-                    if bytes.is_empty() {
++                    }
++                    if pane_output_closed {
+                         current_target.pane_output = None;
+                         continue;
+                     }
++                    if needs_full_refresh {
++                        defer_passthroughs(&mut deferred_passthroughs, passthroughs);
++                        pane_refresh.schedule_now();
++                        continue;
++                    }
+                     if closing.load(Ordering::SeqCst) {
+                         log_attach_exit(
+                             &live_input,
+diff --git a/src/pane_terminals.rs b/src/pane_terminals.rs
+index 7df6cf9..ff61db6 100644
+--- a/src/pane_terminals.rs
++++ b/src/pane_terminals.rs
+@@ -1,5 +1,5 @@
+ use std::collections::{HashMap, HashSet, VecDeque};
+-use std::path::Path;
++use std::path::{Path, PathBuf};
+ #[cfg(test)]
+ use std::sync::Mutex as StdMutex;
+ 
+@@ -9,13 +9,16 @@ use rmux_core::{
+ };
+ use rmux_proto::{
+     KillPaneResponse, KillWindowResponse, OptionName, PaneTarget, ProcessCommand, RmuxError,
+-    SessionName, TerminalPixels, WindowTarget,
++    SessionId, SessionName, TerminalPixels, TerminalSize, WindowId, WindowTarget,
+ };
++use rmux_pty::PtyMaster;
+ 
+ use crate::pane_io::{PaneAlertCallback, PaneExitCallback, PaneOutputSender};
++use crate::pane_terminal_process::PaneTerminal;
+ #[cfg(unix)]
+ use crate::pane_reader_runtime::PaneReaderRuntime;
+ use crate::pane_transcript::SharedPaneTranscript;
++use crate::terminal::TerminalProfile;
+ 
+ #[path = "pane_terminals/lifecycle_state.rs"]
+ mod lifecycle_state;
+@@ -82,10 +85,35 @@ pub(crate) struct InitialPaneSpawnOptions<'a> {
+     pub(crate) spawn_environment: Option<&'a HashMap<String, String>>,
+     pub(crate) environment_overrides: Option<&'a [String]>,
+     pub(crate) command: Option<&'a ProcessCommand>,
++    #[cfg_attr(not(test), allow(dead_code))]
+     pub(crate) pane_alert_callback: Option<PaneAlertCallback>,
++    #[cfg_attr(not(test), allow(dead_code))]
+     pub(crate) pane_exit_callback: Option<PaneExitCallback>,
+ }
+ 
++pub(crate) struct PreparedInitialPaneTerminal {
++    pub(in crate::pane_terminals) runtime_session_name: SessionName,
++    pub(in crate::pane_terminals) session_id: SessionId,
++    pub(in crate::pane_terminals) window_id: WindowId,
++    pub(in crate::pane_terminals) window_index: u32,
++    pub(in crate::pane_terminals) pane_id: PaneId,
++    pub(in crate::pane_terminals) pane_geometry: PaneGeometry,
++    pub(in crate::pane_terminals) pane_dimensions: TerminalSize,
++    pub(in crate::pane_terminals) profile: TerminalProfile,
++    pub(in crate::pane_terminals) automatic_window_name: Option<String>,
++    pub(in crate::pane_terminals) runtime_window_name: Option<String>,
++    pub(in crate::pane_terminals) initial_title: Option<String>,
++    pub(in crate::pane_terminals) lifecycle_cwd: PathBuf,
++    pub(in crate::pane_terminals) private_environment: Option<Vec<String>>,
++}
++
++pub(crate) struct OpenedInitialPaneTerminal {
++    pub(in crate::pane_terminals) terminal: PaneTerminal,
++    pub(in crate::pane_terminals) output_reader: PtyMaster,
++    #[cfg(windows)]
++    pub(in crate::pane_terminals) exit_watcher: rmux_pty::PtyChild,
++}
++
+ pub(crate) struct NewWindowOptions<'a> {
+     pub(crate) name: Option<String>,
+     pub(crate) detached: bool,
+diff --git a/src/pane_terminals/pane_lifecycle.rs b/src/pane_terminals/pane_lifecycle.rs
+index 26daf03..314bfd1 100644
+--- a/src/pane_terminals/pane_lifecycle.rs
++++ b/src/pane_terminals/pane_lifecycle.rs
+@@ -15,8 +15,8 @@ use crate::terminal::{validate_process_command, TerminalProfile};
+ use super::lifecycle_state::terminal_size_from_geometry;
+ use super::{
+     pane_terminal_geometry_for_session, session_not_found, HandlerState, InitialPaneSpawnOptions,
+-    KilledPaneHookContext, KilledPaneResult, PaneLifecycleSpawn, PaneOutputSpawn,
+-    WindowSpawnOptions,
++    KilledPaneHookContext, KilledPaneResult, OpenedInitialPaneTerminal, PaneLifecycleSpawn,
++    PaneOutputSpawn, PreparedInitialPaneTerminal, WindowSpawnOptions,
+ };
+ 
+ #[path = "pane_lifecycle/preview.rs"]
+@@ -34,11 +34,11 @@ enum PaneOutputMode {
+ }
+ 
+ impl HandlerState {
+-    pub(crate) fn insert_initial_session_terminal(
+-        &mut self,
++    pub(crate) fn prepare_initial_session_terminal(
++        &self,
+         session_name: &SessionName,
+         spawn: InitialPaneSpawnOptions<'_>,
+-    ) -> Result<(), RmuxError> {
++    ) -> Result<PreparedInitialPaneTerminal, RmuxError> {
+         let pane = initial_pane(&self.sessions, session_name)?;
+         let runtime_session_name =
+             self.runtime_session_name_for_window(session_name, pane.window_index);
+@@ -76,53 +76,132 @@ impl HandlerState {
+         let runtime_window_name = profile.runtime_window_name(spawn.command);
+         let initial_title = profile.initial_pane_title();
+         let lifecycle_cwd = profile.cwd().to_path_buf();
+-        let terminal = open_pane_terminal(
++        Ok(PreparedInitialPaneTerminal {
++            runtime_session_name,
++            session_id,
++            window_id,
++            window_index: pane.window_index,
++            pane_id: pane.id,
+             pane_geometry,
++            pane_dimensions: terminal_size_from_geometry(pane.geometry),
+             profile,
+-            runtime_window_name.clone(),
+-            spawn.command,
+-        )?;
+-        let pid = terminal.pid();
+-        let output_reader = clone_terminal_for_output_reader(&terminal, session_name, pane.id)?;
+-        #[cfg(windows)]
+-        let exit_watcher = clone_terminal_for_exit_watcher(&terminal, session_name, pane.id)?;
++            automatic_window_name,
++            runtime_window_name,
++            initial_title,
++            lifecycle_cwd,
++            private_environment: spawn.environment_overrides.map(<[String]>::to_vec),
++        })
++    }
+ 
+-        self.apply_automatic_window_name(session_name, pane.window_index, automatic_window_name)?;
++    pub(crate) fn insert_prepared_initial_session_terminal(
++        &mut self,
++        session_name: &SessionName,
++        prepared: PreparedInitialPaneTerminal,
++        opened: OpenedInitialPaneTerminal,
++        command: Option<&ProcessCommand>,
++        pane_alert_callback: Option<PaneAlertCallback>,
++        pane_exit_callback: Option<PaneExitCallback>,
++    ) -> Result<(), RmuxError> {
++        if !self.sessions.contains_session(session_name) {
++            return Err(session_not_found(session_name));
++        }
++
++        let pid = opened.terminal.pid();
++        self.apply_automatic_window_name(
++            session_name,
++            prepared.window_index,
++            prepared.automatic_window_name,
++        )?;
+ 
+-        self.terminals
+-            .insert_session(runtime_session_name.clone(), pane.id, terminal)?;
++        self.terminals.insert_session(
++            prepared.runtime_session_name.clone(),
++            prepared.pane_id,
++            opened.terminal,
++        )?;
+         if let Err(error) = self.insert_pane_output(
+-            &runtime_session_name,
+-            pane.id,
++            &prepared.runtime_session_name,
++            prepared.pane_id,
+             PaneOutputSpawn {
+-                geometry: pane_geometry,
+-                initial_title,
+-                output_reader,
++                geometry: prepared.pane_geometry,
++                initial_title: prepared.initial_title,
++                output_reader: opened.output_reader,
+                 #[cfg(windows)]
+-                exit_watcher: Some(exit_watcher),
+-                pane_alert_callback: spawn.pane_alert_callback,
+-                pane_exit_callback: spawn.pane_exit_callback,
++                exit_watcher: Some(opened.exit_watcher),
++                pane_alert_callback,
++                pane_exit_callback,
+             },
+         ) {
+-            let _ = self.terminals.remove_session(&runtime_session_name);
++            let _ = self.terminals.remove_session(&prepared.runtime_session_name);
+             return Err(error);
+         }
+         self.record_pane_lifecycle_spawn(PaneLifecycleSpawn {
+-            session_id,
+-            window_id,
+-            pane_id: pane.id,
+-            command: spawn.command.map(ProcessCommand::display_command),
+-            working_directory: Some(lifecycle_cwd),
+-            private_environment: spawn.environment_overrides.map(<[String]>::to_vec),
+-            dimensions: terminal_size_from_geometry(pane.geometry),
++            session_id: prepared.session_id,
++            window_id: prepared.window_id,
++            pane_id: prepared.pane_id,
++            command: command.map(ProcessCommand::display_command),
++            working_directory: Some(prepared.lifecycle_cwd),
++            private_environment: prepared.private_environment,
++            dimensions: prepared.pane_dimensions,
+             pid: Some(pid),
+         });
+-        let output_sequence = self.pane_output_generation(&runtime_session_name, pane.id);
+-        self.update_pane_lifecycle_output_sequence(pane.id, output_sequence);
++        let output_sequence =
++            self.pane_output_generation(&prepared.runtime_session_name, prepared.pane_id);
++        self.update_pane_lifecycle_output_sequence(prepared.pane_id, output_sequence);
+ 
+         Ok(())
+     }
+ 
++    #[cfg_attr(not(test), allow(dead_code))]
++    pub(crate) fn insert_initial_session_terminal(
++        &mut self,
++        session_name: &SessionName,
++        spawn: InitialPaneSpawnOptions<'_>,
++    ) -> Result<(), RmuxError> {
++        let command = spawn.command;
++        let pane_alert_callback = spawn.pane_alert_callback.clone();
++        let pane_exit_callback = spawn.pane_exit_callback.clone();
++        let prepared = self.prepare_initial_session_terminal(session_name, spawn)?;
++        let opened = prepared.open(session_name, command)?;
++        self.insert_prepared_initial_session_terminal(
++            session_name,
++            prepared,
++            opened,
++            command,
++            pane_alert_callback,
++            pane_exit_callback,
++        )
++    }
++}
++
++impl PreparedInitialPaneTerminal {
++    pub(crate) fn open(
++        &self,
++        session_name: &SessionName,
++        command: Option<&ProcessCommand>,
++    ) -> Result<OpenedInitialPaneTerminal, RmuxError> {
++        let terminal = open_pane_terminal(
++            self.pane_geometry,
++            self.profile.clone(),
++            self.runtime_window_name.clone(),
++            command,
++        )?;
++        let output_reader =
++            clone_terminal_for_output_reader(&terminal, session_name, self.pane_id)?;
++        #[cfg(windows)]
++        let exit_watcher =
++            clone_terminal_for_exit_watcher(&terminal, session_name, self.pane_id)?;
++
++        Ok(OpenedInitialPaneTerminal {
++            terminal,
++            output_reader,
++            #[cfg(windows)]
++            exit_watcher,
++        })
++    }
++}
++
++impl HandlerState {
++
+     pub(crate) fn resize_terminals(&mut self, session_name: &SessionName) -> Result<(), RmuxError> {
+         let session_size = self
+             .sessions
