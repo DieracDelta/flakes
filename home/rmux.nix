@@ -3,6 +3,7 @@ let
   rmuxDeckBin = "/home/jrestivo/dev/rmux-deck/.worktrees/feature-rmux-impl/target/release/rmux-deck";
   rmuxDeck = pkgs.writeShellScriptBin "rmux-deck" ''
     export RMUX_DECK_RMUX_BINARY=${pkgs.rmux}/bin/rmux
+    export RMUX_LIFECYCLE_LOG="''${RMUX_LIFECYCLE_LOG:-/tmp/rmux-lifecycle-$USER.log}"
     exec ${rmuxDeckBin} "$@"
   '';
 in

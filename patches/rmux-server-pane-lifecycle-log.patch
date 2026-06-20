@@ -1,0 +1,113 @@
+diff --git a/src/handler_pane/lifecycle.rs b/src/handler_pane/lifecycle.rs
+index 19ab780..ee862c4 100644
+--- a/src/handler_pane/lifecycle.rs
++++ b/src/handler_pane/lifecycle.rs
+@@ -1,4 +1,6 @@
+-use std::time::Duration;
++use std::fs::OpenOptions;
++use std::io::Write;
++use std::time::{Duration, SystemTime, UNIX_EPOCH};
+ 
+ use rmux_core::events::{OutputCursorItem, PaneOutputSubscriptionKey};
+ use rmux_core::LifecycleEvent;
+@@ -133,6 +135,17 @@ impl RequestHandler {
+ 
+                 if let Some(metadata) = metadata {
+                     if should_keep_dead_pane(&state, &target, metadata) {
++                        append_pane_lifecycle_log(format_args!(
++                            "pane-exit plan=keep-dead runtime_session={} session={} pane_id={} window={} pane={} status={:?} signal={:?} generation={:?}",
++                            runtime_session_name,
++                            target.session_name(),
++                            event.pane_id.as_u32(),
++                            target.window_index(),
++                            target.pane_index(),
++                            metadata.status,
++                            metadata.signal,
++                            event.generation
++                        ));
+                         Some(PaneExitPlan::KeepDead {
+                             runtime_session_name,
+                             target,
+@@ -166,6 +179,17 @@ impl RequestHandler {
+                         );
+ 
+                         if only_window_remaining && only_pane_remaining {
++                            append_pane_lifecycle_log(format_args!(
++                                "pane-exit plan=remove-session runtime_session={} session={} pane_id={} window={} pane={} status={:?} signal={:?} generation={:?}",
++                                runtime_session_name,
++                                target.session_name(),
++                                event.pane_id.as_u32(),
++                                target.window_index(),
++                                target.pane_index(),
++                                metadata.status,
++                                metadata.signal,
++                                event.generation
++                            ));
+                             let current_runtime_owner =
+                                 state.sessions.runtime_owner(target.session_name());
+                             let next_runtime_owner = state
+@@ -215,6 +239,17 @@ impl RequestHandler {
+                                 output,
+                             })
+                         } else {
++                            append_pane_lifecycle_log(format_args!(
++                                "pane-exit plan=remove-pane runtime_session={} session={} pane_id={} window={} pane={} status={:?} signal={:?} generation={:?}",
++                                runtime_session_name,
++                                target.session_name(),
++                                event.pane_id.as_u32(),
++                                target.window_index(),
++                                target.pane_index(),
++                                metadata.status,
++                                metadata.signal,
++                                event.generation
++                            ));
+                             match state.kill_pane(target.clone()) {
+                                 Ok(result) => {
+                                     if result.response.window_destroyed {
+@@ -256,9 +291,24 @@ impl RequestHandler {
+                 Some(plan) => break plan,
+                 None if attempts < PANE_EXIT_STATUS_RETRY_ATTEMPTS => {
+                     attempts += 1;
++                    append_pane_lifecycle_log(format_args!(
++                        "pane-exit status-pending session={} pane_id={} generation={:?} attempt={}",
++                        event.session_name,
++                        event.pane_id.as_u32(),
++                        event.generation,
++                        attempts
++                    ));
+                     tokio::time::sleep(PANE_EXIT_STATUS_RETRY_DELAY).await;
+                 }
+-                None => return,
++                None => {
++                    append_pane_lifecycle_log(format_args!(
++                        "pane-exit status-missing session={} pane_id={} generation={:?}",
++                        event.session_name,
++                        event.pane_id.as_u32(),
++                        event.generation
++                    ));
++                    return;
++                }
+             }
+         };
+ 
+@@ -462,6 +512,20 @@ impl RequestHandler {
+     }
+ }
+ 
++fn append_pane_lifecycle_log(args: std::fmt::Arguments<'_>) {
++    let Some(path) = std::env::var_os("RMUX_LIFECYCLE_LOG") else {
++        return;
++    };
++    let now_ms = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .map(|duration| duration.as_millis())
++        .unwrap_or_default();
++    let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) else {
++        return;
++    };
++    let _ = writeln!(file, "{now_ms} {args}");
++}
++
+ async fn wait_for_pane_output_eof(output_rx: Option<PaneOutputReceiver>) -> bool {
+     let Some(mut output_rx) = output_rx else {
+         return false;

@@ -17,6 +17,11 @@ final: _prev: {
       inherit version;
       hash = "sha256-sz4fO0y2sZGYC/EOjQetfyhnis4TQ90S0JSfOHEjI30=";
     };
+    rmuxOsSrc = final.fetchCrate {
+      pname = "rmux-os";
+      inherit version;
+      hash = "sha256-pQahpAlWEATxzqdA+tLXZXFuESAUieizKoiyxXbAlFg=";
+    };
 
     cargoHash = "sha256-jovAKziYEqs4EQuXxD59RKt2BkWDr+DKf0cKOAZ7YZ0=";
     buildNoDefaultFeatures = true;
@@ -28,6 +33,9 @@ final: _prev: {
       chmod -R u+w vendor/rmux-core-0.5.0
       patch -d vendor/rmux-core-0.5.0 -p1 < ${../patches/rmux-core-kitty-keyboard.patch}
       patch -d vendor/rmux-core-0.5.0 -p3 < ${../patches/rmux-core-osc52-pane-clipboard.patch}
+      cp -R ${rmuxOsSrc} vendor/rmux-os-0.5.0
+      chmod -R u+w vendor/rmux-os-0.5.0
+      patch -d vendor/rmux-os-0.5.0 -p3 < ${../patches/rmux-os-reset-pane-child-priority.patch}
       cp -R ${rmuxServerSrc} vendor/rmux-server-0.5.0
       chmod -R u+w vendor/rmux-server-0.5.0
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-delta-preserve-cursor.patch}
@@ -37,20 +45,34 @@ final: _prev: {
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-prefix-table-before-copy-mode.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-copy-mode-selection-style.patch}
       patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-attach-latency-session-lock.patch}
+      patch -d vendor/rmux-server-0.5.0 -p1 < ${../patches/rmux-server-pane-lifecycle-log.patch}
       substituteInPlace vendor/rmux-server-0.5.0/Cargo.toml \
         --replace-fail \
           $'[dependencies.rmux-core]\nversion = "0.5.0"' \
-          $'[dependencies.rmux-core]\nversion = "0.5.0"\npath = "../rmux-core-0.5.0"'
+          $'[dependencies.rmux-core]\nversion = "0.5.0"\npath = "../rmux-core-0.5.0"' \
+        --replace-fail \
+          $'[dependencies.rmux-os]\nversion = "0.5.0"' \
+          $'[dependencies.rmux-os]\nversion = "0.5.0"\npath = "../rmux-os-0.5.0"'
       substituteInPlace Cargo.toml \
         --replace-fail \
           $'[dependencies.rmux-core]\nversion = "0.5.0"' \
           $'[dependencies.rmux-core]\nversion = "0.5.0"\npath = "vendor/rmux-core-0.5.0"' \
+        --replace-fail \
+          $'[dependencies.rmux-os]\nversion = "0.5.0"' \
+          $'[dependencies.rmux-os]\nversion = "0.5.0"\npath = "vendor/rmux-os-0.5.0"' \
         --replace-fail \
           $'[dev-dependencies.rmux-core]\nversion = "0.5.0"' \
           $'[dev-dependencies.rmux-core]\nversion = "0.5.0"\npath = "vendor/rmux-core-0.5.0"' \
         --replace-fail \
           $'[dependencies.rmux-server]\nversion = "0.5.0"\ndefault-features = false' \
           $'[dependencies.rmux-server]\nversion = "0.5.0"\npath = "vendor/rmux-server-0.5.0"\ndefault-features = false'
+      cat >> Cargo.toml <<'EOF'
+
+[patch.crates-io]
+rmux-core = { path = "vendor/rmux-core-0.5.0" }
+rmux-os = { path = "vendor/rmux-os-0.5.0" }
+rmux-server = { path = "vendor/rmux-server-0.5.0" }
+EOF
     '';
 
     meta = with final.lib; {

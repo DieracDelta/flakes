@@ -1,0 +1,45 @@
+diff --git a/crates/rmux-os/src/signals.rs b/crates/rmux-os/src/signals.rs
+index cd09c04..4446153 100644
+--- a/crates/rmux-os/src/signals.rs
++++ b/crates/rmux-os/src/signals.rs
+@@ -2,8 +2,8 @@
+ 
+ use std::io;
+ 
+-/// Resets signal dispositions that RMUX may handle in its daemon process back
+-/// to their default behavior before executing a pane child.
++/// Resets process state that RMUX may alter in its daemon process before
++/// executing a pane child.
+ ///
+ /// This is a no-op on non-Unix platforms.
+ pub fn reset_child_signal_dispositions() -> io::Result<()> {
+@@ -22,6 +22,7 @@ fn reset_child_signal_dispositions_impl() -> io::Result<()> {
+     ] {
+         reset_signal(signal)?;
+     }
++    reset_nice_priority()?;
+     Ok(())
+ }
+ 
+@@ -54,6 +55,21 @@ fn reset_signal(signal: libc::c_int) -> io::Result<()> {
+     }
+ }
+ 
++#[cfg(unix)]
++fn reset_nice_priority() -> io::Result<()> {
++    let result = unsafe {
++        // SAFETY: This runs in the post-fork child before exec. It changes only
++        // the current process' scheduler nice value back to the normal shell
++        // default so a boosted rmux daemon does not boost every pane workload.
++        libc::setpriority(libc::PRIO_PROCESS, 0, 0)
++    };
++    if result == 0 {
++        Ok(())
++    } else {
++        Err(io::Error::last_os_error())
++    }
++}
++
+ #[cfg(not(unix))]
+ fn reset_child_signal_dispositions_impl() -> io::Result<()> {
+     Ok(())
