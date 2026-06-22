@@ -106,5 +106,6 @@ in
   inputs.claude-code-nix-local.overlays.default
   inputs.hermes-agent.overlays.default
   inputs.codex-nix.overlays.default
+  (import ./codex-sqlite-log-filter.nix)
   codex-rmux
 ]

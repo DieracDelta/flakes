@@ -1,0 +1,26 @@
+diff --git a/app-server/src/lib.rs b/app-server/src/lib.rs
+index 44d16b213..0f5915c95 100644
+--- a/app-server/src/lib.rs
++++ b/app-server/src/lib.rs
+@@ -656,7 +656,7 @@ pub async fn run_main(opts: AppServerMainOptions) -> anyhow::Result<()> {
+     let log_db = state_db.clone().map(log_db::start);
+     let log_db_layer = log_db
+         .clone()
+-        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
++        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
+     let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
+     let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
+     let _ = tracing_subscriber::registry()
+diff --git a/tui/src/lib.rs b/tui/src/lib.rs
+index b6dd72b82..65e180e66 100644
+--- a/tui/src/lib.rs
++++ b/tui/src/lib.rs
+@@ -1229,7 +1229,7 @@ pub async fn run_main(
+     let log_db = state_db.clone().map(log_db::start);
+     let log_db_layer = log_db
+         .clone()
+-        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
++        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
+ 
+     let _ = tracing_subscriber::registry()
+         .with(tui_file_layer)
