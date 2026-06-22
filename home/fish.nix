@@ -19,6 +19,7 @@ let
         git = "#c4c47e"; # Yellow-green
         error = "#c47e7e"; # Muted red
         hostname = "#9cb398";
+        mute = "#51635b";
       }
     else if pkgs.stdenv.hostPlatform.isAarch64 then
       {
@@ -29,6 +30,7 @@ let
         git = "#c4a07e"; # Orange-ish
         error = "#c48060"; # Orange for errors (since red is primary)
         hostname = "#b39c98";
+        mute = "#6e5552";
       }
     else
       {
@@ -39,6 +41,7 @@ let
         git = "#b8bb26"; # Gruvbox green
         error = "#fb4934"; # Gruvbox red
         hostname = "#bdae93";
+        mute = "#665c54";
       };
 in
 {
@@ -51,31 +54,6 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.tirith ];
 
-    programs.starship = {
-      settings = {
-        add_newline = false;
-        git_branch.disabled = false;
-        directory.fish_style_pwd_dir_length = 1; # turn on fish directory truncation
-        directory.truncation_length = 2; # number of directories not to truncate
-
-        # Host-specific colors
-        directory.style = "bold ${promptColors.directory}";
-        git_branch.style = "bold ${promptColors.git}";
-        git_status.style = "${promptColors.git}";
-        character = {
-          success_symbol = "[❯](bold ${promptColors.primary})";
-          error_symbol = "[❯](bold ${promptColors.error})";
-        };
-        hostname = {
-          style = "bold ${promptColors.hostname}";
-          ssh_only = false;
-        };
-        username.style_user = "bold ${promptColors.primary}";
-      };
-      enable = true;
-      enableBashIntegration = true;
-      enableFishIntegration = true;
-    };
     programs.dircolors = {
       enable = true;
       enableFishIntegration = true;
@@ -89,6 +67,14 @@ in
         {
           name = "puffer";
           inherit (puffer) src;
+        }
+        {
+          name = "async-prompt";
+          inherit (async-prompt) src;
+        }
+        {
+          name = "pure";
+          inherit (pure) src;
         }
       ];
       shellAliases = {
@@ -135,6 +121,58 @@ in
       };
       # keys.sh contains a bunch of my keys
       interactiveShellInit = ''
+        set -g async_prompt_enable 1
+        set -g async_prompt_functions fish_prompt
+        set -g async_prompt_inherit_variables \
+          CMD_DURATION \
+          SHLVL \
+          fish_bind_mode \
+          pipestatus \
+          status \
+          pure_begin_prompt_with_current_directory \
+          pure_color_at_sign \
+          pure_color_current_directory \
+          pure_color_git_branch \
+          pure_color_git_dirty \
+          pure_color_git_stash \
+          pure_color_git_unpulled_commits \
+          pure_color_git_unpushed_commits \
+          pure_color_hostname \
+          pure_color_prompt_on_error \
+          pure_color_prompt_on_success \
+          pure_color_system_time \
+          pure_color_username_normal \
+          pure_color_username_root \
+          pure_enable_single_line_prompt \
+          pure_show_system_time \
+          pure_shorten_prompt_current_directory_length \
+          pure_symbol_prompt \
+          pure_symbol_reverse_prompt \
+          pure_truncate_prompt_current_directory_keeps
+
+        set -g pure_enable_single_line_prompt true
+        set -g pure_begin_prompt_with_current_directory true
+        set -g pure_shorten_prompt_current_directory_length 1
+        set -g pure_truncate_prompt_current_directory_keeps 2
+
+        set -g pure_show_system_time true
+        set -g pure_color_system_time "${promptColors.mute}"
+
+        set -g pure_symbol_prompt "❯"
+        set -g pure_symbol_reverse_prompt "❮"
+        set -g pure_color_prompt_on_success "${promptColors.primary}"
+        set -g pure_color_prompt_on_error "${promptColors.error}"
+        set -g pure_color_current_directory "${promptColors.directory}"
+        set -g pure_color_git_branch "${promptColors.git}"
+        set -g pure_color_git_dirty "${promptColors.git}"
+        set -g pure_color_git_stash "${promptColors.git}"
+        set -g pure_color_git_unpulled_commits "${promptColors.git}"
+        set -g pure_color_git_unpushed_commits "${promptColors.git}"
+        set -g pure_color_hostname "${promptColors.hostname}"
+        set -g pure_color_at_sign "${promptColors.mute}"
+        set -g pure_color_username_normal "${promptColors.primary}"
+        set -g pure_color_username_root "${promptColors.error}"
+
         ${builtins.readFile ./config.fish}
       '';
       # tirith init --shell fish | source

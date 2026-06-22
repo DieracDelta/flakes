@@ -59,6 +59,11 @@ let
     plane-mcp-server-src = inputs.plane-mcp-server-src;
   };
 
+  # Repowise codebase intelligence MCP server
+  repowise = import ./repowise.nix {
+    repowise-src = inputs.repowise-src;
+  };
+
   # Jitsi Meet with Olm/E2EE dependency removed.
   jitsi = import ./jitsi.nix;
 
@@ -91,6 +96,7 @@ in
   rapids
   amp-cli
   plane
+  repowise
   jitsi
   skynet
   # inputs.nix-btm.overlays.default

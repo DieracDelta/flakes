@@ -46,6 +46,10 @@
     plane-mcp-server-src.url = "path:/home/jrestivo/dev/plane-mcp-server";
     plane-mcp-server-src.flake = false;
 
+    # Repowise codebase intelligence MCP server
+    repowise-src.url = "github:repowise-dev/repowise";
+    repowise-src.flake = false;
+
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
 

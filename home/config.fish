@@ -2,16 +2,6 @@ if test -n "$GHOSTTY_RESOURCES_DIR"
     source "$GHOSTTY_RESOURCES_DIR/shell-integration/fish/vendor_conf.d/ghostty-shell-integration.fish"
 end
 
-if status is-interactive
-    if type -q renice
-        sudo -n renice -n -10 -p $fish_pid
-    end
-
-    if type -q ionice
-        sudo -n ionice -c2 -n0 -p $fish_pid
-    end
-end
-
 function nn --description 'launch nvim with priority boosting where available'
     set OS (uname)
 
@@ -44,8 +34,51 @@ end
 
 set os (uname)
 
-ssh-agent -c | source -
+function __add_ssh_key_once --argument-names key_path
+    test -r "$key_path"; or return
+
+    set -l pub_path "$key_path.pub"
+    if test -r "$pub_path"
+        set -l fingerprint (ssh-keygen -lf "$pub_path" 2>/dev/null | awk '{print $2}')
+        if test -n "$fingerprint"; and ssh-add -l 2>/dev/null | string match -q "*$fingerprint*"
+            return
+        end
+    end
+
+    ssh-add -q "$key_path"
+end
+
+function __use_shared_ssh_agent
+    set -l gcr_sock "$XDG_RUNTIME_DIR/gcr/ssh"
+    set -l fallback_sock "$XDG_RUNTIME_DIR/ssh-agent/socket"
+
+    if test -n "$XDG_RUNTIME_DIR"; and test -S "$gcr_sock"
+        set -gx SSH_AUTH_SOCK "$gcr_sock"
+        set -e SSH_AGENT_PID
+        return
+    end
+
+    if set -q SSH_AUTH_SOCK; and test -S "$SSH_AUTH_SOCK"; and ssh-add -l >/dev/null 2>&1
+        return
+    end
+
+    if test -n "$XDG_RUNTIME_DIR"
+        mkdir -p (dirname "$fallback_sock")
+        if test -S "$fallback_sock"; and env SSH_AUTH_SOCK="$fallback_sock" ssh-add -l >/dev/null 2>&1
+            set -gx SSH_AUTH_SOCK "$fallback_sock"
+            set -e SSH_AGENT_PID
+            return
+        end
+
+        rm -f "$fallback_sock"
+        ssh-agent -a "$fallback_sock" -c | source -
+    end
+end
+
 if test $os = "Darwin"
+  if not set -q SSH_AUTH_SOCK; or not test -S "$SSH_AUTH_SOCK"
+    ssh-agent -c | source -
+  end
   ssh-add ~/.ssh/id_ed25519
   # ssh-add ~/.ssh/id_rsa_old
   fish_add_path /run/current-system/sw/bin
@@ -59,7 +92,8 @@ else if test $os = "Linux"
   set -gx PLANE_API_KEY (command cat /home/jrestivo/PLANE_TOKEN | string trim)
 
 
-  ssh-add ~/.ssh/id_rsa
+  __use_shared_ssh_agent
+  __add_ssh_key_once ~/.ssh/id_rsa
   export EDITOR="/home/jrestivo/dev/vimconfig/result/bin/nvim"
 else
     echo "Unknown OS: $os"
@@ -90,7 +124,4 @@ abbr --position anywhere --add \.\.\.\.\.\.\. '../../../../../../'
 fish_vi_key_bindings
 set -U fish_greeting
 
-eval "$(starship init fish)"
 export NIX_BUILD_SHELL="bash"
-export LINEAR_API_KEY="$(linear auth token)"
-zoxide init fish | source

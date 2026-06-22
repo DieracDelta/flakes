@@ -653,6 +653,7 @@ in
     inputs.psi-coding-agent.packages.${system}.default
     forgejo-mcp
     plane-mcp-server
+    repowise
   ];
 
   services.nginx.virtualHosts."nominatim.local" = {

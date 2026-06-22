@@ -3226,6 +3226,22 @@
         "type": "github"
       }
     },
+    "repowise-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781519708,
+        "narHash": "sha256-Mx40DCVRTOcZhLDBBjJbAR5mRagFtQAUl6ETrabiuY0=",
+        "owner": "repowise-dev",
+        "repo": "repowise",
+        "rev": "01978e7bf1f02001e4b91b1cefa76ed55ce40020",
+        "type": "github"
+      },
+      "original": {
+        "owner": "repowise-dev",
+        "repo": "repowise",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "bpftop": "bpftop",
@@ -3249,6 +3265,7 @@
         "plane-mcp-server-src": "plane-mcp-server-src",
         "psi-coding-agent": "psi-coding-agent",
         "quadlet-nix": "quadlet-nix",
+        "repowise-src": "repowise-src",
         "rotki": "rotki",
         "shapebpf": "shapebpf",
         "simple-nixos-mailserver": "simple-nixos-mailserver",

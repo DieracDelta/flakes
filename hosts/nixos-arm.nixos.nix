@@ -96,7 +96,28 @@
   };
 
   # SSH configuration
-  services.openssh.settings.PasswordAuthentication = false;
+  services.openssh.settings = {
+    PasswordAuthentication = false;
+    KbdInteractiveAuthentication = false;
+    MaxAuthTries = 3;
+    LoginGraceTime = "20s";
+    MaxStartups = "3:30:10";
+  };
+
+  # Ban repeated SSH scanners before they can build up enough preauth load to
+  # starve sshd/nsncd workers. OCI ingress allowlisting is still the stronger
+  # control for public SSH.
+  services.fail2ban = {
+    enable = true;
+    bantime = "1h";
+    maxretry = 5;
+    jails.sshd.settings = {
+      enabled = true;
+      backend = "systemd";
+      filter = "sshd";
+      port = "ssh";
+    };
+  };
   security.sudo.wheelNeedsPassword = false;
 
   # Tailscale VPN
