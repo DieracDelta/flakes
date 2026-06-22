@@ -1,8 +1,6 @@
-diff --git a/app-server/src/lib.rs b/app-server/src/lib.rs
-index 44d16b213..0f5915c95 100644
---- a/app-server/src/lib.rs
-+++ b/app-server/src/lib.rs
-@@ -656,7 +656,7 @@ pub async fn run_main(opts: AppServerMainOptions) -> anyhow::Result<()> {
+--- app-server/src/lib.rs	2026-06-22 10:55:21.877055234 -0400
++++ app-server/src/lib.rs	2026-06-22 10:55:22.310502686 -0400
+@@ -656,7 +656,7 @@
      let log_db = state_db.clone().map(log_db::start);
      let log_db_layer = log_db
          .clone()
@@ -11,35 +9,33 @@ index 44d16b213..0f5915c95 100644
      let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
      let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
      let _ = tracing_subscriber::registry()
-diff --git a/cli/src/login.rs b/cli/src/login.rs
-index 53ee3b6b7..83cd40857 100644
---- a/cli/src/login.rs
-+++ b/cli/src/login.rs
-@@ -86,7 +86,7 @@ fn init_login_file_logging(config: &Config) -> Option<WorkerGuard> {
+--- cli/src/login.rs	2026-06-22 10:55:21.934084134 -0400
++++ cli/src/login.rs	2026-06-22 10:55:22.312616900 -0400
+@@ -87,8 +87,7 @@
+     };
  
      let (non_blocking, guard) = non_blocking(log_file);
-     let env_filter = EnvFilter::try_from_default_env()
+-    let env_filter = EnvFilter::try_from_default_env()
 -        .unwrap_or_else(|_| EnvFilter::new("codex_cli=info,codex_core=info,codex_login=info"));
-+        .unwrap_or_else(|_| EnvFilter::new("codex_cli=warn,codex_core=warn,codex_login=warn"));
++    let env_filter = EnvFilter::new("warn");
      let file_layer = tracing_subscriber::fmt::layer()
          .with_writer(non_blocking)
          .with_target(true)
-diff --git a/feedback/src/lib.rs b/feedback/src/lib.rs
-index 14af16980..e820b4992 100644
---- a/feedback/src/lib.rs
-+++ b/feedback/src/lib.rs
-@@ -199,9 +199,7 @@ impl CodexFeedback {
+--- feedback/src/lib.rs	2026-06-22 10:55:22.007981452 -0400
++++ feedback/src/lib.rs	2026-06-22 10:55:22.313057308 -0400
+@@ -202,9 +202,8 @@
              .with_timer(tracing_subscriber::fmt::time::SystemTime)
              .with_ansi(false)
              .with_target(false)
 -            // Capture everything, regardless of the caller's `RUST_LOG`, so feedback includes the
 -            // full trace when the user uploads a report.
 -            .with_filter(Targets::new().with_default(Level::TRACE))
++            // Keep uploaded feedback logs to warnings and errors by default.
 +            .with_filter(Targets::new().with_default(Level::WARN))
      }
  
      /// Returns a [`tracing_subscriber`] layer that collects structured metadata for feedback.
-@@ -218,7 +216,7 @@ impl CodexFeedback {
+@@ -218,7 +217,7 @@
          FeedbackMetadataLayer {
              inner: self.inner.clone(),
          }
@@ -48,19 +44,20 @@ index 14af16980..e820b4992 100644
      }
  
      pub fn snapshot(&self, session_id: Option<ThreadId>) -> FeedbackSnapshot {
-diff --git a/tui/src/lib.rs b/tui/src/lib.rs
-index b6dd72b82..4f551c7ee 100644
---- a/tui/src/lib.rs
-+++ b/tui/src/lib.rs
-@@ -1189,5 +1189,5 @@ pub async fn run_main(
+--- tui/src/lib.rs	2026-06-22 10:55:22.095359581 -0400
++++ tui/src/lib.rs	2026-06-22 10:55:22.311550826 -0400
+@@ -1186,9 +1186,7 @@
+ 
+         let log_file = log_file_opts.open(log_dir.join(TUI_LOG_FILE_NAME))?;
          let (non_blocking, guard) = non_blocking(log_file);
-         let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+-        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
 -            EnvFilter::new("codex_core=info,codex_tui=info,codex_rmcp_client=info")
-+            EnvFilter::new("codex_core=warn,codex_tui=warn,codex_rmcp_client=warn")
-         });
+-        });
++        let env_filter = EnvFilter::new("warn");
          let file_layer = tracing_subscriber::fmt::layer()
              .with_writer(non_blocking)
-@@ -1229,7 +1229,7 @@ pub async fn run_main(
+             .with_target(true)
+@@ -1229,7 +1227,7 @@
      let log_db = state_db.clone().map(log_db::start);
      let log_db_layer = log_db
          .clone()
