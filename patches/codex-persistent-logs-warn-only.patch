@@ -39,6 +39,15 @@ index 14af16980..e820b4992 100644
      }
  
      /// Returns a [`tracing_subscriber`] layer that collects structured metadata for feedback.
+@@ -218,7 +216,7 @@ impl CodexFeedback {
+         FeedbackMetadataLayer {
+             inner: self.inner.clone(),
+         }
+-        .with_filter(Targets::new().with_target(FEEDBACK_TAGS_TARGET, Level::TRACE))
++        .with_filter(Targets::new().with_target(FEEDBACK_TAGS_TARGET, Level::WARN))
+     }
+ 
+     pub fn snapshot(&self, session_id: Option<ThreadId>) -> FeedbackSnapshot {
 diff --git a/tui/src/lib.rs b/tui/src/lib.rs
 index b6dd72b82..4f551c7ee 100644
 --- a/tui/src/lib.rs
