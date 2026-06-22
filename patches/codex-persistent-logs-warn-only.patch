@@ -1,0 +1,62 @@
+diff --git a/app-server/src/lib.rs b/app-server/src/lib.rs
+index 44d16b213..0f5915c95 100644
+--- a/app-server/src/lib.rs
++++ b/app-server/src/lib.rs
+@@ -656,7 +656,7 @@ pub async fn run_main(opts: AppServerMainOptions) -> anyhow::Result<()> {
+     let log_db = state_db.clone().map(log_db::start);
+     let log_db_layer = log_db
+         .clone()
+-        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
++        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
+     let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
+     let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
+     let _ = tracing_subscriber::registry()
+diff --git a/cli/src/login.rs b/cli/src/login.rs
+index 53ee3b6b7..83cd40857 100644
+--- a/cli/src/login.rs
++++ b/cli/src/login.rs
+@@ -86,7 +86,7 @@ fn init_login_file_logging(config: &Config) -> Option<WorkerGuard> {
+ 
+     let (non_blocking, guard) = non_blocking(log_file);
+     let env_filter = EnvFilter::try_from_default_env()
+-        .unwrap_or_else(|_| EnvFilter::new("codex_cli=info,codex_core=info,codex_login=info"));
++        .unwrap_or_else(|_| EnvFilter::new("codex_cli=warn,codex_core=warn,codex_login=warn"));
+     let file_layer = tracing_subscriber::fmt::layer()
+         .with_writer(non_blocking)
+         .with_target(true)
+diff --git a/feedback/src/lib.rs b/feedback/src/lib.rs
+index 14af16980..e820b4992 100644
+--- a/feedback/src/lib.rs
++++ b/feedback/src/lib.rs
+@@ -199,9 +199,7 @@ impl CodexFeedback {
+             .with_timer(tracing_subscriber::fmt::time::SystemTime)
+             .with_ansi(false)
+             .with_target(false)
+-            // Capture everything, regardless of the caller's `RUST_LOG`, so feedback includes the
+-            // full trace when the user uploads a report.
+-            .with_filter(Targets::new().with_default(Level::TRACE))
++            .with_filter(Targets::new().with_default(Level::WARN))
+     }
+ 
+     /// Returns a [`tracing_subscriber`] layer that collects structured metadata for feedback.
+diff --git a/tui/src/lib.rs b/tui/src/lib.rs
+index b6dd72b82..4f551c7ee 100644
+--- a/tui/src/lib.rs
++++ b/tui/src/lib.rs
+@@ -1189,5 +1189,5 @@ pub async fn run_main(
+         let (non_blocking, guard) = non_blocking(log_file);
+         let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+-            EnvFilter::new("codex_core=info,codex_tui=info,codex_rmcp_client=info")
++            EnvFilter::new("codex_core=warn,codex_tui=warn,codex_rmcp_client=warn")
+         });
+         let file_layer = tracing_subscriber::fmt::layer()
+             .with_writer(non_blocking)
+@@ -1229,7 +1229,7 @@ pub async fn run_main(
+     let log_db = state_db.clone().map(log_db::start);
+     let log_db_layer = log_db
+         .clone()
+-        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
++        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
+ 
+     let _ = tracing_subscriber::registry()
+         .with(tui_file_layer)

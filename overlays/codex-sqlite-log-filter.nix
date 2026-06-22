@@ -20,7 +20,7 @@ in
     sourceRoot = "${src.name}/codex-rs";
 
     patches = [
-      ../patches/codex-sqlite-log-db-warn-only.patch
+      ../patches/codex-persistent-logs-warn-only.patch
     ];
 
     cargoLock = {
