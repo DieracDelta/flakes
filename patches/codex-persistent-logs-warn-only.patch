@@ -1,19 +1,52 @@
---- app-server/src/lib.rs	2026-06-22 10:55:21.877055234 -0400
-+++ app-server/src/lib.rs	2026-06-22 10:55:22.310502686 -0400
-@@ -656,7 +656,7 @@
-     let log_db = state_db.clone().map(log_db::start);
-     let log_db_layer = log_db
-         .clone()
+--- a/app-server/src/lib.rs
++++ b/app-server/src/lib.rs
+@@ -61,18 +61,15 @@
+ use codex_feedback::CodexFeedback;
+ use codex_protocol::protocol::SessionSource;
+ use codex_rollout::state_db as rollout_state_db;
+-use codex_state::log_db;
+ use tokio::sync::mpsc;
+ use tokio::sync::oneshot;
+ use tokio::task::JoinHandle;
+ use tokio_util::sync::CancellationToken;
+-use tracing::Level;
+ use tracing::error;
+ use tracing::info;
+ use tracing::warn;
+ use tracing_subscriber::EnvFilter;
+ use tracing_subscriber::Layer;
+-use tracing_subscriber::filter::Targets;
+ use tracing_subscriber::layer::SubscriberExt;
+ use tracing_subscriber::registry::Registry;
+ use tracing_subscriber::util::SubscriberInitExt;
+@@ -651,21 +648,9 @@
+             .boxed(),
+     };
+
+-    let feedback_layer = feedback.logger_layer();
+-    let feedback_metadata_layer = feedback.metadata_layer();
+-    let log_db = state_db.clone().map(log_db::start);
+-    let log_db_layer = log_db
+-        .clone()
 -        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
-+        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
-     let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
-     let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
+-    let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
+-    let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
++    let log_db = None;
      let _ = tracing_subscriber::registry()
---- cli/src/login.rs	2026-06-22 10:55:21.934084134 -0400
-+++ cli/src/login.rs	2026-06-22 10:55:22.312616900 -0400
+         .with(stderr_fmt)
+-        .with(feedback_layer)
+-        .with(feedback_metadata_layer)
+-        .with(log_db_layer)
+-        .with(otel_logger_layer)
+-        .with(otel_tracing_layer)
+         .try_init();
+     for warning in &config_warnings {
+         match &warning.details {
+--- a/cli/src/login.rs
++++ b/cli/src/login.rs
 @@ -87,8 +87,7 @@
      };
- 
+
      let (non_blocking, guard) = non_blocking(log_file);
 -    let env_filter = EnvFilter::try_from_default_env()
 -        .unwrap_or_else(|_| EnvFilter::new("codex_cli=info,codex_core=info,codex_login=info"));
@@ -21,8 +54,8 @@
      let file_layer = tracing_subscriber::fmt::layer()
          .with_writer(non_blocking)
          .with_target(true)
---- feedback/src/lib.rs	2026-06-22 10:55:22.007981452 -0400
-+++ feedback/src/lib.rs	2026-06-22 10:55:22.313057308 -0400
+--- a/feedback/src/lib.rs
++++ b/feedback/src/lib.rs
 @@ -202,9 +202,8 @@
              .with_timer(tracing_subscriber::fmt::time::SystemTime)
              .with_ansi(false)
@@ -33,7 +66,7 @@
 +            // Keep uploaded feedback logs to warnings and errors by default.
 +            .with_filter(Targets::new().with_default(Level::WARN))
      }
- 
+
      /// Returns a [`tracing_subscriber`] layer that collects structured metadata for feedback.
 @@ -218,7 +217,7 @@
          FeedbackMetadataLayer {
@@ -42,12 +75,25 @@
 -        .with_filter(Targets::new().with_target(FEEDBACK_TAGS_TARGET, Level::TRACE))
 +        .with_filter(Targets::new().with_target(FEEDBACK_TAGS_TARGET, Level::WARN))
      }
- 
+
      pub fn snapshot(&self, session_id: Option<ThreadId>) -> FeedbackSnapshot {
---- tui/src/lib.rs	2026-06-22 10:55:22.095359581 -0400
-+++ tui/src/lib.rs	2026-06-22 10:55:22.311550826 -0400
-@@ -1186,9 +1186,7 @@
- 
+--- a/tui/src/lib.rs
++++ b/tui/src/lib.rs
+@@ -74,12 +74,10 @@
+ use std::sync::Arc;
+ use std::time::Instant;
+ pub use token_usage::TokenUsage;
+-use tracing::Level;
+ use tracing::error;
+ use tracing::warn;
+ use tracing_appender::non_blocking;
+ use tracing_subscriber::EnvFilter;
+-use tracing_subscriber::filter::Targets;
+ use tracing_subscriber::prelude::*;
+ use url::Url;
+ use uuid::Uuid;
+@@ -1186,9 +1184,7 @@
+
          let log_file = log_file_opts.open(log_dir.join(TUI_LOG_FILE_NAME))?;
          let (non_blocking, guard) = non_blocking(log_file);
 -        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -57,12 +103,36 @@
          let file_layer = tracing_subscriber::fmt::layer()
              .with_writer(non_blocking)
              .with_target(true)
-@@ -1229,7 +1227,7 @@
-     let log_db = state_db.clone().map(log_db::start);
-     let log_db_layer = log_db
-         .clone()
+@@ -1204,8 +1200,6 @@
+     };
+
+     let feedback = codex_feedback::CodexFeedback::new();
+-    let feedback_layer = feedback.logger_layer();
+-    let feedback_metadata_layer = feedback.metadata_layer();
+
+     if cli.oss && model_provider_override.is_some() {
+         // We're in the oss section, so provider_id should be Some
+@@ -1222,22 +1216,10 @@
+         ensure_oss_provider_ready(provider_id, &config).await?;
+     }
+
+-    let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
+-
+-    let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
+-
+-    let log_db = state_db.clone().map(log_db::start);
+-    let log_db_layer = log_db
+-        .clone()
 -        .map(|layer| layer.with_filter(Targets::new().with_default(Level::TRACE)));
-+        .map(|layer| layer.with_filter(Targets::new().with_default(Level::WARN)));
- 
++    let log_db = None;
+
      let _ = tracing_subscriber::registry()
          .with(tui_file_layer)
+-        .with(feedback_layer)
+-        .with(feedback_metadata_layer)
+-        .with(log_db_layer)
+-        .with(otel_logger_layer)
+-        .with(otel_tracing_layer)
+         .try_init();
+
+     run_ratatui_app(

@@ -3229,15 +3229,16 @@
     "repowise-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1781519708,
-        "narHash": "sha256-Mx40DCVRTOcZhLDBBjJbAR5mRagFtQAUl6ETrabiuY0=",
+        "lastModified": 1782386244,
+        "narHash": "sha256-f7+ViEDT623X3BfWomkDPadrqkRblz0Pw5nLtLe3HCA=",
         "owner": "repowise-dev",
         "repo": "repowise",
-        "rev": "01978e7bf1f02001e4b91b1cefa76ed55ce40020",
+        "rev": "7a7257f98fac9cc0db0524dda591be9df289770b",
         "type": "github"
       },
       "original": {
         "owner": "repowise-dev",
+        "ref": "v0.24.0",
         "repo": "repowise",
         "type": "github"
       }

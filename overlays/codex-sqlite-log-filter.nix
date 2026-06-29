@@ -59,7 +59,7 @@ in
     '';
 
     meta = prev.codex.meta // {
-      description = "${prev.codex.meta.description or "OpenAI Codex CLI"} with WARN-only SQLite feedback log persistence";
+      description = "${prev.codex.meta.description or "OpenAI Codex CLI"} without persistent tracing sinks";
     };
   };
 }

@@ -47,7 +47,7 @@
     plane-mcp-server-src.flake = false;
 
     # Repowise codebase intelligence MCP server
-    repowise-src.url = "github:repowise-dev/repowise";
+    repowise-src.url = "github:repowise-dev/repowise/v0.24.0";
     repowise-src.flake = false;
 
     # eBPF process monitor

@@ -137,7 +137,7 @@ in
 
     python312.pkgs.buildPythonApplication rec {
       pname = "repowise";
-      version = "0.19.1";
+      version = "0.24.0";
       pyproject = true;
 
       src = repowise-src;

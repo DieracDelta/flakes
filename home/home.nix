@@ -12,6 +12,23 @@
     EDITOR = "nvim";
   };
 
+  systemd.user.services.repowise-ironmain-mcp = {
+    Unit = {
+      Description = "Repowise MCP server for IronMain";
+      After = [ "network-online.target" ];
+    };
+
+    Service = {
+      Type = "simple";
+      WorkingDirectory = "/home/jrestivo/dev/ironmain_checkout";
+      ExecStart = "${pkgs.repowise}/bin/repowise mcp /home/jrestivo/dev/ironmain_checkout --transport streamable-http --port 7338";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+
+    Install.WantedBy = [ "default.target" ];
+  };
+
   home.stateVersion = "25.11";
 
   programs.fish.enable = true;

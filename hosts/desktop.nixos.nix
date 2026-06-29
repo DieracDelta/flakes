@@ -66,15 +66,25 @@ let
         -X ${pkgs.coreutils}/bin/rm -rf --
     }
 
-    prune_dirs_older_than /var/cache/forgejo-actions/ironmain/cargo-crap-target 2days
-    prune_entries_older_than /var/cache/forgejo-actions/ironmain/tmp 1day
+    prune_dirs_older_than /var/tmp/ironmain-ci-work 1d
 
-    for cache_dir in \
-      /var/cache/forgejo-actions/ironmain/cargo-target \
-      /var/cache/forgejo-actions/ironmain/frontend-cargo-target \
-      /var/cache/forgejo-actions/ironmain/isa-metadata-cargo-target \
-      /var/cache/forgejo-actions/ironmain/next; do
-      prune_dirs_older_than "$cache_dir" 14days
+    for cache_root in \
+      /var/cache/forgejo-actions/ironmain \
+      /home/jrestivo/.cache/ironmain-ci; do
+      prune_dirs_older_than "$cache_root/cargo-crap-target" 1d
+      prune_entries_older_than "$cache_root/tmp" 1d
+
+      for cache_dir in \
+        "$cache_root/cargo-target" \
+        "$cache_root/frontend-cargo-target" \
+        "$cache_root/isa-metadata-cargo-target" \
+        "$cache_root/fuzz-target" \
+        "$cache_root/lake" \
+        "$cache_root/next" \
+        "$cache_root/test-projects" \
+        "$cache_root/validation-target"; do
+        prune_dirs_older_than "$cache_dir" 7d
+      done
     done
   '';
   forgejoMcpDaemon = pkgs.writeShellScript "forgejo-mcp-daemon" ''
@@ -517,6 +527,7 @@ in
     "d /var/cache/forgejo-actions/ironmain/lake 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/next 0775 gitea-runner gitea-runner -"
     "d /var/cache/forgejo-actions/ironmain/tmp 0775 gitea-runner gitea-runner -"
+    "d /var/tmp/ironmain-ci-work 0775 gitea-runner gitea-runner -"
   ];
 
   virtualisation.docker = {
