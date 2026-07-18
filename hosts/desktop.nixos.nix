@@ -167,6 +167,14 @@ in
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
   custom_modules.runner_vms.enable = true;
+  custom_modules.octo-fiesta = {
+    enable = true;
+    subsonicUrl = "http://127.0.0.1:4533/navidrome";
+    musicDir = /var/lib/musiclibrary;
+    caddy = {
+      basePath = "/octo-fiesta";
+    };
+  };
   custom_modules.soulseek = {
     enable = true;
     tailscaleExitNode = "100.109.204.162";
@@ -660,6 +668,10 @@ in
     linear-cli
     agent-deck
     codex
+    pi-coding-agent
+    pi-subagents
+    pi-codex-goal
+    context-mode
     hermes-agent
     inputs.psi-coding-agent.packages.${system}.default
     forgejo-mcp

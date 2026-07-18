@@ -73,11 +73,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1776989649,
-        "narHash": "sha256-RxUGyCki67DZI+4MjOxUHTsTY8pWbcomDByx/TkKJcM=",
+        "lastModified": 1783380155,
+        "narHash": "sha256-SwUwKaLrZ+c5y4GoZHKBf1nUsDHVsIUtn2CFloZrV2A=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "f3eb770e763b685def35939621026433d31d0a18",
+        "rev": "25d979d1a39d0acdbcb1b8d0b9d83ffdd10b5f43",
         "type": "github"
       },
       "original": {
@@ -2683,11 +2683,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1776329215,
-        "narHash": "sha256-a8BYi3mzoJ/AcJP8UldOx8emoPRLeWqALZWu4ZvjPXw=",
+        "lastModified": 1783279667,
+        "narHash": "sha256-/NAkDSsve+GNM0Bt6tleJdCGfsTlK89nPjkVOzZMo0s=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b86751bc4085f48661017fa226dee99fab6c651b",
+        "rev": "f205b5574fd0cb7da5b702a2da51507b7f4fdd1b",
         "type": "github"
       },
       "original": {
@@ -2956,6 +2956,19 @@
         "owner": "kevinhwang91",
         "repo": "nvim-ufo",
         "type": "github"
+      }
+    },
+    "octo-fiesta-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782754047,
+        "narHash": "sha256-ytz0jMEWG/2kbvR81esKkJgMgHMF6Jt593r/NYqAk8w=",
+        "path": "/home/jrestivo/dev/octo-fiesta",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/jrestivo/dev/octo-fiesta",
+        "type": "path"
       }
     },
     "opam-nix": {
@@ -3263,6 +3276,7 @@
         "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-stable": "nixpkgs-stable_3",
         "nixpkgs-unpatched": "nixpkgs-unpatched",
+        "octo-fiesta-src": "octo-fiesta-src",
         "plane-mcp-server-src": "plane-mcp-server-src",
         "psi-coding-agent": "psi-coding-agent",
         "quadlet-nix": "quadlet-nix",

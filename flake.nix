@@ -50,6 +50,10 @@
     repowise-src.url = "github:repowise-dev/repowise/v0.24.0";
     repowise-src.flake = false;
 
+    # Octo-Fiesta Subsonic proxy for WRhythm/Navidrome testing
+    octo-fiesta-src.url = "path:/home/jrestivo/dev/octo-fiesta";
+    octo-fiesta-src.flake = false;
+
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
 

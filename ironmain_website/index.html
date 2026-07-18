@@ -26,14 +26,13 @@
       html,
       body {
         min-height: 100%;
+        scroll-behavior: smooth;
       }
 
       body {
         margin: 0;
         min-height: 100vh;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
+        overflow-x: hidden;
         background:
           radial-gradient(
             circle at 18% 22%,
@@ -73,10 +72,70 @@
         mask-image: radial-gradient(circle at center, black, transparent 72%);
       }
 
+      .topbar {
+        position: fixed;
+        z-index: 2;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 4vw, 3rem);
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0.86),
+          rgba(0, 0, 0, 0.38) 72%,
+          transparent
+        );
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-brand {
+        color: var(--ink);
+        font-size: 1rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 0.35rem;
+        padding: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(8, 10, 12, 0.72);
+      }
+
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.15rem;
+        padding: 0 0.85rem;
+        border-radius: 6px;
+        color: var(--steel);
+        font-size: 0.92rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .tab:hover,
+      .tab:focus-visible {
+        color: #001014;
+        background: var(--cloud);
+        outline: none;
+      }
+
       main {
-        width: min(92vw, 72rem);
-        padding: 4rem 1.25rem;
+        width: min(92vw, 74rem);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 6rem 1.25rem 2.5rem;
         text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       h1 {
@@ -130,21 +189,60 @@
       .contact a:focus-visible {
         color: var(--cloud);
       }
+
+      @media (max-width: 760px) {
+        .topbar {
+          align-items: flex-start;
+          padding: 0.8rem 0.85rem;
+        }
+
+        .topbar-brand {
+          min-height: 2.15rem;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .tabs {
+          max-width: 62vw;
+          overflow-x: auto;
+        }
+
+        .tab {
+          white-space: nowrap;
+        }
+
+        main {
+          min-height: auto;
+          padding-top: 5.25rem;
+        }
+
+      }
     </style>
   </head>
   <body>
+    <header class="topbar">
+      <a class="topbar-brand" href="#top" aria-label="IronMain home"
+        >IronMain</a
+      >
+      <nav class="tabs" aria-label="Primary">
+        <a class="tab" href="/product/">Products</a>
+        <a class="tab" href="mailto:justin@ironmain.dev">Contact</a>
+      </nav>
+    </header>
     <main>
-      <h1>
-        <span class="brand">IronMain:</span>
-        <span class="tagline"
-          ><span class="oxide">Oxidizing</span> mainframes into the
-          <span class="cloud">cloud</span></span
-        >
-      </h1>
-      <p class="contact">
-        Contact us at:
-        <a href="mailto:justin@ironmain.dev">justin@ironmain.dev</a>
-      </p>
+      <section class="hero" id="top" aria-labelledby="site-title">
+        <h1 id="site-title">
+          <span class="brand">IronMain:</span>
+          <span class="tagline"
+            ><span class="oxide">Oxidizing</span> mainframes into the
+            <span class="cloud">cloud</span></span
+          >
+        </h1>
+        <p class="contact">
+          Contact us:
+          <a href="mailto:justin@ironmain.dev">justin@ironmain.dev</a>
+        </p>
+      </section>
     </main>
   </body>
 </html>

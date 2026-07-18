@@ -142,6 +142,24 @@ in
 
       src = repowise-src;
 
+      postPatch = ''
+        python - <<'PY'
+        from pathlib import Path
+
+        path = Path("packages/server/src/repowise/server/mcp_server/_server.py")
+        source = path.read_text()
+        for transport in ("sse", "streamable-http"):
+            before = f'        mcp.settings.port = port\n        mcp.run(transport="{transport}")'
+            after = f'        mcp.settings.host = os.environ.get("REPOWISE_HOST", "127.0.0.1")\n        mcp.settings.port = port\n        mcp.run(transport="{transport}")'
+            if before not in source:
+                raise SystemExit(f"expected MCP {transport} port stanza not found")
+            source = source.replace(before, after)
+        path.write_text(source)
+        PY
+        substituteInPlace packages/cli/src/repowise/cli/commands/mcp_cmd.py \
+          --replace-fail 'URL: http://127.0.0.1:{port}/{endpoint}' 'URL: http://{__import__("os").environ.get("REPOWISE_HOST", "127.0.0.1")}:{port}/{endpoint}'
+      '';
+
       build-system = with python312.pkgs; [ setuptools ];
 
       dependencies =

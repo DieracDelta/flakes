@@ -12,6 +12,7 @@ let
   packages = import ./packages.nix { };
   rmux = import ./rmux.nix;
   mcpRemote = import ./mcp-remote.nix;
+  pi = import ./pi.nix;
 
   # Overlays that need flake inputs
   external = import ./external.nix {
@@ -64,6 +65,11 @@ let
     repowise-src = inputs.repowise-src;
   };
 
+  # Octo-Fiesta Subsonic proxy for WRhythm/Navidrome testing
+  octo-fiesta = import ./octo-fiesta.nix {
+    octo-fiesta-src = inputs.octo-fiesta-src;
+  };
+
   # Jitsi Meet with Olm/E2EE dependency removed.
   jitsi = import ./jitsi.nix;
 
@@ -81,6 +87,7 @@ in
   python
   packages
   rmux
+  pi
   external
   mcpRemote
   tmux-gruvbox-themes
@@ -97,6 +104,7 @@ in
   amp-cli
   plane
   repowise
+  octo-fiesta
   jitsi
   skynet
   # inputs.nix-btm.overlays.default

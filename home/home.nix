@@ -10,6 +10,69 @@
 
   home.sessionVariables = {
     EDITOR = "nvim";
+    VISP_PI_BINARY = "${pkgs.pi-coding-agent}/bin/pi";
+    VISP_PI_MCP_ADAPTER_PACKAGE = "${pkgs.pi-mcp-adapter}/lib/node_modules/pi-mcp-adapter";
+    VISP_PI_SUBAGENTS_PACKAGE = "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents";
+    VISP_PI_CODEX_GOAL_PACKAGE = "${pkgs.pi-codex-goal}/lib/node_modules/pi-codex-goal";
+    VISP_PI_WEB_ACCESS_PACKAGE = "${pkgs.pi-web-access}/lib/node_modules/pi-web-access";
+    VISP_PI_CONTEXT_MODE_PACKAGE = "${pkgs.context-mode}/lib/node_modules/context-mode";
+  };
+
+  home.file.".pi/agent/extensions/pi-mcp-adapter.ts".text = ''
+    import extension from "${pkgs.pi-mcp-adapter}/lib/node_modules/pi-mcp-adapter/index.ts";
+    export default extension;
+  '';
+  home.file.".pi/agent/extensions/pi-subagents.ts".text = ''
+    import extension from "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents/dist/index.js";
+    export default extension;
+  '';
+  home.file.".pi/agent/extensions/pi-codex-goal.ts".text = ''
+    import extension from "${pkgs.pi-codex-goal}/lib/node_modules/pi-codex-goal/src/index.ts";
+    export default extension;
+  '';
+  home.file.".pi/agent/extensions/pi-web-access.ts".text = ''
+    import extension from "${pkgs.pi-web-access}/lib/node_modules/pi-web-access/index.ts";
+    export default extension;
+  '';
+  home.file.".pi/agent/extensions/context-mode.ts".text = ''
+    import extension from "${pkgs.context-mode}/lib/node_modules/context-mode/build/adapters/pi/extension.js";
+    export default extension;
+  '';
+  home.file.".pi/agent/skills/context-mode".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/context-mode";
+  home.file.".pi/agent/skills/ctx-doctor".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-doctor";
+  home.file.".pi/agent/skills/ctx-index".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-index";
+  home.file.".pi/agent/skills/ctx-insight".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-insight";
+  home.file.".pi/agent/skills/ctx-purge".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-purge";
+  home.file.".pi/agent/skills/ctx-search".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-search";
+  home.file.".pi/agent/skills/ctx-stats".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-stats";
+  home.file.".pi/agent/skills/ctx-upgrade".source =
+    "${pkgs.context-mode}/lib/node_modules/context-mode/skills/ctx-upgrade";
+
+  xdg.configFile."mcp/mcp.json".text = builtins.toJSON {
+    settings = {
+      requestTimeoutMs = 120000;
+    };
+    mcpServers = {
+      plane = {
+        url = "http://127.0.0.1:8211/http/api-key/mcp";
+        requestTimeoutMs = 120000;
+        headers = {
+          Authorization = "Bearer \${PLANE_API_KEY}";
+          x-workspace-slug = "iro";
+        };
+      };
+      forgejo = {
+        url = "http://127.0.0.1:8213/mcp";
+        requestTimeoutMs = 120000;
+      };
+    };
   };
 
   systemd.user.services.repowise-ironmain-mcp = {
@@ -21,6 +84,7 @@
     Service = {
       Type = "simple";
       WorkingDirectory = "/home/jrestivo/dev/ironmain_checkout";
+      Environment = [ "REPOWISE_HOST=0.0.0.0" ];
       ExecStart = "${pkgs.repowise}/bin/repowise mcp /home/jrestivo/dev/ironmain_checkout --transport streamable-http --port 7338";
       Restart = "on-failure";
       RestartSec = "5s";

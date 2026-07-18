@@ -1,0 +1,52 @@
+[
+  {
+    "pname": "BouncyCastle.Cryptography",
+    "version": "2.6.2",
+    "hash": "sha256-Yjk2+x/RcVeccGOQOQcRKCiYzyx1mlFnhS5auCII+Ms="
+  },
+  {
+    "pname": "Microsoft.AspNetCore.OpenApi",
+    "version": "9.0.4",
+    "hash": "sha256-TGyUwcxFsEDYvOTj+GBmhbkkb2vqe3Ver1Y8AqP7/x8="
+  },
+  {
+    "pname": "Microsoft.Extensions.ApiDescription.Server",
+    "version": "9.0.0",
+    "hash": "sha256-dvSRCpheFixWJk+ZJ2FyOSodjNPnkW9fWSYkl62/giY="
+  },
+  {
+    "pname": "Microsoft.OpenApi",
+    "version": "1.6.17",
+    "hash": "sha256-Wx9PwlEJPNMq1kp59nJJnLHQ+yNhqCTudcokmlP+tSk="
+  },
+  {
+    "pname": "Microsoft.OpenApi",
+    "version": "1.6.25",
+    "hash": "sha256-Y8/b5gl+VtHD48BOsnSnyIH9ncjy3EGvszIHn+pjzP4="
+  },
+  {
+    "pname": "Swashbuckle.AspNetCore",
+    "version": "9.0.4",
+    "hash": "sha256-lbZ+CJYVSV4vgjjiuy9bTrjycgFQlSXuiv4y11kS4I8="
+  },
+  {
+    "pname": "Swashbuckle.AspNetCore.Swagger",
+    "version": "9.0.4",
+    "hash": "sha256-ZOgHmhWygPSq2feS+61SIIw0NtyYFwE+E1JL7+Msvss="
+  },
+  {
+    "pname": "Swashbuckle.AspNetCore.SwaggerGen",
+    "version": "9.0.4",
+    "hash": "sha256-6d1CCDiiCcC/jYpWY39Spo2J9Iw/fKal90cFs7FiNmA="
+  },
+  {
+    "pname": "Swashbuckle.AspNetCore.SwaggerUI",
+    "version": "9.0.4",
+    "hash": "sha256-lJaFCOVP9OOv3fqxdPjnKNXHbZ18tmrJsv4nBEfggBg="
+  },
+  {
+    "pname": "TagLibSharp",
+    "version": "2.3.0",
+    "hash": "sha256-PD9bVZiPaeC8hNx2D+uDUf701cCaMi2IRi5oPTNN+/w="
+  }
+]

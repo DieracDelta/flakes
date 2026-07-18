@@ -124,7 +124,7 @@ in
     ];
 
     services.jitsi-meet = {
-      enable = false;
+      enable = true;
       hostName = cfg.domain;
       caddy.enable = false;
       nginx.enable = true;
