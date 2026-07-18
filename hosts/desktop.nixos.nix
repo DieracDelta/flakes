@@ -328,7 +328,9 @@ in
 
       service = {
         DISABLE_REGISTRATION = false;
-        REQUIRE_SIGNIN_VIEW = true;
+        # Fork Actions receive no repository token. Let them clone public PR
+        # heads anonymously; private repositories still require authentication.
+        REQUIRE_SIGNIN_VIEW = false;
       };
 
       mirror = {
