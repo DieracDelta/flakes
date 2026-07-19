@@ -365,6 +365,7 @@ in
       url = "http://127.0.0.1:${toString forgejoPort}";
       tokenFile = "/var/lib/forgejo/runner_token";
       labels = [
+        "jrestivo-workstation-local:host"
         "native:host"
         "ubuntu-latest:host"
         "ubuntu-22.04:host"
