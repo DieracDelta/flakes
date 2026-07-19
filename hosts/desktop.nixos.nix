@@ -87,6 +87,7 @@ let
       done
     done
   '';
+  forgejoNixosTestSwitch = pkgs.callPackage ../nix/packages/forgejo-nixos-test-switch.nix { };
   forgejoMcpDaemon = pkgs.writeShellScript "forgejo-mcp-daemon" ''
     set -euo pipefail
 
@@ -287,6 +288,18 @@ in
     home = "/var/cache/forgejo-actions/runner";
     createHome = true;
   };
+
+  security.sudo-rs.extraRules = [
+    {
+      users = [ "gitea-runner" ];
+      commands = [
+        {
+          command = "${forgejoNixosTestSwitch}/bin/forgejo-nixos-test-switch";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
 
   services.forgejo = {
     enable = true;
@@ -676,6 +689,7 @@ in
     pi-codex-goal
     context-mode
     hermes-agent
+    forgejoNixosTestSwitch
     inputs.psi-coding-agent.packages.${system}.default
     forgejo-mcp
     plane-mcp-server
