@@ -210,7 +210,7 @@ in
   # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
   services.shapebpf.interface = "enp6s0";
-  systemd.services.shapebpf.environment.RUST_LOG = lib.mkForce "error";
+  systemd.services.shapebpf.serviceConfig.Environment = lib.mkForce "RUST_LOG=error";
   systemd.services.signal-cli-hermes = {
     description = "signal-cli HTTP daemon for Hermes Agent";
     wantedBy = [ "multi-user.target" ];
