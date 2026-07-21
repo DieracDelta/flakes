@@ -2216,6 +2216,8 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
 
     npmDepsHash = "sha256-K6zKmkjoBcshZ9mWeM1BiBFtM8/ekf9A1S1xwJ/p7PA=";
 
+    patches = [ ../patches/multi-scrobbler-event-driven-sqlite-timestamps.patch ];
+
     nodejs = final.nodejs;
 
     # Subpath deployment - set base URL for frontend build
@@ -2266,6 +2268,12 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
         dist/manifest.json > dist/manifest.json.tmp && mv dist/manifest.json.tmp dist/manifest.json
 
       runHook postBuild
+    '';
+
+    # This repository's stdenv overlay disables checkPhase globally, so run the
+    # backend regression suite from the explicit post-build hook instead.
+    postBuild = ''
+      npm run test:backend -- --timeout 10000
     '';
 
     # Don't run default npm install phase - we handle it

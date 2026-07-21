@@ -1,0 +1,314 @@
+diff --git a/src/backend/common/AbstractComponent.ts b/src/backend/common/AbstractComponent.ts
+index a8df7ec..a54c79f 100644
+--- a/src/backend/common/AbstractComponent.ts
++++ b/src/backend/common/AbstractComponent.ts
+@@ -81,7 +81,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
+ 
+     protected async postInitialize(): Promise<void> {
+         super.postInitialize();
+-        this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
++        await this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
+     }
+ 
+     protected async doBuildDatabase(): Promise<true | string | undefined> {
+diff --git a/src/backend/scrobblers/AbstractScrobbleClient.ts b/src/backend/scrobblers/AbstractScrobbleClient.ts
+index 3fbfc2b..4c6475a 100644
+--- a/src/backend/scrobblers/AbstractScrobbleClient.ts
++++ b/src/backend/scrobblers/AbstractScrobbleClient.ts
+@@ -704,7 +704,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+     }
+ 
+     protected async postInitialize(): Promise<void> {
+-        super.postInitialize();
++        await super.postInitialize();
+         const {
+             options: {
+                 refreshInitialCount = this.MAX_INITIAL_SCROBBLES_FETCH
+@@ -799,7 +799,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+     addScrobbledTrack = async (playObj: PlayObject) => {
+         this.emitEvent('scrobble', { play: playObj });
+         try {
+-            await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + 1});
++            await this.componentRepo.updateById(this.dbComponent.id, {
++                countLive: this.dbComponent.countLive + 1,
++                lastActiveAt: dayjs()
++            });
+         } catch (e) {
+             this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
+         }
+@@ -1011,7 +1014,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+                     }
+                     this.emitEvent('queueEmptied', {});
+                 }
+-                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+                 await delay(signal, this.scrobbleSleep);
+             }
+         } catch (e) {
+@@ -1378,7 +1380,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+             this.deadLetterQueued -= 1;
+         }
+         if(state === 'scrobbled') {
+-            this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + 1});
++            this.componentRepo.updateById(this.dbComponent.id, {
++                countLive: this.dbComponent.countLive + 1,
++                lastActiveAt: dayjs()
++            });
+         }
+         this.emitEvent('removeDeadLetter', { dead: { id: deadScrobble.uid } });
+     }
+diff --git a/src/backend/sources/AbstractSource.ts b/src/backend/sources/AbstractSource.ts
+index 288e5ee..cbe5451 100644
+--- a/src/backend/sources/AbstractSource.ts
++++ b/src/backend/sources/AbstractSource.ts
+@@ -196,8 +196,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
+                     this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
+                 }
+                 return true;
+-            } else if(!this.canPoll) {
+-                this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
+             }
+         }
+         return true;
+@@ -356,13 +354,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
+                 options.signal?.throwIfAborted()
+                 const hydratedPlay = await this.addPlayToDiscovered(play);
+                 newDiscoveredPlays.push(hydratedPlay);
+-            } else {
+-                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
+             }
+         }
+         if(newDiscoveredPlays.length > 0) {
+             try {
+-                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
++                await this.componentRepo.updateById(this.dbComponent.id, {
++                    countLive: this.dbComponent.countLive + newDiscoveredPlays.length,
++                    lastActiveAt: dayjs()
++                });
+             } catch (e) {
+                 this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
+             }
+@@ -704,8 +703,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
+                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
+                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
+                 this.setIsSleeping(true);
+-                // set last active before we sleep
+-                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+                 while(dayjs().isBefore(this.getWakeAt())) {
+                     // check for polling status every half second and wait till wake up time
+                    await delay(signal, 500);
+diff --git a/src/backend/tests/scrobbler/TestScrobbler.ts b/src/backend/tests/scrobbler/TestScrobbler.ts
+index 60eeaea..f00177b 100644
+--- a/src/backend/tests/scrobbler/TestScrobbler.ts
++++ b/src/backend/tests/scrobbler/TestScrobbler.ts
+@@ -11,12 +11,14 @@ import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from "../../common/da
+ import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
+ import { PlaySelect } from "../../common/database/drizzle/drizzleTypes.js";
+ import { loggerDebug } from "@foxxmd/logging";
++import { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.js";
+ 
+ export class TestScrobbler extends AbstractScrobbleClient {
+ 
+     testRecentScrobbles: PlayObject[] = [];
+     getScrobblesForTimeRange: TimeRangeListensFetcher;
+ 
++    public componentRepoTest: DrizzleComponentRepository;
+     public playRepoTest: DrizzlePlayRepository;
+     public queueRepoTest: DrizzleQueueRepository;
+ 
+@@ -44,6 +46,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
+ 
+     protected async postDatabase(): Promise<void> {
+         super.postDatabase();
++        this.componentRepoTest = this.componentRepo;
+         this.playRepoTest = this.playRepo;
+         this.queueRepoTest = this.queueRepo;
+     }
+@@ -57,6 +60,11 @@ export class TestScrobbler extends AbstractScrobbleClient {
+         return await this.playRepoTest.createPlays(newPlayData);
+     }
+ 
++    getTotalChanges(): number {
++        const result = this.db.$client.prepare('SELECT total_changes() AS changes').get() as {changes: number};
++        return result.changes;
++    }
++
+ }
+ 
+ export class TestAuthScrobbler extends TestScrobbler {
+diff --git a/src/backend/tests/scrobbler/scrobblers.test.ts b/src/backend/tests/scrobbler/scrobblers.test.ts
+index 8c52beb..9c14de3 100644
+--- a/src/backend/tests/scrobbler/scrobblers.test.ts
++++ b/src/backend/tests/scrobbler/scrobblers.test.ts
+@@ -511,6 +511,51 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
+     });
+ });
+ 
++describe('Event-driven client persistence', function() {
++
++    it('does not write while the scrobble queue is idle', async function() {
++        await using scrobbler = await generateTestScrobbler();
++        const changesBefore = scrobbler.getTotalChanges();
++        const queueReads = spy(scrobbler.playRepoTest, 'getQueueNext');
++        const controller = new AbortController();
++        const processing = scrobbler.startScrobbling(controller.signal).catch((e) => {
++            if(!isAbortError(e)) {
++                throw e;
++            }
++        });
++
++        while(queueReads.callCount < 3) {
++            await sleep(1);
++        }
++        controller.abort();
++        await processing;
++
++        expect(scrobbler.getTotalChanges()).to.eq(changesBefore);
++    });
++
++    it('records activity when a queued scrobble succeeds', async function() {
++        await using scrobbler = await generateTestScrobbler();
++        scrobbler.testRecentScrobbles = [];
++        await scrobbler.queueScrobble(generatePlay(), 'test');
++        const componentUpdate = spy(scrobbler.componentRepoTest, 'updateById');
++        const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
++        const controller = new AbortController();
++        const processing = scrobbler.startScrobbling(controller.signal).catch((e) => {
++            if(!isAbortError(e)) {
++                throw e;
++            }
++        });
++
++        await emptied;
++        controller.abort();
++        await processing;
++
++        expect(componentUpdate.calledOnce).to.be.true;
++        expect(componentUpdate.firstCall.args[1]).to.have.property('lastActiveAt');
++        expect(componentUpdate.firstCall.args[1]).not.to.have.property('lastReadyAt');
++    });
++});
++
+ describe('Upstream Scrobbles', function() {
+ 
+     afterEach(function () {
+diff --git a/src/backend/tests/source/TestSource.ts b/src/backend/tests/source/TestSource.ts
+index e17009a..ab39751 100644
+--- a/src/backend/tests/source/TestSource.ts
++++ b/src/backend/tests/source/TestSource.ts
+@@ -2,11 +2,39 @@ import { PlayObject } from "../../../core/Atomic.js";
+ import AbstractSource from "../../sources/AbstractSource.js";
+ import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.js";
+ import MemorySource from "../../sources/MemorySource.js";
++import { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.js";
++import { DrizzlePlayRepository } from "../../common/database/drizzle/repositories/PlayRepository.js";
+ 
+ export class TestSource extends AbstractSource {
++    public componentRepoTest: DrizzleComponentRepository;
++    public playRepoTest: DrizzlePlayRepository;
++
++    protected async postDatabase(): Promise<void> {
++        await super.postDatabase();
++        this.componentRepoTest = this.componentRepo;
++        this.playRepoTest = this.playRepo;
++    }
++
+     handle(plays: PlayObject[]) {
+         this.scrobble(plays);
+     }
++
++    runHeartbeatTask() {
++        return this.heartbeatTask();
++    }
++
++    runPolling(signal: AbortSignal) {
++        return this.doPolling(signal);
++    }
++
++    isPollingSleeping() {
++        return this.getIsSleeping();
++    }
++
++    getTotalChanges(): number {
++        const result = this.db.$client.prepare('SELECT total_changes() AS changes').get() as {changes: number};
++        return result.changes;
++    }
+ }
+ 
+ export class TestMemorySource extends MemorySource {
+diff --git a/src/backend/tests/source/source.test.ts b/src/backend/tests/source/source.test.ts
+index 8b04678..c7b9095 100644
+--- a/src/backend/tests/source/source.test.ts
++++ b/src/backend/tests/source/source.test.ts
+@@ -20,6 +20,8 @@ import { sleep } from "../../utils.js";
+ import DeezerInternalSource from "../../sources/DeezerInternalSource.js";
+ import { DeezerInternalSourceOptions } from "../../common/infrastructure/config/source/deezer.js";
+ import { artistCreditsToNames } from "../../../core/StringUtils.js";
++import { spy } from "sinon";
++import { isAbortError } from "abort-controller-x";
+ 
+ chai.use(asPromised);
+ 
+@@ -46,6 +48,63 @@ const generateMemoryPositionalSource = async (config: SourceConfig = {}) => {
+     return s;
+ }
+ 
++describe('Event-driven source persistence', function () {
++
++    it('does not write component state during periodic readiness checks', async function() {
++        await using source = await generateSource();
++        const changesBefore = source.getTotalChanges();
++
++        await source.runHeartbeatTask();
++        await source.runHeartbeatTask();
++
++        expect(source.getTotalChanges()).to.eq(changesBefore);
++    });
++
++    it('does not write while an idle polling loop sleeps', async function() {
++        await using source = await generateSource();
++        source.config.data = {interval: 1, maxInterval: 1};
++        const changesBefore = source.getTotalChanges();
++        const componentUpdate = spy(source.componentRepoTest, 'updateById');
++        const controller = new AbortController();
++        const polling = source.runPolling(controller.signal).catch((e) => {
++            if(!isAbortError(e)) {
++                throw e;
++            }
++        });
++
++        while(!source.isPollingSleeping()) {
++            await sleep(1);
++        }
++        controller.abort();
++        await polling;
++
++        expect(componentUpdate.notCalled).to.be.true;
++        expect(source.getTotalChanges()).to.eq(changesBefore);
++    });
++
++    it('does not rewrite a play when polling rediscovers identical data', async function() {
++        await using source = await generateSource();
++        const play = generatePlay();
++        expect(await source.discover([play])).to.have.length(1);
++        const changesBefore = source.getTotalChanges();
++
++        expect(await source.discover([play])).to.have.length(0);
++
++        expect(source.getTotalChanges()).to.eq(changesBefore);
++    });
++
++    it('records activity only when a new play is persisted', async function() {
++        await using source = await generateSource();
++        const componentUpdate = spy(source.componentRepoTest, 'updateById');
++
++        expect(await source.discover([generatePlay()])).to.have.length(1);
++
++        expect(componentUpdate.calledOnce).to.be.true;
++        expect(componentUpdate.firstCall.args[1]).to.have.property('lastActiveAt');
++        expect(componentUpdate.firstCall.args[1]).not.to.have.property('lastReadyAt');
++    });
++});
++
+ describe('Sources use transform plays correctly', function () {
+ 
+     it('Transforms play on preCompare', async function() {
