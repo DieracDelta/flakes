@@ -159,6 +159,7 @@ in
 
       environment = {
         NODE_ENV = "production";
+        DEBUG_MODE = "false";
         CONFIG_DIR = stateDir;
         PORT = toString cfg.port;
         BASE_URL = if cfg.baseUrl != null then cfg.baseUrl else "http://127.0.0.1:${toString cfg.port}";
@@ -183,7 +184,7 @@ in
             printf '{}\n' > "$app_base_file"
           fi
 
-          jq '.logging = ((.logging // {}) + { file: false })' "$app_base_file" > "$app_tmp_file"
+          jq '.debugMode = false | .logging = ((.logging // {}) + { file: false, console: "warn", level: "warn" })' "$app_base_file" > "$app_tmp_file"
           install -m 0600 "$app_tmp_file" "$app_cfg_file"
         ''
         + optionalString listenBrainzEndpoint.enable ''

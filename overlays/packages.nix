@@ -2216,7 +2216,10 @@ const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/$/, "") || undef
 
     npmDepsHash = "sha256-K6zKmkjoBcshZ9mWeM1BiBFtM8/ekf9A1S1xwJ/p7PA=";
 
-    patches = [ ../patches/multi-scrobbler-event-driven-sqlite-timestamps.patch ];
+    patches = [
+      ../patches/multi-scrobbler-event-driven-sqlite-timestamps.patch
+      ../patches/multi-scrobbler-auth-retry-wal.patch
+    ];
 
     nodejs = final.nodejs;
 
