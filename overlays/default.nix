@@ -112,7 +112,6 @@ in
   inputs.claude-code-nix.overlays.default
   # Local path overlay wins so desktop can track /home/jrestivo/dev/claude-code-nix directly.
   inputs.claude-code-nix-local.overlays.default
-  inputs.hermes-agent.overlays.default
   inputs.codex-nix.overlays.default
   (import ./codex-sqlite-log-filter.nix)
   codex-rmux
