@@ -17,6 +17,109 @@ let
     network = import ./dashboards/network.nix;
     smart = import ./dashboards/smart.nix;
   };
+
+  userCgroupIoCollector = pkgs.writeScript "prometheus-user-cgroup-io" ''
+    #!${pkgs.python3}/bin/python3
+    import glob
+    import os
+    import pwd
+    import re
+    import time
+    from pathlib import Path
+
+    output = Path(os.environ.get(
+        "USER_CGROUP_IO_OUTPUT",
+        "/var/lib/node_exporter/textfile_collector/user_cgroup_io.prom",
+    ))
+    cgroup_root = Path("/sys/fs/cgroup")
+    metric_definitions = (
+        ("rbytes", "user_cgroup_io_read_bytes_total", "Bytes read by a user cgroup from a physical block device."),
+        ("wbytes", "user_cgroup_io_write_bytes_total", "Bytes written by a user cgroup to a physical block device."),
+        ("rios", "user_cgroup_io_read_operations_total", "Read operations issued by a user cgroup to a physical block device."),
+        ("wios", "user_cgroup_io_write_operations_total", "Write operations issued by a user cgroup to a physical block device."),
+    )
+
+    def escape_label(value):
+        return str(value).replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
+    def physical_device_name(major_minor):
+        sys_device = Path("/sys/dev/block") / major_minor
+        if not sys_device.exists():
+            return None
+        resolved = os.path.realpath(sys_device)
+        if "/virtual/" in resolved:
+            return None
+        return os.path.basename(resolved)
+
+    def read_scope(path, user, uid):
+        rows = []
+        try:
+            stat_lines = (path / "io.stat").read_text().splitlines()
+        except OSError:
+            return rows
+
+        for line in stat_lines:
+            fields = line.split()
+            if not fields:
+                continue
+            major_minor = fields[0]
+            device = physical_device_name(major_minor)
+            if device is None:
+                continue
+            counters = {}
+            for field in fields[1:]:
+                try:
+                    key, value = field.split("=", 1)
+                    counters[key] = int(value)
+                except (ValueError, TypeError):
+                    continue
+            labels = (
+                f'user="{escape_label(user)}",uid="{escape_label(uid)}",'
+                f'cgroup="{escape_label(path.name)}",device="{escape_label(device)}",'
+                f'major_minor="{escape_label(major_minor)}"'
+            )
+            for field, metric, _help in metric_definitions:
+                if field in counters:
+                    rows.append((metric, labels, counters[field]))
+        return rows
+
+    scopes = []
+    for path_string in sorted(glob.glob(str(cgroup_root / "user.slice/user-*.slice"))):
+        path = Path(path_string)
+        match = re.fullmatch(r"user-(\d+)\.slice", path.name)
+        if match is None:
+            continue
+        uid = int(match.group(1))
+        try:
+            user = pwd.getpwuid(uid).pw_name
+        except KeyError:
+            user = str(uid)
+        scopes.append((path, user, uid))
+
+    for scope_name, label in (("system.slice", "system"), ("machine.slice", "machines")):
+        path = cgroup_root / scope_name
+        if path.exists():
+            scopes.append((path, label, label))
+
+    lines = []
+    for _field, metric, help_text in metric_definitions:
+        lines.append(f"# HELP {metric} {help_text}")
+        lines.append(f"# TYPE {metric} counter")
+    for path, user, uid in scopes:
+        for metric, labels, value in read_scope(path, user, uid):
+            lines.append(f"{metric}{{{labels}}} {value}")
+    lines.extend((
+        "# HELP user_cgroup_io_collector_timestamp_seconds Unix timestamp of the last successful collection.",
+        "# TYPE user_cgroup_io_collector_timestamp_seconds gauge",
+        f"user_cgroup_io_collector_timestamp_seconds {time.time():.6f}",
+    ))
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output.with_name(f".{output.name}.{os.getpid()}.tmp")
+    temporary.write_text("\n".join(lines) + "\n")
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, output)
+  '';
 in
 {
   options.custom_modules.monitoring = {
@@ -31,6 +134,36 @@ in
     # ===================
     services.prometheus = {
       enable = true;
+
+      # The default 15-day retention made historical disk-write accounting
+      # impossible. Current usage projects to roughly 35 GiB for five years.
+      retentionTime = "5y";
+
+      # Physical whole-device writes from node_exporter's diskstats collector.
+      # This covers NVMe and SATA disks and survives counter resets on reboot.
+      # Exact calendar periods are calculated from the retained counter using
+      # $__range.
+      rules = [
+        ''
+          groups:
+            - name: disk-io-aggregates
+              interval: 5m
+              rules:
+                - record: node_disk_written_bytes_1d
+                  expr: increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[1d])
+                - record: node_disk_written_bytes_7d
+                  expr: increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[7d])
+                - record: node_disk_written_bytes_30d
+                  expr: increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[30d])
+                - record: user_cgroup_io_write_bytes_per_second
+                  expr: rate(user_cgroup_io_write_bytes_total[5m])
+                - record: user_cgroup_io_write_operations_per_second
+                  expr: rate(user_cgroup_io_write_operations_total[5m])
+                - record: user_cgroup_io_written_bytes_1d
+                  expr: increase(user_cgroup_io_write_bytes_total[1d])
+        ''
+      ];
+
       exporters.node = {
         enable = true;
         enabledCollectors = [
@@ -115,6 +248,40 @@ in
     systemd.tmpfiles.rules = [
       "d /var/lib/node_exporter/textfile_collector 0777 root root -"
     ];
+
+    # node_exporter has no per-user disk collector. Export the recursive
+    # cgroup-v2 counters from each user slice, plus system and machine slices,
+    # through node_exporter's textfile collector.
+    systemd.services.prometheus-user-cgroup-io = {
+      description = "Export per-user cgroup disk I/O metrics for Prometheus";
+      after = [ "systemd-tmpfiles-setup.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = userCgroupIoCollector;
+        User = "root";
+        Group = "root";
+        UMask = "0022";
+        Nice = 10;
+        NoNewPrivileges = true;
+        ProtectHome = true;
+        ProtectSystem = "strict";
+        ProtectControlGroups = true;
+        ProtectKernelTunables = true;
+        PrivateTmp = true;
+        CapabilityBoundingSet = "";
+        ReadWritePaths = [ "/var/lib/node_exporter/textfile_collector" ];
+      };
+    };
+
+    systemd.timers.prometheus-user-cgroup-io = {
+      description = "Collect per-user cgroup disk I/O metrics every minute";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* *:*:00";
+        AccuracySec = "10s";
+        Persistent = true;
+      };
+    };
 
     # Allow smartctl-exporter to access NVMe character devices
     services.udev.extraRules = ''

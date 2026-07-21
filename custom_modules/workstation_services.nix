@@ -90,27 +90,37 @@ in
     # Scrutiny disk health monitoring
     services.scrutiny.enable = true;
     services.scrutiny.collector.enable = true;
+    services.scrutiny.collector.schedule = "daily";
     services.scrutiny.settings.web.listen.port = 5123;
     services.scrutiny.openFirewall = true;
     services.scrutiny.settings.web.listen.basepath = "/scrutiny";
-    services.scrutiny.collector.settings.devices = [
-      {
-        device = "/dev/sda";
-        type = "sat";
-      }
-      {
-        device = "/dev/sdc";
-        type = "sat";
-      }
-      {
-        device = "/dev/nvme0";
-        type = "nvme";
-      }
-      {
-        device = "/dev/nvme1";
-        type = "nvme";
-      }
-    ];
+    services.scrutiny.collector.settings = {
+      # A wildcard listen address is not a valid collector destination. Using
+      # loopback also fixes the historical collector gap that began in May.
+      api.endpoint = "http://127.0.0.1:5123/scrutiny";
+      devices = [
+        {
+          device = "/dev/sda";
+          type = "sat";
+        }
+        {
+          device = "/dev/sdb";
+          type = "sat";
+        }
+        {
+          device = "/dev/nvme0";
+          type = "nvme";
+        }
+        {
+          device = "/dev/nvme1";
+          type = "nvme";
+        }
+      ];
+    };
+
+    # Scrutiny enables smartd's native CSV attribute logger. The NixOS module
+    # passes /var/log/smartd/ to smartd but does not create the directory.
+    systemd.tmpfiles.rules = [ "d /var/log/smartd 0750 root root -" ];
 
     # Netdata monitoring
     services.netdata.enable = false;

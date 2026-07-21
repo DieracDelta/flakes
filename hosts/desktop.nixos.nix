@@ -399,8 +399,8 @@ in
         wget
       ];
       settings.log = {
-        level = "debug";
-        job_level = "debug";
+        level = "warn";
+        job_level = "warn";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
@@ -440,8 +440,8 @@ in
         wget
       ];
       settings.log = {
-        level = "debug";
-        job_level = "debug";
+        level = "warn";
+        job_level = "warn";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {

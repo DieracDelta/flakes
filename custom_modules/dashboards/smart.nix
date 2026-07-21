@@ -1,10 +1,117 @@
 # SMART Dashboard - Disk health monitoring via smartctl
+let
+  writeAggregatePanel =
+    {
+      title,
+      description,
+      x,
+      expr,
+      instant ? false,
+    }:
+    {
+      type = "stat";
+      inherit title description;
+      gridPos = {
+        h = 6;
+        w = 6;
+        inherit x;
+        y = 42;
+      };
+
+      fieldConfig.defaults = {
+        unit = "decbytes";
+        color.mode = "palette-classic";
+      };
+      options = {
+        reduceOptions.calcs = [ "lastNotNull" ];
+        colorMode = "value";
+        graphMode = if instant then "none" else "area";
+        textMode = "auto";
+      };
+      targets = [
+        {
+          inherit expr instant;
+          range = !instant;
+          legendFormat = "{{device}}";
+          refId = "A";
+        }
+      ];
+    };
+
+  userIoTimeseriesPanel =
+    {
+      title,
+      description,
+      x,
+      unit,
+      expr,
+    }:
+    {
+      type = "timeseries";
+      inherit title description;
+      gridPos = {
+        h = 8;
+        w = 12;
+        inherit x;
+        y = 48;
+      };
+      fieldConfig.defaults = {
+        inherit unit;
+        color.mode = "palette-classic";
+        custom = {
+          drawStyle = "line";
+          fillOpacity = 12;
+          lineInterpolation = "linear";
+          lineWidth = 1;
+          showPoints = "never";
+          spanNulls = true;
+        };
+      };
+      options = {
+        legend = {
+          displayMode = "table";
+          placement = "bottom";
+          calcs = [
+            "lastNotNull"
+            "mean"
+          ];
+        };
+        tooltip.mode = "multi";
+      };
+      targets = [
+        {
+          inherit expr;
+          legendFormat = "{{user}} · {{device}}";
+          refId = "A";
+        }
+      ];
+    };
+in
 {
   annotations.list = [ ];
   editable = true;
   fiscalYearStartMonth = 0;
   graphTooltip = 0;
-  links = [ ];
+  links = [
+    {
+      title = "Current calendar month";
+      tooltip = "Set exact calendar-month boundaries for the Selected Range panel";
+      type = "link";
+      url = "?from=now%2FM&to=now";
+      includeVars = false;
+      keepTime = false;
+      targetBlank = false;
+    }
+    {
+      title = "Previous calendar month";
+      tooltip = "Show the previous complete calendar month";
+      type = "link";
+      url = "?from=now-1M%2FM&to=now%2FM";
+      includeVars = false;
+      keepTime = false;
+      targetBlank = false;
+    }
+  ];
   panels = [
     # Row 1: Overview Stats
     {
@@ -164,8 +271,12 @@
           {
             type = "value";
             options = {
-              "0" = { text = "Down"; };
-              "1" = { text = "Up"; };
+              "0" = {
+                text = "Down";
+              };
+              "1" = {
+                text = "Up";
+              };
             };
           }
         ];
@@ -596,7 +707,82 @@
       ];
     }
 
-    # Row 7: SMART Attributes (for SATA drives)
+    # Row 7: Retained write aggregates
+    (writeAggregatePanel {
+      title = "Written — Last 24 Hours";
+      description = "Rolling 24-hour physical writes from the kernel's whole-device counters";
+      x = 0;
+      expr = "node_disk_written_bytes_1d";
+    })
+    (writeAggregatePanel {
+      title = "Written — Last 7 Days";
+      description = "Rolling seven-day physical writes from the kernel's whole-device counters";
+      x = 6;
+      expr = "node_disk_written_bytes_7d";
+    })
+    (writeAggregatePanel {
+      title = "Written — Last 30 Days";
+      description = "Rolling 30-day physical writes; use Selected Range for calendar months";
+      x = 12;
+      expr = "node_disk_written_bytes_30d";
+    })
+    (writeAggregatePanel {
+      title = "Written — Selected Range";
+      description = "Exact increase over the dashboard range; use the calendar-month links above";
+      x = 18;
+      expr = ''increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])'';
+      instant = true;
+    })
+
+    # Row 8: Per-user physical disk I/O
+    (userIoTimeseriesPanel {
+      title = "Write Throughput by User and Drive";
+      description = "Five-minute write throughput grouped by login user and physical drive; system services are labelled system";
+      x = 0;
+      unit = "Bps";
+      expr = "sum by (user, device) (user_cgroup_io_write_bytes_per_second)";
+    })
+    (userIoTimeseriesPanel {
+      title = "Write IOPS by User and Drive";
+      description = "Five-minute write-operation rate grouped by login user and physical drive";
+      x = 12;
+      unit = "iops";
+      expr = "sum by (user, device) (user_cgroup_io_write_operations_per_second)";
+    })
+
+    # Row 9: Per-user daily totals
+    {
+      type = "stat";
+      title = "Written by User and Drive — Last 24 Hours";
+      description = "Rolling 24-hour physical writes attributed through cgroup-v2 user slices";
+      gridPos = {
+        h = 8;
+        w = 24;
+        x = 0;
+        y = 56;
+      };
+      fieldConfig.defaults = {
+        unit = "decbytes";
+        color.mode = "palette-classic";
+      };
+      options = {
+        reduceOptions.calcs = [ "lastNotNull" ];
+        colorMode = "value";
+        graphMode = "none";
+        textMode = "auto";
+      };
+      targets = [
+        {
+          expr = "sum by (user, device) (user_cgroup_io_written_bytes_1d)";
+          instant = true;
+          range = false;
+          legendFormat = "{{user}} · {{device}}";
+          refId = "A";
+        }
+      ];
+    }
+
+    # Row 10: SMART Attributes (for SATA drives)
     {
       type = "table";
       title = "SMART Attributes";
@@ -605,7 +791,7 @@
         h = 10;
         w = 24;
         x = 0;
-        y = 42;
+        y = 64;
       };
 
       targets = [
@@ -663,14 +849,18 @@
   ];
   refresh = "1m";
   schemaVersion = 39;
-  tags = [ "smart" "storage" "disk" ];
+  tags = [
+    "smart"
+    "storage"
+    "disk"
+  ];
   templating.list = [ ];
   time = {
     from = "now-24h";
     to = "now";
   };
   timepicker = { };
-  timezone = "browser";
+  timezone = "America/New_York";
   title = "Disk SMART Health";
   uid = "disk-smart-health";
   version = 1;
