@@ -142,6 +142,7 @@ in
       enable = true;
       port = cfg.redis.port;
       bind = cfg.redis.host;
+      save = [ ];
     };
 
     # Create data directory
