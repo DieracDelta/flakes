@@ -194,12 +194,24 @@ in
       ];
     };
 
-    # Journal retention
-    services.journald.extraConfig = ''
-      SystemMaxUse=500G
-      MaxRetentionSec=6month
-      MaxFileSec=1week
-    '';
+    # Keep the journal in RAM to avoid persistent write amplification. Preserve
+    # useful bursts while suppressing sustained log storms above ~33 messages/s.
+    services.journald = {
+      storage = "volatile";
+      rateLimitInterval = "30s";
+      rateLimitBurst = 1000;
+      extraConfig = ''
+        RuntimeMaxUse=512M
+        Compress=yes
+      '';
+    };
+
+    # Mask both OBEX unit names so D-Bus activation cannot start the Bluetooth
+    # file-transfer daemon, even if the main BlueZ stack is later re-enabled.
+    systemd.user.services = {
+      obex.enable = false;
+      "dbus-org.bluez.obex".enable = false;
+    };
 
     # Firewall ports
     networking.firewall.allowedTCPPorts = [
