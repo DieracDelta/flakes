@@ -206,6 +206,14 @@ in
     };
   };
 
+  # Discard core dump payloads instead of writing them to persistent storage.
+  # Keeping the handler enabled avoids falling back to `core` files in each
+  # crashing process's working directory.
+  systemd.coredump.extraConfig = ''
+    Storage=none
+    ProcessSizeMax=0
+  '';
+
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
