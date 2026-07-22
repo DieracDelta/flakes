@@ -737,6 +737,26 @@ class SlotAllocatorTests(unittest.TestCase):
         self.assertIn("security.sudo-rs.extraRules = [", module)
         self.assertNotIn("security.sudo.extraRules = [", module)
 
+    # /// What it's testing: Provisioning repairs mutable-resource and root-only registry ownership after allocator initialization.
+    # /// Why it matters: Initialize may create missing directories after tmpfiles, so deployed registration must not inherit root-only defaults or writable registry subdirectories.
+    def test_nix_provision_repairs_resource_and_registry_permissions(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'chown ${lib.escapeShellArg "${cfg.runnerUser}:${cfg.runnerGroup}"} ${lib.escapeShellArg "${cfg.root}/resources"}',
+            module,
+        )
+        self.assertIn(
+            'chmod 0770 ${lib.escapeShellArg "${cfg.root}/resources"}', module
+        )
+        for registry_path in ("registry/locks", "registry/quarantine", "registry/resources"):
+            self.assertIn(
+                f'${{lib.escapeShellArg "${{cfg.root}}/{registry_path}"}}', module
+            )
+
     # /// What it's testing: The privileged systemd broker traps cancellation and tears down its exact unit.
     # /// Why it matters: Killing the outer command must not leave expensive work or fixed slot locks running.
     def test_nix_broker_has_explicit_cancellation_teardown(self) -> None:

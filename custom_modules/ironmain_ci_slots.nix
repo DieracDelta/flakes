@@ -210,8 +210,15 @@ let
     text = ''
       ironmain-ci-slots --root ${lib.escapeShellArg cfg.root} initialize
       chown -R ${lib.escapeShellArg "${cfg.runnerUser}:${cfg.runnerGroup}"} ${lib.escapeShellArg "${cfg.root}/slots"}
+      chown ${lib.escapeShellArg "${cfg.runnerUser}:${cfg.runnerGroup}"} ${lib.escapeShellArg "${cfg.root}/resources"}
       chown -R root:root ${lib.escapeShellArg "${cfg.root}/locks"} ${lib.escapeShellArg "${cfg.root}/registry"}
-      chmod 0555 ${lib.escapeShellArg "${cfg.root}/locks"} ${lib.escapeShellArg "${cfg.root}/registry"}
+      chmod 0555 \
+        ${lib.escapeShellArg "${cfg.root}/locks"} \
+        ${lib.escapeShellArg "${cfg.root}/registry"} \
+        ${lib.escapeShellArg "${cfg.root}/registry/locks"} \
+        ${lib.escapeShellArg "${cfg.root}/registry/quarantine"} \
+        ${lib.escapeShellArg "${cfg.root}/registry/resources"}
+      chmod 0770 ${lib.escapeShellArg "${cfg.root}/resources"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
     '';
   };
