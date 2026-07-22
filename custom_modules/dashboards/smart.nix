@@ -750,11 +750,11 @@ in
       expr = "sum by (user, device) (user_cgroup_io_write_operations_per_second)";
     })
 
-    # Row 9: Per-user daily totals
+    # Row 9: Per-user selected-range totals
     {
       type = "stat";
-      title = "Written by User and Drive — Last 24 Hours";
-      description = "Rolling 24-hour physical writes attributed through cgroup-v2 user slices";
+      title = "Written by User and Drive — Selected Range";
+      description = "Exact increase over the dashboard-selected range attributed through cgroup-v2 user slices";
       gridPos = {
         h = 8;
         w = 24;
@@ -773,7 +773,7 @@ in
       };
       targets = [
         {
-          expr = "sum by (user, device) (user_cgroup_io_written_bytes_1d)";
+          expr = ''sum by (user, device) (increase(user_cgroup_io_write_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range]))'';
           instant = true;
           range = false;
           legendFormat = "{{user}} · {{device}}";
