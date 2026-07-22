@@ -59,6 +59,7 @@ let
     name = "ironmain-ci-invocation-broker";
     runtimeInputs = [
       helper
+      pkgs.coreutils
       pkgs.systemd
     ];
     text = ''
@@ -88,6 +89,52 @@ let
       unit_description="IronMain invocation $invocation broker $BASHPID"
       systemd_run_pid=
       cancellation_status=0
+      broker_pid=$BASHPID
+      caller_pid="$PPID"
+      caller_watchdog_pid=
+
+      # /// Description: Reads one process's PID-reuse-resistant start-time identity.
+      # /// Pre: pid names a procfs process visible to the privileged broker.
+      # /// Post: Prints Linux start time or returns nonzero when the process is absent or malformed.
+      # /// Reason: Caller-loss recovery must not mistake a reused PID for the original sudo process.
+      process_start() {
+        local raw tail
+        local -a fields
+        [ -r "/proc/$1/stat" ] || return 1
+        raw="$(<"/proc/$1/stat")"
+        tail="''${raw##*) }"
+        read -r -a fields <<< "$tail"
+        [ -n "''${fields[19]:-}" ] || return 1
+        printf '%s\n' "''${fields[19]}"
+      }
+      caller_start="$(process_start "$caller_pid")"
+      if [ -z "$caller_start" ]; then
+        echo "invocation broker cannot verify its sudo caller" >&2
+        exit 77
+      fi
+
+      # /// Description: Stops and reaps the caller-identity watchdog when broker work ends.
+      # /// Pre: caller_watchdog_pid is empty or identifies this broker's background watchdog.
+      # /// Post: No watchdog remains able to signal the broker after completion.
+      # /// Reason: Normal completion and explicit cancellation must not leak monitor processes.
+      stop_caller_watchdog() {
+        if [ -n "$caller_watchdog_pid" ]; then
+          kill -TERM "$caller_watchdog_pid" 2>/dev/null || true
+          wait "$caller_watchdog_pid" 2>/dev/null || true
+          caller_watchdog_pid=
+        fi
+      }
+
+      # /// Description: Cancels this broker when its exact sudo caller identity disappears.
+      # /// Pre: caller_pid and caller_start identify the process that launched this broker.
+      # /// Post: Signals only this broker after caller death or PID reuse; otherwise keeps waiting.
+      # /// Reason: SIGKILL cannot be forwarded by sudo, so orphaned expensive work needs bounded recovery.
+      watch_caller() {
+        while [ "$(process_start "$caller_pid" 2>/dev/null || true)" = "$caller_start" ]; do
+          sleep 0.1
+        done
+        kill -TERM "$broker_pid" 2>/dev/null || true
+      }
 
       # /// Description: Stops the exact transient invocation when its waiting caller is cancelled.
       # /// Pre: A trusted invocation unit may be starting or active under systemd_run_pid.
@@ -95,6 +142,7 @@ let
       # /// Reason: Killing systemd-run alone does not stop the system-owned transient service.
       cancel() {
         cancellation_status="$1"
+        stop_caller_watchdog
         if [ -z "$systemd_run_pid" ]; then
           return
         fi
@@ -110,6 +158,8 @@ let
       trap 'cancel 129' HUP
       trap 'cancel 130' INT
       trap 'cancel 143' TERM
+      watch_caller &
+      caller_watchdog_pid=$!
 
       systemd-run \
         --quiet \
@@ -140,6 +190,7 @@ let
       wait "$systemd_run_pid"
       status=$?
       set -e
+      stop_caller_watchdog
       trap - HUP INT TERM
       exit "$status"
     '';

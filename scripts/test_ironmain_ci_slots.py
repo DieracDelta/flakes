@@ -773,6 +773,20 @@ class SlotAllocatorTests(unittest.TestCase):
         )
         self.assertNotIn("exec systemd-run \\", module)
 
+    # /// What it's testing: The privileged broker monitors its exact sudo caller identity and self-cancels after untrappable caller loss.
+    # /// Why it matters: SIGKILL cannot be forwarded, so an orphaned root broker must not let expensive work finish clean and become reusable.
+    def test_nix_broker_monitors_caller_identity_for_sigkill_recovery(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn('caller_pid="$PPID"', module)
+        self.assertIn('caller_start="$(process_start "$caller_pid")"', module)
+        self.assertIn('watch_caller &', module)
+        self.assertIn('kill -TERM "$broker_pid"', module)
+        self.assertIn('stop_caller_watchdog', module)
+
     # /// What it's testing: Control-group termination closes child, slot, and role descriptors for immediate recovery.
     # /// Why it matters: The broker's systemd stop must recover bounded capacity even when Python cannot run finally blocks.
     def test_cancelled_command_group_releases_child_slot_and_role(self) -> None:
