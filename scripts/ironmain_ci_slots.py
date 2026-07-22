@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 from dataclasses import asdict, dataclass
 from enum import Enum
 import errno
@@ -128,6 +129,7 @@ class ResourceRegistration:
     heartbeat_ns: int
     root_identity: DirectoryIdentity
     resource_identity: DirectoryIdentity
+    lock_identity: DirectoryIdentity
 
 
 @dataclass(frozen=True, order=True)
@@ -346,19 +348,34 @@ class SlotLayout:
     def role_root(self, slot_id: SlotId, role: ArtifactRole) -> Path:
         return self.slot_root(slot_id) / "artifacts" / role.value
 
+    @property
+    # /// Description: Returns the root-owned fixed-lock namespace outside runner-owned slots.
+    # /// Pre: The layout has a trusted cache root.
+    # /// Post: The path is independent of mutable workspaces and artifact trees.
+    # /// Reason: Runner jobs must not rename active slot or role lock pathnames.
+    def locks_root(self) -> Path:
+        return self.root / "locks"
+
     # /// Description: Returns the exclusive slot lock path.
     # /// Pre: slot_id is validated.
-    # /// Post: The lock path remains outside mutable artifact contents.
-    # /// Reason: Slot ownership must survive role recycling.
+    # /// Post: The lock path remains in the root-owned fixed-lock namespace.
+    # /// Reason: Slot ownership must survive role recycling and runner path mutation.
     def slot_lock(self, slot_id: SlotId) -> Path:
-        return self.slot_root(slot_id) / "locks" / "slot.lock"
+        return self.locks_root / slot_id.directory_name() / "slot.lock"
 
     # /// Description: Returns the exclusive artifact-role lock path.
     # /// Pre: slot_id and role are validated.
-    # /// Post: Each role receives a distinct stable lock.
+    # /// Post: Each role receives a distinct root-owned stable lock.
     # /// Reason: Baseline, current, and standard mutations must never race.
     def role_lock(self, slot_id: SlotId, role: ArtifactRole) -> Path:
-        return self.slot_root(slot_id) / "locks" / f"{role.value}.lock"
+        return self.locks_root / slot_id.directory_name() / f"{role.value}.lock"
+
+    # /// Description: Returns immutable expected-inode state for one fixed lock.
+    # /// Pre: lock_path is a slot or role lock returned by this layout.
+    # /// Post: The identity path is adjacent to but distinct from the lock inode.
+    # /// Reason: No-follow opening alone cannot detect rename followed by regular-file replacement.
+    def lock_identity(self, lock_path: Path) -> Path:
+        return lock_path.with_name(f"{lock_path.name}.identity.json")
 
     # /// Description: Returns the atomic slot state path.
     # /// Pre: slot_id is validated.
@@ -402,18 +419,61 @@ def _atomic_json(path: Path, value: dict[str, object]) -> None:
     os.replace(temporary, path)
 
 
-# /// Description: Opens and attempts to exclusively lock a stable lock file.
-# /// Pre: The lock parent belongs to a fixed allocator path.
-# /// Post: Returns a held file descriptor or None without blocking.
-# /// Reason: Allocation and pressure handling need one shared fail-closed lock primitive.
-def _try_lock(path: Path) -> int | None:
+# /// Description: Provisions one stable lock inode and records its expected identity atomically.
+# /// Pre: The caller is the trusted provisioning or registration authority for the parent.
+# /// Post: The lock and adjacent identity state exist and refer to the same inode.
+# /// Reason: Later callers must distinguish an original lock from a pathname replacement.
+def _provision_lock(path: Path, identity_path: Path) -> DirectoryIdentity:
     path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o660)
+    descriptor = os.open(
+        path, os.O_RDONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o444
+    )
     try:
+        identity = DirectoryIdentity.from_descriptor(descriptor)
+    finally:
+        os.close(descriptor)
+    _atomic_json(identity_path, {"device": identity.device, "inode": identity.inode})
+    os.chmod(path, 0o444, follow_symlinks=False)
+    os.chmod(identity_path, 0o444, follow_symlinks=False)
+    return identity
+
+
+# /// Description: Loads an exact persisted stable-lock identity.
+# /// Pre: identity_path belongs to a trusted root-owned lock namespace.
+# /// Post: Returns a typed identity or None for missing, malformed, or extended state.
+# /// Reason: Uncertain lock identity must prevent acquisition rather than create a new lock.
+def _load_lock_identity(identity_path: Path) -> DirectoryIdentity | None:
+    try:
+        value = json.loads(identity_path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict) or set(value) != {"device", "inode"}:
+            return None
+        return DirectoryIdentity(value["device"], value["inode"])
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+# /// Description: Opens and attempts to exclusively lock one pre-provisioned stable inode.
+# /// Pre: The lock and trusted identity state were created by _provision_lock.
+# /// Post: Returns a held descriptor only when no-follow lookup matches the expected inode and flock succeeds.
+# /// Reason: Path replacement must fail closed instead of bypassing an active owner.
+def _try_lock(path: Path, expected: DirectoryIdentity | None) -> int | None:
+    if expected is None:
+        return None
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except OSError:
+        return None
+    try:
+        if DirectoryIdentity.from_descriptor(descriptor) != expected:
+            os.close(descriptor)
+            return None
         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         os.close(descriptor)
         return None
+    except Exception:
+        os.close(descriptor)
+        raise
     return descriptor
 
 
@@ -429,6 +489,36 @@ def _unlock(descriptor: int) -> None:
 _DIRECTORY_OPEN_FLAGS: Final = (
     os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 )
+_RENAME_NOREPLACE: Final = 1
+_LIBC = ctypes.CDLL(None, use_errno=True)
+
+
+# /// Description: Atomically renames an entry only when the destination name is absent.
+# /// Pre: Both names are safe relative components and descriptors refer to trusted directories on one filesystem.
+# /// Post: The source inode moves without replacing an existing destination, or OSError reports no change.
+# /// Reason: Quarantine must capture one exact registered inode without deleting a raced replacement.
+def _rename_noreplace(
+    source_directory: int,
+    source_name: str,
+    destination_directory: int,
+    destination_name: str,
+) -> None:
+    for name in (source_name, destination_name):
+        if not _SAFE_IDENTITY.fullmatch(name):
+            raise UnsafePath("unsafe quarantine name")
+    renameat2 = getattr(_LIBC, "renameat2", None)
+    if renameat2 is None:
+        raise OSError(errno.ENOSYS, "renameat2 is unavailable")
+    result = renameat2(
+        source_directory,
+        os.fsencode(source_name),
+        destination_directory,
+        os.fsencode(destination_name),
+        _RENAME_NOREPLACE,
+    )
+    if result != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
 
 
 # /// Description: Opens a directory chain beneath one trusted no-follow anchor.
@@ -461,11 +551,23 @@ def _close_directory_chain(descriptors: list[int]) -> None:
         os.close(descriptor)
 
 
+# /// Description: Seals a quarantined stale directory against further runner mutation.
+# /// Pre: Cleanup runs as the system authority and descriptor names the captured resource inode.
+# /// Post: Root owns the directory when privileged and its mode denies non-owner mutation.
+# /// Reason: A process racing with an old directory fd must not substitute nested entries during removal.
+def _seal_directory_descriptor(descriptor: int) -> None:
+    if os.geteuid() == 0:
+        os.fchown(descriptor, 0, 0)
+    os.fchmod(descriptor, 0o700)
+
+
 # /// Description: Removes directory contents using only no-follow descriptor-relative operations.
 # /// Pre: descriptor is an exclusively controlled directory beneath a trusted anchor.
 # /// Post: Its original inode is empty or an uncertainty raises before traversing a substituted path.
 # /// Reason: shutil and Path traversal can follow role or ancestor substitutions outside the cache.
-def _clear_directory_descriptor(descriptor: int) -> None:
+def _clear_directory_descriptor(descriptor: int, *, seal: bool = False) -> None:
+    if seal:
+        _seal_directory_descriptor(descriptor)
     for entry in tuple(os.scandir(descriptor)):
         try:
             child_descriptor = os.open(
@@ -478,7 +580,7 @@ def _clear_directory_descriptor(descriptor: int) -> None:
             continue
         try:
             child_identity = DirectoryIdentity.from_descriptor(child_descriptor)
-            _clear_directory_descriptor(child_descriptor)
+            _clear_directory_descriptor(child_descriptor, seal=seal)
             current = os.stat(
                 entry.name, dir_fd=descriptor, follow_symlinks=False
             )
@@ -658,6 +760,8 @@ class ResourceRegistry:
             raise ValueError("heartbeat timeout must be positive")
         self.root = registry_root.resolve()
         self.allowed_roots = tuple(path.resolve() for path in allowed_roots)
+        self.quarantine_root = self.root / "quarantine"
+        self.quarantine_root.mkdir(parents=True, exist_ok=True)
         self.monotonic_ns = monotonic_ns
         self.owner_liveness = owner_liveness
         self.reference_liveness = reference_liveness
@@ -669,6 +773,13 @@ class ResourceRegistry:
     # /// Reason: Cleanup must keep its lock valid while deleting a resource root.
     def _lock_path(self, resource_id: str) -> Path:
         return self.root / "locks" / f"{resource_id}.lock"
+
+    # /// Description: Returns expected-inode state for one registered-resource lock.
+    # /// Pre: resource_id passed safe identity validation.
+    # /// Post: The identity path is adjacent to the dynamic lock inode.
+    # /// Reason: Cleanup and active owners must reject a replaced registered lock pathname.
+    def _lock_identity_path(self, resource_id: str) -> Path:
+        return self.root / "locks" / f"{resource_id}.lock.identity.json"
 
     # /// Description: Returns one atomic registration manifest path.
     # /// Pre: resource_id passed safe identity validation.
@@ -724,6 +835,9 @@ class ResourceRegistry:
             resource_identity = DirectoryIdentity.from_descriptor(descriptors[-1])
         finally:
             _close_directory_chain(descriptors)
+        lock_identity = _provision_lock(
+            self._lock_path(resource_id), self._lock_identity_path(resource_id)
+        )
         _atomic_json(
             self._manifest_path(resource_id),
             {
@@ -736,6 +850,7 @@ class ResourceRegistry:
                 "heartbeat_ns": heartbeat_ns,
                 "root_identity": asdict(root_identity),
                 "resource_identity": asdict(resource_identity),
+                "lock_identity": asdict(lock_identity),
             },
         )
 
@@ -746,7 +861,21 @@ class ResourceRegistry:
     def acquire_resource_lock(self, resource_id: str) -> ResourceLock | None:
         if not _SAFE_IDENTITY.fullmatch(resource_id):
             raise ValueError("unsafe resource identity")
-        descriptor = _try_lock(self._lock_path(resource_id))
+        registration = self._load_registration(self._manifest_path(resource_id))
+        if registration is None:
+            return None
+        return self._acquire_registered_lock(registration)
+
+    # /// Description: Attempts the exact lock inode recorded by one validated registration.
+    # /// Pre: registration came from _load_registration.
+    # /// Post: Returns a held lock only when the dynamic pathname still names its original inode.
+    # /// Reason: Cleanup must share replacement-safe exclusion with active registered owners.
+    def _acquire_registered_lock(
+        self, registration: ResourceRegistration
+    ) -> ResourceLock | None:
+        descriptor = _try_lock(
+            self._lock_path(registration.resource_id), registration.lock_identity
+        )
         return None if descriptor is None else ResourceLock(descriptor)
 
     # /// Description: Loads and validates one registration without trusting persisted paths or types.
@@ -768,6 +897,7 @@ class ResourceRegistry:
                 "heartbeat_ns",
                 "root_identity",
                 "resource_identity",
+                "lock_identity",
             }:
                 return None
             resource_id = state["resource_id"]
@@ -797,6 +927,7 @@ class ResourceRegistry:
             owner_state = state["owner"]
             root_state = state["root_identity"]
             resource_state = state["resource_identity"]
+            lock_state = state["lock_identity"]
             return ResourceRegistration(
                 resource_id=resource_id,
                 root_index=root_index,
@@ -810,6 +941,9 @@ class ResourceRegistry:
                 ),
                 resource_identity=DirectoryIdentity(
                     resource_state["device"], resource_state["inode"]
+                ),
+                lock_identity=DirectoryIdentity(
+                    lock_state["device"], lock_state["inode"]
                 ),
             )
         except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
@@ -838,6 +972,72 @@ class ResourceRegistry:
         finally:
             _close_directory_chain(current)
 
+    # /// Description: Atomically quarantines and removes only the exact registered resource inode.
+    # /// Pre: descriptors hold the unchanged registered chain after every liveness check.
+    # /// Post: Returns true only after the registered inode is removed from trusted quarantine; substitutions are restored or preserved.
+    # /// Reason: Identity check followed by pathname rmdir leaves a check-to-use race.
+    def _quarantine_and_remove(
+        self,
+        registration: ResourceRegistration,
+        descriptors: list[int],
+    ) -> bool:
+        quarantine_descriptors = _open_directory_chain(self.root, ("quarantine",))
+        quarantine_name = "q-" + hashlib.sha256(
+            f"{registration.resource_id}:{os.getpid()}:{time.time_ns()}".encode()
+        ).hexdigest()
+        moved = False
+        registered_captured = False
+        try:
+            _rename_noreplace(
+                descriptors[-2],
+                registration.relative_parts[-1],
+                quarantine_descriptors[-1],
+                quarantine_name,
+            )
+            moved = True
+            quarantined = os.open(
+                quarantine_name,
+                _DIRECTORY_OPEN_FLAGS,
+                dir_fd=quarantine_descriptors[-1],
+            )
+            try:
+                registered_captured = (
+                    DirectoryIdentity.from_descriptor(quarantined)
+                    == registration.resource_identity
+                )
+                if not registered_captured:
+                    try:
+                        _rename_noreplace(
+                            quarantine_descriptors[-1],
+                            quarantine_name,
+                            descriptors[-2],
+                            registration.relative_parts[-1],
+                        )
+                        moved = False
+                    except OSError:
+                        pass
+                    return False
+                _clear_directory_descriptor(quarantined, seal=True)
+            finally:
+                os.close(quarantined)
+            os.rmdir(quarantine_name, dir_fd=quarantine_descriptors[-1])
+            moved = False
+            return True
+        except OSError:
+            return False
+        finally:
+            if moved and not registered_captured:
+                try:
+                    _rename_noreplace(
+                        quarantine_descriptors[-1],
+                        quarantine_name,
+                        descriptors[-2],
+                        registration.relative_parts[-1],
+                    )
+                except OSError:
+                    pass
+            _close_directory_chain(quarantine_descriptors)
+
     # /// Description: Removes registered stale roots only after lock, heartbeat, owner, cwd, and fd checks are negative.
     # /// Pre: Registrations were written through register and liveness probes are authoritative or return uncertain.
     # /// Post: Returns removed IDs; live, uncertain, locked, malformed, missing, and unregistered paths are preserved.
@@ -852,7 +1052,7 @@ class ResourceRegistry:
             if registration is None:
                 continue
             try:
-                lock = self.acquire_resource_lock(registration.resource_id)
+                lock = self._acquire_registered_lock(registration)
             except OSError:
                 continue
             if lock is None:
@@ -889,13 +1089,8 @@ class ResourceRegistry:
                         continue
                     if not self._path_matches_held_chain(registration, descriptors):
                         continue
-                    _clear_directory_descriptor(descriptors[-1])
-                    if not self._path_matches_held_chain(registration, descriptors):
+                    if not self._quarantine_and_remove(registration, descriptors):
                         continue
-                    os.rmdir(
-                        registration.relative_parts[-1],
-                        dir_fd=descriptors[-2],
-                    )
                     manifest_path.unlink()
                 except OSError:
                     continue
@@ -1038,9 +1233,21 @@ class SlotAllocator:
         self.layout.mirror_root.mkdir(parents=True, exist_ok=True)
         (self.layout.mirror_root / "objects").mkdir(exist_ok=True)
         os.chmod(self.layout.mirror_root, 0o550)
+        self.layout.locks_root.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.layout.locks_root, 0o755)
         for slot_id in self.layout.slot_ids:
             slot_root = self.layout.slot_root(slot_id)
-            (slot_root / "locks").mkdir(parents=True, exist_ok=True)
+            fixed_lock_root = self.layout.locks_root / slot_id.directory_name()
+            fixed_lock_root.mkdir(parents=True, exist_ok=True)
+            os.chmod(fixed_lock_root, 0o755)
+            fixed_locks = [self.layout.slot_lock(slot_id)] + [
+                self.layout.role_lock(slot_id, role) for role in ArtifactRole
+            ]
+            for lock_path in fixed_locks:
+                _provision_lock(
+                    lock_path, self.layout.lock_identity(lock_path)
+                )
+            os.chmod(fixed_lock_root, 0o555)
             (slot_root / "state").mkdir(parents=True, exist_ok=True)
             (slot_root / "results").mkdir(parents=True, exist_ok=True)
             for workspace in ("head", "baseline"):
@@ -1056,6 +1263,16 @@ class SlotAllocator:
                 )
             for role in ArtifactRole:
                 self.layout.role_root(slot_id, role).mkdir(parents=True, exist_ok=True)
+        os.chmod(self.layout.locks_root, 0o555)
+
+    # /// Description: Attempts one fixed lock using its provisioned expected inode.
+    # /// Pre: initialize created the lock and adjacent root-owned identity state.
+    # /// Post: Returns a held descriptor only for the original stable lock inode.
+    # /// Reason: Slot, role, and pressure callers must share replacement-safe acquisition.
+    def _try_fixed_lock(self, path: Path) -> int | None:
+        return _try_lock(
+            path, _load_lock_identity(self.layout.lock_identity(path))
+        )
 
     # /// Description: Acquires the first available fixed private slot without blocking.
     # /// Pre: initialize has created the layout and identity has passed trust validation.
@@ -1063,7 +1280,7 @@ class SlotAllocator:
     # /// Reason: Concurrent jobs need private workspaces under a hard cardinality bound.
     def acquire(self, identity: LeaseIdentity) -> SlotLease:
         for slot_id in self.layout.slot_ids:
-            descriptor = _try_lock(self.layout.slot_lock(slot_id))
+            descriptor = self._try_fixed_lock(self.layout.slot_lock(slot_id))
             if descriptor is not None:
                 lease = SlotLease(self, slot_id, identity, descriptor)
                 lease.heartbeat()
@@ -1081,7 +1298,7 @@ class SlotAllocator:
         compatibility: Compatibility,
         identity: LeaseIdentity,
     ) -> RoleLease:
-        descriptor = _try_lock(self.layout.role_lock(slot_id, role))
+        descriptor = self._try_fixed_lock(self.layout.role_lock(slot_id, role))
         if descriptor is None:
             raise RoleBusy(
                 f"slot {slot_id.directory_name()} role {role.value} is active"
@@ -1169,10 +1386,10 @@ class SlotAllocator:
         ):
             if current >= PRESSURE_TARGET_PERCENT:
                 break
-            slot_descriptor = _try_lock(self.layout.slot_lock(slot_id))
+            slot_descriptor = self._try_fixed_lock(self.layout.slot_lock(slot_id))
             if slot_descriptor is None:
                 continue
-            descriptor = _try_lock(self.layout.role_lock(slot_id, role))
+            descriptor = self._try_fixed_lock(self.layout.role_lock(slot_id, role))
             if descriptor is None:
                 _unlock(slot_descriptor)
                 continue

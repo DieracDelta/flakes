@@ -120,6 +120,109 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertTrue((second.root / "warm-artifact").exists())
             second.release(clean=True)
 
+    # /// What it's testing: Active role locks survive lock-file rename, symlink, and lock-directory substitution.
+    # /// Why it matters: Mutable lock pathnames must not permit a second owner to delete live role artifacts.
+    def test_role_lock_identity_rejects_path_substitution(self) -> None:
+        for substitution in ("file", "symlink", "directory"):
+            with self.subTest(substitution=substitution), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                allocator = SlotAllocator(root)
+                allocator.initialize()
+                identity = LeaseIdentity("runner", "ironmain", "trusted")
+                compatibility = Compatibility(
+                    "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+                )
+                first = allocator.acquire_role(
+                    SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+                )
+                (first.root / "active").write_text("preserve")
+                lock = allocator.layout.role_lock(
+                    SlotId(0), ArtifactRole.STANDARD
+                )
+                if substitution == "directory":
+                    original = lock.parent.with_name("00-original")
+                    lock.parent.parent.chmod(0o755)
+                    lock.parent.rename(original)
+                    lock.parent.mkdir()
+                    lock.touch()
+                    lock.parent.parent.chmod(0o555)
+                else:
+                    original = lock.with_name("standard-original.lock")
+                    lock.parent.chmod(0o755)
+                    lock.rename(original)
+                    if substitution == "file":
+                        lock.touch()
+                    else:
+                        outside = root / "outside.lock"
+                        outside.touch()
+                        lock.symlink_to(outside)
+                    lock.parent.chmod(0o555)
+
+                with self.assertRaises(RoleBusy):
+                    allocator.acquire_role(
+                        SlotId(0),
+                        ArtifactRole.STANDARD,
+                        Compatibility(
+                            "changed", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+                        ),
+                        identity,
+                    )
+
+                self.assertTrue((first.root / "active").exists())
+                first.release(clean=True)
+
+    # /// What it's testing: Replaced active slot and registered-resource locks cannot create duplicate owners.
+    # /// Why it matters: Every lock consumer must use stable inode identity rather than mutable path existence.
+    def test_slot_and_registered_lock_replacement_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            allocator = SlotAllocator(root / "cache")
+            allocator.initialize()
+            identity = LeaseIdentity("runner", "ironmain", "trusted")
+            first = allocator.acquire(identity)
+            self.assertEqual(SlotId(0), first.slot_id)
+            slot_lock = allocator.layout.slot_lock(SlotId(0))
+            slot_lock.parent.chmod(0o755)
+            slot_lock.rename(slot_lock.with_name("slot-original.lock"))
+            slot_lock.touch()
+            slot_lock.parent.chmod(0o555)
+
+            second = allocator.acquire(identity)
+
+            self.assertEqual(SlotId(1), second.slot_id)
+            second.release()
+            first.release()
+
+            allowed = root / "targets"
+            resource = allowed / "resource"
+            resource.mkdir(parents=True)
+            registry = ResourceRegistry(
+                root / "registry",
+                (allowed,),
+                monotonic_ns=lambda: 1_000,
+                owner_liveness=lambda owner: Liveness.DEAD,
+                reference_liveness=lambda path: Liveness.DEAD,
+                heartbeat_timeout_ns=100,
+            )
+            registry.register(
+                "stable-lock",
+                RegisteredResourceKind.CARGO_TARGET,
+                resource,
+                ProcessOwner(1234, 5678),
+                heartbeat_ns=1,
+            )
+            held = registry.acquire_resource_lock("stable-lock")
+            self.assertIsNotNone(held)
+            registered_lock = registry._lock_path("stable-lock")
+            registered_lock.rename(registered_lock.with_name("stable-lock-original"))
+            registered_lock.touch()
+            try:
+                self.assertEqual((), registry.cleanup_stale())
+                self.assertTrue(resource.exists())
+            finally:
+                assert held is not None
+                held.release()
+
     # /// What it's testing: Role recycling rejects substituted role-root and mutable-ancestor symlinks.
     # /// Why it matters: In-place invalidation must never follow a runner-controlled path outside the fixed slot.
     def test_role_recycling_preserves_external_targets_after_symlink_substitution(self) -> None:
@@ -476,7 +579,7 @@ class SlotAllocatorTests(unittest.TestCase):
             )
             (lease.root / "artifact").write_text("preserve")
             lease.release(clean=True, last_used_ns=1)
-            real_try_lock = slots._try_lock
+            real_try_fixed_lock = allocator._try_fixed_lock
 
             # /// Description: Corrupts role state at the simulated post-candidate lock boundary.
             # /// Pre: The allocator is about to acquire one fixed role lock.
@@ -489,9 +592,11 @@ class SlotAllocatorTests(unittest.TestCase):
                     allocator.layout.role_state(
                         SlotId(0), ArtifactRole.STANDARD
                     ).write_text('{"schema":1,"state":"clean","last_used_ns":1}')
-                return real_try_lock(path)
+                return real_try_fixed_lock(path)
 
-            with patch.object(slots, "_try_lock", side_effect=mutate_before_role_lock):
+            with patch.object(
+                allocator, "_try_fixed_lock", side_effect=mutate_before_role_lock
+            ):
                 self.assertEqual([], allocator.evict_under_pressure(lambda: 1.0))
             self.assertTrue((lease.root / "artifact").exists())
 
@@ -673,6 +778,65 @@ class SlotAllocatorTests(unittest.TestCase):
                     else allowed / "owned-original" / "resource"
                 )
                 self.assertTrue((original / "registered").exists())
+
+    # /// What it's testing: Final cleanup refuses a terminal-directory substitution after identity revalidation.
+    # /// Why it matters: The final removal operation must name the registered inode rather than an unrelated replacement.
+    def test_cleanup_preserves_final_rmdir_boundary_substitution(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            allowed = root / "targets"
+            resource = allowed / "resource"
+            resource.mkdir(parents=True)
+            (resource / "registered").write_text("preserve")
+            unrelated = root / "unrelated"
+            unrelated.mkdir()
+            registry = ResourceRegistry(
+                root / "registry",
+                (allowed,),
+                monotonic_ns=lambda: 1_000,
+                owner_liveness=lambda owner: Liveness.DEAD,
+                reference_liveness=lambda path: Liveness.DEAD,
+                heartbeat_timeout_ns=100,
+            )
+            registry.register(
+                "final-race",
+                RegisteredResourceKind.CARGO_TARGET,
+                resource,
+                ProcessOwner(1234, 5678),
+                heartbeat_ns=1,
+            )
+            real_rename_noreplace = slots._rename_noreplace
+            calls = 0
+
+            # /// Description: Substitutes an unrelated directory at the atomic quarantine boundary.
+            # /// Pre: Cleanup completed liveness and inode-chain validation for the registered pathname.
+            # /// Post: The registered inode is renamed and the unrelated inode occupies its former pathname before capture.
+            # /// Reason: The regression reproduces the reviewer's final check-to-remove race.
+            def swap_before_quarantine(
+                source_directory: int,
+                source_name: str,
+                destination_directory: int,
+                destination_name: str,
+            ) -> None:
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    resource.rename(allowed / "resource-original")
+                    unrelated.rename(resource)
+                real_rename_noreplace(
+                    source_directory,
+                    source_name,
+                    destination_directory,
+                    destination_name,
+                )
+
+            with patch.object(
+                slots, "_rename_noreplace", side_effect=swap_before_quarantine
+            ):
+                self.assertEqual((), registry.cleanup_stale())
+
+            self.assertTrue(resource.exists())
+            self.assertTrue((allowed / "resource-original" / "registered").exists())
 
     # /// What it's testing: Procfs probes distinguish PID reuse and detect cwd and open-fd references.
     # /// Why it matters: Cleanup must independently prove owner exit and absence of process references before deletion.

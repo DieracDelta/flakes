@@ -39,6 +39,8 @@ let
     text = ''
       ironmain-ci-slots --root ${lib.escapeShellArg cfg.root} initialize
       chown -R ${lib.escapeShellArg "${cfg.runnerUser}:${cfg.runnerGroup}"} ${lib.escapeShellArg "${cfg.root}/slots"}
+      chown -R root:root ${lib.escapeShellArg "${cfg.root}/locks"} ${lib.escapeShellArg "${cfg.root}/registry"}
+      chmod 0555 ${lib.escapeShellArg "${cfg.root}/locks"} ${lib.escapeShellArg "${cfg.root}/registry"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
     '';
   };
@@ -101,6 +103,11 @@ in
       systemd.tmpfiles.rules = [
         "d ${cfg.root} 0750 root ${cfg.runnerGroup} -"
         "d ${cfg.root}/mirror.git 0750 root ${cfg.runnerGroup} -"
+        "d ${cfg.root}/locks 0555 root root -"
+        "d ${cfg.root}/registry 0555 root root -"
+        "d ${cfg.root}/registry/locks 0555 root root -"
+        "d ${cfg.root}/registry/quarantine 0555 root root -"
+        "d ${cfg.root}/registry/resources 0555 root root -"
         "d ${cfg.root}/slots 0770 ${cfg.runnerUser} ${cfg.runnerGroup} -"
       ];
 
