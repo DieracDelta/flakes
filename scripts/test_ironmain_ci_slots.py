@@ -1402,6 +1402,73 @@ class SlotAllocatorTests(unittest.TestCase):
             (process / "fd" / "4").symlink_to(resource / "artifact")
             self.assertEqual(Liveness.LIVE, _reference_liveness(resource, proc))
 
+    # /// What it's testing: Procfs reference scans ignore only the cleanup process's explicitly anchored directory descriptors.
+    # /// Why it matters: Cleanup must not classify its own safety anchors as external users while still preserving every other live reference.
+    def test_procfs_reference_scan_ignores_only_cleanup_anchor_fds(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            proc = root / "proc"
+            cleanup = proc / str(os.getpid())
+            other = proc / "123456"
+            (cleanup / "fd").mkdir(parents=True)
+            (other / "fd").mkdir(parents=True)
+            resource = root / "target"
+            resource.mkdir()
+            (cleanup / "cwd").symlink_to(root)
+            (other / "cwd").symlink_to(root)
+            (cleanup / "fd" / "7").symlink_to(resource / "anchor")
+
+            self.assertEqual(Liveness.LIVE, _reference_liveness(resource, proc))
+            self.assertEqual(
+                Liveness.DEAD,
+                _reference_liveness(resource, proc, ignored_fds=frozenset({7})),
+            )
+            (other / "fd" / "8").symlink_to(resource / "external")
+            self.assertEqual(
+                Liveness.LIVE,
+                _reference_liveness(resource, proc, ignored_fds=frozenset({7})),
+            )
+
+    # /// What it's testing: Registered cleanup passes its held no-follow chain as the only ignored self-reference set.
+    # /// Why it matters: The deployed cleanup must reclaim proven stale roots without weakening inode anchoring or unrelated-process protection.
+    def test_cleanup_excludes_its_own_anchored_descriptors_from_reference_probe(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            allowed = root / "targets"
+            resource = allowed / "stale"
+            resource.mkdir(parents=True)
+            registry = ResourceRegistry(
+                root / "registry",
+                (allowed,),
+                monotonic_ns=lambda: 1_000_000_000_000,
+                owner_liveness=lambda owner: Liveness.DEAD,
+            )
+            registry.register(
+                "stale",
+                RegisteredResourceKind.CARGO_TARGET,
+                resource,
+                ProcessOwner(999_999, 1),
+                heartbeat_ns=1,
+            )
+            observed: list[frozenset[int]] = []
+
+            def no_external_reference(
+                path: Path,
+                proc_root: Path = Path("/proc"),
+                *,
+                ignored_fds: frozenset[int] = frozenset(),
+            ) -> Liveness:
+                self.assertEqual(resource, path)
+                observed.append(ignored_fds)
+                return Liveness.DEAD
+
+            with patch.object(slots, "_reference_liveness", no_external_reference):
+                self.assertEqual(("stale",), registry.cleanup_stale())
+
+            self.assertEqual(1, len(observed))
+            self.assertGreaterEqual(len(observed[0]), 2)
+            self.assertFalse(resource.exists())
+
     # /// What it's testing: Registration rejects traversal, allowed-root deletion, unsafe IDs, and credential-bearing paths.
     # /// Why it matters: A poisoned registry must not turn targeted cleanup into arbitrary filesystem deletion or secret persistence.
     def test_cleanup_registration_rejects_unsafe_or_overbroad_paths(self) -> None:

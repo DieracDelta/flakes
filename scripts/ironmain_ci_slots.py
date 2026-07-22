@@ -684,11 +684,14 @@ def _owner_liveness(
 
 
 # /// Description: Scans process cwd and fd links for references beneath a registered resource.
-# /// Pre: resource is a canonical trusted resource root.
-# /// Post: Returns live for a reference, dead after a complete scan, and uncertain on inaccessible evidence.
-# /// Reason: An unrelated process reference must prevent deletion even after the registered owner exits.
+# /// Pre: resource is canonical and ignored_fds contains only this cleanup process's held no-follow anchors.
+# /// Post: Returns live for any non-ignored reference, dead after a complete scan, and uncertain on inaccessible evidence.
+# /// Reason: Cleanup must exclude its own safety anchors without overlooking unrelated process references.
 def _reference_liveness(
-    resource: Path, proc_root: Path = Path("/proc")
+    resource: Path,
+    proc_root: Path = Path("/proc"),
+    *,
+    ignored_fds: frozenset[int] = frozenset(),
 ) -> Liveness:
     try:
         processes = tuple(path for path in proc_root.iterdir() if path.name.isdigit())
@@ -703,6 +706,13 @@ def _reference_liveness(
         except (OSError, PermissionError):
             return Liveness.UNCERTAIN
         for link in links:
+            if (
+                process.name == str(os.getpid())
+                and link.parent.name == "fd"
+                and link.name.isdigit()
+                and int(link.name) in ignored_fds
+            ):
+                continue
             try:
                 target = Path(os.readlink(link))
             except FileNotFoundError:
@@ -764,7 +774,7 @@ class ResourceRegistry:
         *,
         monotonic_ns: Callable[[], int] = time.monotonic_ns,
         owner_liveness: Callable[[ProcessOwner], Liveness] = _owner_liveness,
-        reference_liveness: Callable[[Path], Liveness] = _reference_liveness,
+        reference_liveness: Callable[[Path], Liveness] | None = None,
         heartbeat_timeout_ns: int = 300_000_000_000,
     ) -> None:
         if not allowed_roots:
@@ -1130,7 +1140,15 @@ class ResourceRegistry:
                     resource = self.allowed_roots[
                         registration.root_index
                     ].joinpath(*registration.relative_parts)
-                    if self.reference_liveness(resource) is not Liveness.DEAD:
+                    reference_state = (
+                        self.reference_liveness(resource)
+                        if self.reference_liveness is not None
+                        else _reference_liveness(
+                            resource,
+                            ignored_fds=frozenset(descriptors),
+                        )
+                    )
+                    if reference_state is not Liveness.DEAD:
                         continue
                     if not self._path_matches_held_chain(registration, descriptors):
                         continue
