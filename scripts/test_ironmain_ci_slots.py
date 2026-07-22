@@ -8,9 +8,11 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import ironmain_ci_slots as slots  # noqa: E402
 from ironmain_ci_slots import (  # noqa: E402
     ArtifactRole,
     Compatibility,
@@ -118,6 +120,46 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertTrue((second.root / "warm-artifact").exists())
             second.release(clean=True)
 
+    # /// What it's testing: Role recycling rejects substituted role-root and mutable-ancestor symlinks.
+    # /// Why it matters: In-place invalidation must never follow a runner-controlled path outside the fixed slot.
+    def test_role_recycling_preserves_external_targets_after_symlink_substitution(self) -> None:
+        for substitution in ("role", "ancestor"):
+            with self.subTest(substitution=substitution), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                allocator = SlotAllocator(root / "cache")
+                allocator.initialize()
+                role = allocator.layout.role_root(SlotId(0), ArtifactRole.STANDARD)
+                external = root / "external"
+                external.mkdir()
+                (external / "important").write_text("preserve")
+                if substitution == "role":
+                    role.rmdir()
+                    role.symlink_to(external, target_is_directory=True)
+                else:
+                    artifacts = role.parent
+                    artifacts.rename(artifacts.with_name("artifacts-original"))
+                    artifacts.symlink_to(external, target_is_directory=True)
+                    (external / ArtifactRole.STANDARD.value).mkdir()
+                    (external / ArtifactRole.STANDARD.value / "important").write_text(
+                        "preserve"
+                    )
+
+                with self.assertRaises(OSError):
+                    allocator.acquire_role(
+                        SlotId(0),
+                        ArtifactRole.STANDARD,
+                        Compatibility(
+                            "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+                        ),
+                        LeaseIdentity("runner", "ironmain", "trusted"),
+                    )
+
+                self.assertTrue((external / "important").exists())
+                if substitution == "ancestor":
+                    self.assertTrue(
+                        (external / ArtifactRole.STANDARD.value / "important").exists()
+                    )
+
     # /// What it's testing: Dirty and incompatible unlocked roles recycle in place without changing their path.
     # /// Why it matters: Recovery must remove poisoned artifacts without recreating source-keyed target directories.
     def test_dirty_and_incompatible_roles_recycle_in_place(self) -> None:
@@ -170,6 +212,36 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertFalse(invalidated.reused)
             self.assertFalse((root / "old").exists())
             invalidated.release(clean=True)
+
+    # /// What it's testing: Structurally incomplete or extended role state cannot authorize cache reuse.
+    # /// Why it matters: The same complete schema must govern semantic reuse and destructive pressure decisions.
+    def test_role_reuse_rejects_noncanonical_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            allocator = SlotAllocator(Path(directory))
+            allocator.initialize()
+            compatibility = Compatibility(
+                "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+            )
+            identity = LeaseIdentity("runner", "ironmain", "trusted")
+            first = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+            (first.root / "artifact").write_text("untrusted")
+            first.release(clean=True)
+            state_path = allocator.layout.role_state(
+                SlotId(0), ArtifactRole.STANDARD
+            )
+            state = json.loads(state_path.read_text())
+            state["unexpected"] = "field"
+            state_path.write_text(json.dumps(state))
+
+            second = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+
+            self.assertFalse(second.reused)
+            self.assertFalse((second.root / "artifact").exists())
+            second.release(clean=True)
 
     # /// What it's testing: Compatible role artifacts do not cross validated user or fork trust namespaces.
     # /// Why it matters: Shared runner storage must not allow one caller to consume another caller's mutable outputs.
@@ -346,6 +418,83 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertEqual([], allocator.evict_under_pressure(lambda: 1.0))
             self.assertTrue((root / "artifact").exists())
 
+    # /// What it's testing: Pressure requires complete role state and revalidates it after acquiring both locks.
+    # /// Why it matters: Incomplete or concurrently changed metadata must not authorize destructive eviction.
+    def test_pressure_rejects_incomplete_and_changed_role_state(self) -> None:
+        malformed_states = (
+            {"schema": 1, "state": "clean", "last_used_ns": 0},
+            {
+                "schema": 1,
+                "state": "clean",
+                "last_used_ns": 0,
+                "compatibility": "short",
+                "namespace": "runner:ironmain:trusted",
+            },
+            {
+                "schema": 1,
+                "state": "clean",
+                "last_used_ns": 0,
+                "compatibility": "a" * 64,
+                "namespace": "unsafe/path",
+            },
+            {
+                "schema": 1,
+                "state": "unknown",
+                "last_used_ns": 0,
+                "compatibility": "a" * 64,
+                "namespace": "runner:ironmain:trusted",
+            },
+            {
+                "schema": 1,
+                "state": [],
+                "last_used_ns": 0,
+                "compatibility": "a" * 64,
+                "namespace": "runner:ironmain:trusted",
+            },
+        )
+        for index, state in enumerate(malformed_states):
+            with self.subTest(index=index), tempfile.TemporaryDirectory() as directory:
+                allocator = SlotAllocator(Path(directory))
+                allocator.initialize()
+                root = allocator.layout.role_root(SlotId(0), ArtifactRole.STANDARD)
+                (root / "artifact").write_text("preserve")
+                allocator.layout.role_state(SlotId(0), ArtifactRole.STANDARD).write_text(
+                    json.dumps(state)
+                )
+                self.assertEqual([], allocator.evict_under_pressure(lambda: 1.0))
+                self.assertTrue((root / "artifact").exists())
+
+        with tempfile.TemporaryDirectory() as directory:
+            allocator = SlotAllocator(Path(directory))
+            allocator.initialize()
+            identity = LeaseIdentity("runner", "ironmain", "trusted")
+            compatibility = Compatibility(
+                "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+            )
+            lease = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+            (lease.root / "artifact").write_text("preserve")
+            lease.release(clean=True, last_used_ns=1)
+            real_try_lock = slots._try_lock
+
+            # /// Description: Corrupts role state at the simulated post-candidate lock boundary.
+            # /// Pre: The allocator is about to acquire one fixed role lock.
+            # /// Post: The selected role state becomes incomplete before the real lock is acquired.
+            # /// Reason: The regression test must prove locked state is independently revalidated.
+            def mutate_before_role_lock(path: Path) -> int | None:
+                if path == allocator.layout.role_lock(
+                    SlotId(0), ArtifactRole.STANDARD
+                ):
+                    allocator.layout.role_state(
+                        SlotId(0), ArtifactRole.STANDARD
+                    ).write_text('{"schema":1,"state":"clean","last_used_ns":1}')
+                return real_try_lock(path)
+
+            with patch.object(slots, "_try_lock", side_effect=mutate_before_role_lock):
+                self.assertEqual([], allocator.evict_under_pressure(lambda: 1.0))
+            self.assertTrue((lease.root / "artifact").exists())
+
     # /// What it's testing: An externally held role lock is treated as active during pressure handling.
     # /// Why it matters: Eviction must fail closed even when the active owner is another process.
     def test_pressure_preserves_external_lock_holder(self) -> None:
@@ -470,6 +619,60 @@ class SlotAllocatorTests(unittest.TestCase):
                 finally:
                     if held is not None:
                         held.release()
+
+    # /// What it's testing: Cleanup preserves external and registered data when a resource or ancestor is swapped during liveness checks.
+    # /// Why it matters: A runner process must not redirect post-check pathname deletion outside the registered allowed root.
+    def test_cleanup_fails_closed_when_resource_path_changes_during_probe(self) -> None:
+        for substitution in ("resource", "ancestor"):
+            with self.subTest(substitution=substitution), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                allowed = root / "targets"
+                parent = allowed / "owned"
+                resource = parent / "resource"
+                resource.mkdir(parents=True)
+                (resource / "registered").write_text("preserve")
+                external_parent = root / "external"
+                external_resource = external_parent / "resource"
+                external_resource.mkdir(parents=True)
+                (external_resource / "important").write_text("preserve")
+
+                # /// Description: Substitutes the registered terminal or ancestor during a liveness probe.
+                # /// Pre: Registration captured the original resource and allowed-root inode chain.
+                # /// Post: The current pathname targets external data while the original remains renamed.
+                # /// Reason: The regression test must reproduce the reviewer's cleanup race boundary.
+                def swap_path(path: Path) -> Liveness:
+                    if substitution == "resource":
+                        resource.rename(parent / "resource-original")
+                        resource.symlink_to(external_resource, target_is_directory=True)
+                    else:
+                        parent.rename(allowed / "owned-original")
+                        parent.symlink_to(external_parent, target_is_directory=True)
+                    return Liveness.DEAD
+
+                registry = ResourceRegistry(
+                    root / "registry",
+                    (allowed,),
+                    monotonic_ns=lambda: 1_000,
+                    owner_liveness=lambda owner: Liveness.DEAD,
+                    reference_liveness=swap_path,
+                    heartbeat_timeout_ns=100,
+                )
+                registry.register(
+                    "resource-swap",
+                    RegisteredResourceKind.CARGO_TARGET,
+                    resource,
+                    ProcessOwner(1234, 5678),
+                    heartbeat_ns=1,
+                )
+
+                self.assertEqual((), registry.cleanup_stale())
+                self.assertTrue((external_resource / "important").exists())
+                original = (
+                    parent / "resource-original"
+                    if substitution == "resource"
+                    else allowed / "owned-original" / "resource"
+                )
+                self.assertTrue((original / "registered").exists())
 
     # /// What it's testing: Procfs probes distinguish PID reuse and detect cwd and open-fd references.
     # /// Why it matters: Cleanup must independently prove owner exit and absence of process references before deletion.

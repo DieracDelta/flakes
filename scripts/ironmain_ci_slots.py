@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict, dataclass
 from enum import Enum
+import errno
 import fcntl
 import hashlib
 import json
@@ -37,6 +38,10 @@ class UnsafeIdentity(ValueError):
     """Raised when an identity cannot safely name shared state."""
 
 
+class UnsafePath(OSError):
+    """Raised when a destructive path no longer resolves beneath its trusted anchor."""
+
+
 class TelemetryAvailability(Enum):
     """Whether authoritative physical I/O counters were available."""
 
@@ -66,6 +71,63 @@ class ArtifactRole(Enum):
     STANDARD = "standard"
     COVERAGE_BASELINE = "coverage-baseline"
     COVERAGE_CURRENT = "coverage-current"
+
+
+class ArtifactState(Enum):
+    """Complete mutable artifact states eligible for pressure ordering."""
+
+    ACTIVE = "active"
+    CLEAN = "clean"
+    DIRTY = "dirty"
+
+
+@dataclass(frozen=True)
+class DirectoryIdentity:
+    """Stable filesystem identity used to detect path substitution."""
+
+    device: int
+    inode: int
+
+    # /// Description: Validates persisted filesystem identity fields.
+    # /// Pre: Device and inode came from fstat or untrusted registration JSON.
+    # /// Post: Both values are nonnegative non-boolean integers.
+    # /// Reason: Mistyped identity state must fail closed before destructive lookup.
+    def __post_init__(self) -> None:
+        for value in (self.device, self.inode):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError("invalid directory identity")
+
+    # /// Description: Captures a directory's device and inode from an open descriptor.
+    # /// Pre: descriptor refers to an opened directory.
+    # /// Post: Returns the stable identity needed for later path revalidation.
+    # /// Reason: Path strings alone cannot detect rename or symlink substitution races.
+    @classmethod
+    def from_descriptor(cls, descriptor: int) -> "DirectoryIdentity":
+        state = os.fstat(descriptor)
+        return cls(state.st_dev, state.st_ino)
+
+
+@dataclass(frozen=True)
+class ArtifactStateRecord:
+    """Validated complete role metadata admitted to pressure eviction."""
+
+    state: ArtifactState
+    compatibility: str
+    namespace: str
+    last_used_ns: int
+
+
+@dataclass(frozen=True)
+class ResourceRegistration:
+    """Validated cleanup registration with anchored filesystem identities."""
+
+    resource_id: str
+    root_index: int
+    relative_parts: tuple[str, ...]
+    owner: "ProcessOwner"
+    heartbeat_ns: int
+    root_identity: DirectoryIdentity
+    resource_identity: DirectoryIdentity
 
 
 @dataclass(frozen=True, order=True)
@@ -364,17 +426,125 @@ def _unlock(descriptor: int) -> None:
     os.close(descriptor)
 
 
-# /// Description: Removes artifact contents while preserving the fixed rolling role root.
-# /// Pre: The caller holds the corresponding exclusive role lock.
-# /// Post: The root exists empty and no sibling role is changed.
-# /// Reason: Dirty or incompatible state must recycle in place rather than proliferate paths.
-def _recycle(root: Path) -> None:
-    root.mkdir(parents=True, exist_ok=True)
-    for child in root.iterdir():
-        if child.is_dir() and not child.is_symlink():
-            shutil.rmtree(child)
-        else:
-            child.unlink()
+_DIRECTORY_OPEN_FLAGS: Final = (
+    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+)
+
+
+# /// Description: Opens a directory chain beneath one trusted no-follow anchor.
+# /// Pre: Every relative component is a validated simple name and the anchor is system-selected.
+# /// Post: Returns held descriptors for anchor through leaf or raises without following symlinks.
+# /// Reason: Destructive operations must remain attached to trusted directory inodes, not mutable path strings.
+def _open_directory_chain(anchor: Path, parts: tuple[str, ...]) -> list[int]:
+    if any(not _SAFE_IDENTITY.fullmatch(part) for part in parts):
+        raise UnsafePath("unsafe destructive path component")
+    descriptors: list[int] = []
+    try:
+        descriptors.append(os.open(anchor, _DIRECTORY_OPEN_FLAGS))
+        for part in parts:
+            descriptors.append(
+                os.open(part, _DIRECTORY_OPEN_FLAGS, dir_fd=descriptors[-1])
+            )
+        return descriptors
+    except Exception:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+        raise
+
+
+# /// Description: Closes a directory chain returned by _open_directory_chain.
+# /// Pre: Each descriptor is open and owned by the caller.
+# /// Post: Every descriptor is closed in leaf-to-anchor order.
+# /// Reason: Anchored deletion should not leak persistent filesystem references.
+def _close_directory_chain(descriptors: list[int]) -> None:
+    for descriptor in reversed(descriptors):
+        os.close(descriptor)
+
+
+# /// Description: Removes directory contents using only no-follow descriptor-relative operations.
+# /// Pre: descriptor is an exclusively controlled directory beneath a trusted anchor.
+# /// Post: Its original inode is empty or an uncertainty raises before traversing a substituted path.
+# /// Reason: shutil and Path traversal can follow role or ancestor substitutions outside the cache.
+def _clear_directory_descriptor(descriptor: int) -> None:
+    for entry in tuple(os.scandir(descriptor)):
+        try:
+            child_descriptor = os.open(
+                entry.name, _DIRECTORY_OPEN_FLAGS, dir_fd=descriptor
+            )
+        except OSError as error:
+            if error.errno not in (errno.ENOTDIR, errno.ELOOP):
+                raise
+            os.unlink(entry.name, dir_fd=descriptor)
+            continue
+        try:
+            child_identity = DirectoryIdentity.from_descriptor(child_descriptor)
+            _clear_directory_descriptor(child_descriptor)
+            current = os.stat(
+                entry.name, dir_fd=descriptor, follow_symlinks=False
+            )
+            if child_identity != DirectoryIdentity(current.st_dev, current.st_ino):
+                raise UnsafePath("directory changed during anchored cleanup")
+            os.rmdir(entry.name, dir_fd=descriptor)
+        finally:
+            os.close(child_descriptor)
+
+
+# /// Description: Recycles one existing directory beneath a trusted anchor without following substitutions.
+# /// Pre: The caller holds the corresponding lock and supplies fixed validated relative components.
+# /// Post: The original leaf inode is empty; missing, symlinked, or changed paths raise fail-closed.
+# /// Reason: Dirty or incompatible artifacts must recycle in place without escaping fixed slot roots.
+def _recycle_beneath(anchor: Path, parts: tuple[str, ...]) -> None:
+    descriptors = _open_directory_chain(anchor, parts)
+    try:
+        _clear_directory_descriptor(descriptors[-1])
+    finally:
+        _close_directory_chain(descriptors)
+
+
+# /// Description: Parses one complete role state eligible for pressure eviction.
+# /// Pre: value came from untrusted persisted JSON.
+# /// Post: Returns typed metadata only for the exact emitted active, clean, or dirty schema.
+# /// Reason: Incomplete ownership or compatibility state must not authorize destructive eviction.
+def _parse_artifact_state(value: object) -> ArtifactStateRecord | None:
+    if not isinstance(value, dict) or set(value) != {
+        "schema",
+        "state",
+        "compatibility",
+        "namespace",
+        "last_used_ns",
+    }:
+        return None
+    compatibility = value.get("compatibility")
+    namespace = value.get("namespace")
+    last_used_ns = value.get("last_used_ns")
+    try:
+        state = ArtifactState(value.get("state"))
+    except ValueError:
+        return None
+    namespace_parts = namespace.split(":") if isinstance(namespace, str) else []
+    if (
+        value.get("schema") != 1
+        or not isinstance(compatibility, str)
+        or len(compatibility) != 64
+        or any(character not in "0123456789abcdef" for character in compatibility)
+        or len(namespace_parts) != 3
+        or any(not _SAFE_IDENTITY.fullmatch(part) for part in namespace_parts)
+        or isinstance(last_used_ns, bool)
+        or not isinstance(last_used_ns, int)
+        or last_used_ns < 0
+    ):
+        return None
+    return ArtifactStateRecord(state, compatibility, namespace, last_used_ns)
+
+
+# /// Description: Produces a stable sortable key for one pressure-eviction candidate.
+# /// Pre: candidate contains validated last-use, slot, role, and state values.
+# /// Post: Returns integer/string fields that order LRU first without comparing enums.
+# /// Reason: Equal timestamps in one slot must not make pressure handling fail open.
+def _artifact_candidate_order(
+    candidate: tuple[int, SlotId, ArtifactRole, ArtifactStateRecord],
+) -> tuple[int, int, str]:
+    return candidate[0], candidate[1].value, candidate[2].value
 
 
 # /// Description: Reports whether a registered PID/start-time owner still exists.
@@ -512,10 +682,10 @@ class ResourceRegistry:
     # /// Post: Returns an allowed-root index and safe nonempty relative components or raises.
     # /// Reason: Persisted state must not contain traversal, credentials, or arbitrary absolute paths.
     def _relative_resource(self, resource: Path) -> tuple[int, tuple[str, ...]]:
-        canonical = resource.resolve(strict=False)
+        lexical = Path(os.path.abspath(resource))
         for index, allowed in enumerate(self.allowed_roots):
             try:
-                relative = canonical.relative_to(allowed)
+                relative = lexical.relative_to(allowed)
             except ValueError:
                 continue
             parts = relative.parts
@@ -546,8 +716,14 @@ class ResourceRegistry:
             or heartbeat_ns < 0
         ):
             raise ValueError("heartbeat must be a nonnegative monotonic timestamp")
-        if not resource.is_dir() or resource.is_symlink():
-            raise ValueError("registered resource must be an existing directory")
+        descriptors = _open_directory_chain(
+            self.allowed_roots[root_index], relative_parts
+        )
+        try:
+            root_identity = DirectoryIdentity.from_descriptor(descriptors[0])
+            resource_identity = DirectoryIdentity.from_descriptor(descriptors[-1])
+        finally:
+            _close_directory_chain(descriptors)
         _atomic_json(
             self._manifest_path(resource_id),
             {
@@ -558,6 +734,8 @@ class ResourceRegistry:
                 "relative_parts": list(relative_parts),
                 "owner": asdict(owner),
                 "heartbeat_ns": heartbeat_ns,
+                "root_identity": asdict(root_identity),
+                "resource_identity": asdict(resource_identity),
             },
         )
 
@@ -577,9 +755,21 @@ class ResourceRegistry:
     # /// Reason: Corrupt or poisoned registration state must fail closed rather than authorize deletion.
     def _load_registration(
         self, manifest_path: Path
-    ) -> tuple[str, Path, ProcessOwner, int] | None:
+    ) -> ResourceRegistration | None:
         try:
             state = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(state, dict) or set(state) != {
+                "schema",
+                "resource_id",
+                "kind",
+                "root_index",
+                "relative_parts",
+                "owner",
+                "heartbeat_ns",
+                "root_identity",
+                "resource_identity",
+            }:
+                return None
             resource_id = state["resource_id"]
             if (
                 state.get("schema") != 1
@@ -605,14 +795,48 @@ class ResourceRegistry:
             ):
                 return None
             owner_state = state["owner"]
-            owner = ProcessOwner(owner_state["pid"], owner_state["start_time_ticks"])
-            resource = self.allowed_roots[root_index].joinpath(*parts)
-            if resource.resolve(strict=False) != resource or resource.is_symlink():
-                return None
-            self._relative_resource(resource)
-            return resource_id, resource, owner, heartbeat_ns
+            root_state = state["root_identity"]
+            resource_state = state["resource_identity"]
+            return ResourceRegistration(
+                resource_id=resource_id,
+                root_index=root_index,
+                relative_parts=tuple(parts),
+                owner=ProcessOwner(
+                    owner_state["pid"], owner_state["start_time_ticks"]
+                ),
+                heartbeat_ns=heartbeat_ns,
+                root_identity=DirectoryIdentity(
+                    root_state["device"], root_state["inode"]
+                ),
+                resource_identity=DirectoryIdentity(
+                    resource_state["device"], resource_state["inode"]
+                ),
+            )
         except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
             return None
+
+    # /// Description: Reopens a registration path and compares every component to held descriptors.
+    # /// Pre: expected is an open chain from the registered root through resource.
+    # /// Post: Returns true only while the current no-follow pathname names the same inode chain.
+    # /// Reason: Liveness callbacks may race with ancestor or terminal path substitution.
+    def _path_matches_held_chain(
+        self, registration: ResourceRegistration, expected: list[int]
+    ) -> bool:
+        try:
+            current = _open_directory_chain(
+                self.allowed_roots[registration.root_index],
+                registration.relative_parts,
+            )
+        except OSError:
+            return False
+        try:
+            return len(current) == len(expected) and all(
+                DirectoryIdentity.from_descriptor(left)
+                == DirectoryIdentity.from_descriptor(right)
+                for left, right in zip(current, expected)
+            )
+        finally:
+            _close_directory_chain(current)
 
     # /// Description: Removes registered stale roots only after lock, heartbeat, owner, cwd, and fd checks are negative.
     # /// Pre: Registrations were written through register and liveness probes are authoritative or return uncertain.
@@ -627,29 +851,57 @@ class ResourceRegistry:
             registration = self._load_registration(manifest_path)
             if registration is None:
                 continue
-            resource_id, resource, owner, heartbeat_ns = registration
             try:
-                lock = self.acquire_resource_lock(resource_id)
+                lock = self.acquire_resource_lock(registration.resource_id)
             except OSError:
                 continue
             if lock is None:
                 continue
             with lock:
-                now = self.monotonic_ns()
-                if now < heartbeat_ns or now - heartbeat_ns <= self.heartbeat_timeout_ns:
-                    continue
-                if self.owner_liveness(owner) is not Liveness.DEAD:
-                    continue
-                if self.reference_liveness(resource) is not Liveness.DEAD:
-                    continue
-                if not resource.is_dir() or resource.is_symlink():
+                try:
+                    descriptors = _open_directory_chain(
+                        self.allowed_roots[registration.root_index],
+                        registration.relative_parts,
+                    )
+                except OSError:
                     continue
                 try:
-                    shutil.rmtree(resource)
+                    if (
+                        DirectoryIdentity.from_descriptor(descriptors[0])
+                        != registration.root_identity
+                        or DirectoryIdentity.from_descriptor(descriptors[-1])
+                        != registration.resource_identity
+                    ):
+                        continue
+                    now = self.monotonic_ns()
+                    if (
+                        now < registration.heartbeat_ns
+                        or now - registration.heartbeat_ns
+                        <= self.heartbeat_timeout_ns
+                    ):
+                        continue
+                    if self.owner_liveness(registration.owner) is not Liveness.DEAD:
+                        continue
+                    resource = self.allowed_roots[
+                        registration.root_index
+                    ].joinpath(*registration.relative_parts)
+                    if self.reference_liveness(resource) is not Liveness.DEAD:
+                        continue
+                    if not self._path_matches_held_chain(registration, descriptors):
+                        continue
+                    _clear_directory_descriptor(descriptors[-1])
+                    if not self._path_matches_held_chain(registration, descriptors):
+                        continue
+                    os.rmdir(
+                        registration.relative_parts[-1],
+                        dir_fd=descriptors[-2],
+                    )
                     manifest_path.unlink()
                 except OSError:
                     continue
-                removed.append(resource_id)
+                finally:
+                    _close_directory_chain(descriptors)
+                removed.append(registration.resource_id)
         return tuple(removed)
 
 
@@ -836,18 +1088,28 @@ class SlotAllocator:
             )
         root = self.layout.role_root(slot_id, role)
         state_path = self.layout.role_state(slot_id, role)
-        state: dict[str, object] = {}
+        state: ArtifactStateRecord | None = None
         try:
             if state_path.exists():
-                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state = _parse_artifact_state(
+                    json.loads(state_path.read_text(encoding="utf-8"))
+                )
             reused = (
-                state.get("schema") == 1
-                and state.get("state") == "clean"
-                and state.get("compatibility") == compatibility.digest()
-                and state.get("namespace") == identity.namespace()
+                state is not None
+                and state.state is ArtifactState.CLEAN
+                and state.compatibility == compatibility.digest()
+                and state.namespace == identity.namespace()
             )
             if not reused:
-                _recycle(root)
+                _recycle_beneath(
+                    self.layout.root,
+                    (
+                        "slots",
+                        slot_id.directory_name(),
+                        "artifacts",
+                        role.value,
+                    ),
+                )
             _atomic_json(
                 state_path,
                 {
@@ -884,29 +1146,27 @@ class SlotAllocator:
         current = free_percent()
         if current >= PRESSURE_TRIGGER_PERCENT:
             return []
-        candidates: list[tuple[int, SlotId, ArtifactRole]] = []
+        candidates: list[
+            tuple[int, SlotId, ArtifactRole, ArtifactStateRecord]
+        ] = []
         for slot_id in self.layout.slot_ids:
             for role in ArtifactRole:
                 state_path = self.layout.role_state(slot_id, role)
                 if not state_path.exists():
                     continue
                 try:
-                    state = json.loads(state_path.read_text(encoding="utf-8"))
-                    last_used = state["last_used_ns"]
-                    if (
-                        state.get("schema") != 1
-                        or state.get("state")
-                        not in ("active", "clean", "dirty", "evicted")
-                        or isinstance(last_used, bool)
-                        or not isinstance(last_used, int)
-                        or last_used < 0
-                    ):
-                        continue
-                except (KeyError, OSError, TypeError, json.JSONDecodeError):
+                    state = _parse_artifact_state(
+                        json.loads(state_path.read_text(encoding="utf-8"))
+                    )
+                except (OSError, TypeError, json.JSONDecodeError):
                     continue
-                candidates.append((last_used, slot_id, role))
+                if state is None:
+                    continue
+                candidates.append((state.last_used_ns, slot_id, role, state))
         evicted: list[tuple[SlotId, ArtifactRole]] = []
-        for _, slot_id, role in sorted(candidates):
+        for _, slot_id, role, candidate_state in sorted(
+            candidates, key=_artifact_candidate_order
+        ):
             if current >= PRESSURE_TARGET_PERCENT:
                 break
             slot_descriptor = _try_lock(self.layout.slot_lock(slot_id))
@@ -917,7 +1177,27 @@ class SlotAllocator:
                 _unlock(slot_descriptor)
                 continue
             try:
-                _recycle(self.layout.role_root(slot_id, role))
+                try:
+                    locked_state = _parse_artifact_state(
+                        json.loads(
+                            self.layout.role_state(slot_id, role).read_text(
+                                encoding="utf-8"
+                            )
+                        )
+                    )
+                except (OSError, TypeError, json.JSONDecodeError):
+                    continue
+                if locked_state != candidate_state:
+                    continue
+                _recycle_beneath(
+                    self.layout.root,
+                    (
+                        "slots",
+                        slot_id.directory_name(),
+                        "artifacts",
+                        role.value,
+                    ),
+                )
                 _atomic_json(
                     self.layout.role_state(slot_id, role),
                     {
