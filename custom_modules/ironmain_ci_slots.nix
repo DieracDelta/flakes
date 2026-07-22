@@ -293,7 +293,7 @@ in
       ];
 
       users.users.${cfg.localUser}.extraGroups = [ cfg.runnerGroup ];
-      security.sudo.extraRules = [
+      security.sudo-rs.extraRules = [
         {
           users = [
             cfg.runnerUser

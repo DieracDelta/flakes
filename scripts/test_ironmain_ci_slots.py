@@ -726,6 +726,17 @@ class SlotAllocatorTests(unittest.TestCase):
             module,
         )
 
+    # /// What it's testing: The broker and registrar passwordless rules target the host's enabled sudo-rs implementation.
+    # /// Why it matters: A generated rule for disabled legacy sudo leaves every deployed invocation blocked on an interactive password.
+    def test_nix_broker_uses_enabled_sudo_rs_rules(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn("security.sudo-rs.extraRules = [", module)
+        self.assertNotIn("security.sudo.extraRules = [", module)
+
     # /// What it's testing: The privileged systemd broker traps cancellation and tears down its exact unit.
     # /// Why it matters: Killing the outer command must not leave expensive work or fixed slot locks running.
     def test_nix_broker_has_explicit_cancellation_teardown(self) -> None:
@@ -801,8 +812,19 @@ class SlotAllocatorTests(unittest.TestCase):
             child = json.loads(started.read_text())
             os.killpg(command.pid, signal.SIGTERM)
             command.wait(timeout=5)
-            with self.assertRaises(ProcessLookupError):
-                os.kill(child["pid"], 0)
+            child_stat = Path("/proc") / str(child["pid"]) / "stat"
+            child_state = None
+            for _ in range(100):
+                try:
+                    raw_stat = child_stat.read_text(encoding="utf-8")
+                except FileNotFoundError:
+                    child_state = None
+                    break
+                child_state = raw_stat[raw_stat.rfind(")") + 2 :].split()[0]
+                if child_state == "Z":
+                    break
+                time.sleep(0.02)
+            self.assertIn(child_state, (None, "Z"))
 
             identity = LeaseIdentity(
                 pwd.getpwuid(os.geteuid()).pw_name, "ironmain", "trusted"
