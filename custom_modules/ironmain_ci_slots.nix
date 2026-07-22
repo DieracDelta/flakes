@@ -28,8 +28,10 @@ let
     resources = "${cfg.root}/resources";
     metrics = cfg.metricsOutput;
     scopes = {
-      runner = "ironmain-ci-runner.slice";
-      local = "ironmain-ci-local.slice";
+      runner_aggregate = "ironmain-ci-runner.slice";
+      local_aggregate = "ironmain-ci-local.slice";
+      runner_invocations = "ironmain-ci-runner-invocations.slice";
+      local_invocations = "ironmain-ci-local-invocations.slice";
     };
   };
   helper = pkgs.writeShellApplication {
@@ -37,6 +39,76 @@ let
     runtimeInputs = [ pkgs.python3 ];
     text = ''
       exec python3 ${../scripts/ironmain_ci_slots.py} "$@"
+    '';
+  };
+  rootRegistrar = pkgs.writeShellApplication {
+    name = "ironmain-ci-root-registrar";
+    runtimeInputs = [ helper ];
+    text = ''
+      case "''${1:-}" in
+        register|unregister) ;;
+        *)
+          echo "root registrar permits only register or unregister" >&2
+          exit 64
+          ;;
+      esac
+      exec ironmain-ci-slots --root ${lib.escapeShellArg cfg.root} "$@"
+    '';
+  };
+  invocationBroker = pkgs.writeShellApplication {
+    name = "ironmain-ci-invocation-broker";
+    runtimeInputs = [
+      helper
+      pkgs.systemd
+    ];
+    text = ''
+      if [ "$#" -lt 2 ]; then
+        echo "usage: ironmain-ci-invocation-broker INVOCATION RUN-OPTIONS... -- COMMAND..." >&2
+        exit 64
+      fi
+      invocation="$1"
+      shift
+      if [[ ! "$invocation" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]]; then
+        echo "unsafe invocation identity" >&2
+        exit 64
+      fi
+      if [ "''${SUDO_USER:-}" = ${lib.escapeShellArg cfg.runnerUser} ]; then
+        slice=ironmain-ci-runner-invocations.slice
+      elif [ "''${SUDO_USER:-}" = ${lib.escapeShellArg cfg.localUser} ]; then
+        slice=ironmain-ci-local-invocations.slice
+      else
+        echo "invocation broker requires an approved sudo caller" >&2
+        exit 77
+      fi
+      if [[ ! "''${SUDO_UID:-}" =~ ^[0-9]+$ ]] || [[ ! "''${SUDO_GID:-}" =~ ^[0-9]+$ ]]; then
+        echo "invocation broker requires sudo UID/GID identity" >&2
+        exit 77
+      fi
+      exec systemd-run \
+        --quiet \
+        --wait \
+        --pipe \
+        --collect \
+        --service-type=exec \
+        --unit="ironmain-ci-invocation-$invocation" \
+        --slice="$slice" \
+        --uid="$SUDO_UID" \
+        --gid="$SUDO_GID" \
+        --property="WorkingDirectory=$PWD" \
+        --setenv="IRONMAIN_CI_BROKER_INVOCATION=$invocation" \
+        ${helper}/bin/ironmain-ci-slots \
+        --root ${lib.escapeShellArg cfg.root} \
+        run \
+        --invocation-id "$invocation" \
+        --register-helper ${rootRegistrar}/bin/ironmain-ci-root-registrar \
+        "$@"
+    '';
+  };
+  invocationCommand = pkgs.writeShellApplication {
+    name = "ironmain-ci-run";
+    runtimeInputs = [ pkgs.sudo ];
+    text = ''
+      exec /run/wrappers/bin/sudo ${invocationBroker}/bin/ironmain-ci-invocation-broker "$@"
     '';
   };
   mirrorUpdate = pkgs.writeShellApplication {
@@ -120,6 +192,12 @@ in
       description = "Group granted read-only traversal of the root-managed mirror.";
     };
 
+    localUser = lib.mkOption {
+      type = lib.types.str;
+      default = "jrestivo";
+      description = "Local orchestrator allowed to use the same fixed slots in an isolated trust namespace.";
+    };
+
     mirrorSource = lib.mkOption {
       type = lib.types.str;
       default = "http://127.0.0.1:3010/jrestivo/ironmain.git";
@@ -163,7 +241,30 @@ in
     }
 
     (lib.mkIf cfg.enable {
-      environment.systemPackages = [ helper ];
+      environment.systemPackages = [
+        helper
+        invocationCommand
+      ];
+
+      users.users.${cfg.localUser}.extraGroups = [ cfg.runnerGroup ];
+      security.sudo.extraRules = [
+        {
+          users = [
+            cfg.runnerUser
+            cfg.localUser
+          ];
+          commands = [
+            {
+              command = "${invocationBroker}/bin/ironmain-ci-invocation-broker";
+              options = [ "NOPASSWD" ];
+            }
+            {
+              command = "${rootRegistrar}/bin/ironmain-ci-root-registrar";
+              options = [ "NOPASSWD" ];
+            }
+          ];
+        }
+      ];
 
       systemd.tmpfiles.rules = [
         "d ${cfg.root} 0750 root ${cfg.runnerGroup} -"
@@ -301,15 +402,27 @@ in
         };
       };
 
-      systemd.slices.ironmain-ci-runner.sliceConfig = {
-        IOAccounting = true;
-        CPUAccounting = true;
-        MemoryAccounting = true;
-      };
-      systemd.user.slices.ironmain-ci-local.sliceConfig = {
-        IOAccounting = true;
-        CPUAccounting = true;
-        MemoryAccounting = true;
+      systemd.slices = {
+        ironmain-ci-runner.sliceConfig = {
+          IOAccounting = true;
+          CPUAccounting = true;
+          MemoryAccounting = true;
+        };
+        ironmain-ci-local.sliceConfig = {
+          IOAccounting = true;
+          CPUAccounting = true;
+          MemoryAccounting = true;
+        };
+        ironmain-ci-runner-invocations.sliceConfig = {
+          IOAccounting = true;
+          CPUAccounting = true;
+          MemoryAccounting = true;
+        };
+        ironmain-ci-local-invocations.sliceConfig = {
+          IOAccounting = true;
+          CPUAccounting = true;
+          MemoryAccounting = true;
+        };
       };
       systemd.services.gitea-runner-desktop = {
         after = [ "ironmain-ci-mirror-update.service" ];

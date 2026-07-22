@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -625,6 +627,230 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertTrue((role.root / "artifact").exists())
             role.release(clean=True)
 
+    # /// What it's testing: Installed-style run commands hold distinct fixed slots and reject broad ambient cgroups as exact telemetry.
+    # /// Why it matters: Concurrent callers need real lease isolation and must not turn contaminated aggregate counters into command evidence.
+    def test_cli_run_holds_distinct_slots_and_reports_unavailable_outside_invocation_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "cache"
+            SlotAllocator(cache).initialize()
+            compatibility = root / "compatibility.json"
+            compatibility.write_text(
+                json.dumps(
+                    {
+                        "toolchain": "tool",
+                        "lockfile": "lock",
+                        "cargo_config": "cargo",
+                        "rustflags": "flags",
+                        "profile": "profile",
+                        "packages": [],
+                        "features": [],
+                        "nextest_filter": "filter",
+                        "script_config": "script",
+                    }
+                )
+            )
+            script = Path(slots.__file__)
+            commands: list[subprocess.Popen[str]] = []
+            outputs: list[Path] = []
+            results: list[Path] = []
+            for index in range(2):
+                output = root / f"child-{index}.json"
+                result = root / f"result-{index}.json"
+                outputs.append(output)
+                results.append(result)
+                commands.append(
+                    subprocess.Popen(
+                        [
+                            sys.executable,
+                            str(script),
+                            "--root",
+                            str(cache),
+                            "run",
+                            "--invocation-id",
+                            f"test-{index}",
+                            "--repository",
+                            "ironmain",
+                            "--fork",
+                            "trusted",
+                            "--role",
+                            "standard",
+                            "--compatibility",
+                            str(compatibility),
+                            "--result",
+                            str(result),
+                            "--",
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json,os,time; "
+                                f"open({str(output)!r},'w').write(json.dumps(dict(os.environ))); "
+                                "time.sleep(0.5)"
+                            ),
+                        ],
+                        text=True,
+                    )
+                )
+            self.assertEqual([0, 0], [command.wait() for command in commands])
+            environments = [json.loads(path.read_text()) for path in outputs]
+            self.assertNotEqual(
+                environments[0]["IRONMAIN_CI_SLOT"],
+                environments[1]["IRONMAIN_CI_SLOT"],
+            )
+            for result in results:
+                state = json.loads(result.read_text())
+                self.assertEqual("unavailable", state["telemetry"])
+                self.assertIsNone(state["physical_write_bytes"])
+
+    # /// What it's testing: A failed installed-style run registers and retains its resource as a cleanup candidate.
+    # /// Why it matters: Interrupted dirty/staging work must have a production registration producer and released lock.
+    def test_cli_failed_run_leaves_registered_cleanup_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "cache"
+            SlotAllocator(cache).initialize()
+            compatibility = root / "compatibility.json"
+            compatibility.write_text(
+                json.dumps(
+                    {
+                        "toolchain": "tool",
+                        "lockfile": "lock",
+                        "cargo_config": "cargo",
+                        "rustflags": "flags",
+                        "profile": "profile",
+                        "packages": [],
+                        "features": [],
+                        "nextest_filter": "filter",
+                        "script_config": "script",
+                    }
+                )
+            )
+            resource = cache / "resources" / "failed-run"
+            resource.mkdir()
+            registrar = root / "registrar"
+            registrar.write_text(
+                "#!/bin/sh\nexec "
+                + repr(sys.executable)
+                + " "
+                + repr(str(Path(slots.__file__)))
+                + " --root "
+                + repr(str(cache))
+                + ' "$@"\n'
+            )
+            registrar.chmod(0o755)
+            result = root / "failed.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(slots.__file__)),
+                    "--root",
+                    str(cache),
+                    "run",
+                    "--invocation-id",
+                    "failed-run",
+                    "--repository",
+                    "ironmain",
+                    "--fork",
+                    "trusted",
+                    "--role",
+                    "standard",
+                    "--compatibility",
+                    str(compatibility),
+                    "--result",
+                    str(result),
+                    "--register-helper",
+                    str(registrar),
+                    "--resource-id",
+                    "failed-run",
+                    "--resource-kind",
+                    "staging",
+                    "--resource",
+                    str(resource),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "raise SystemExit(7)",
+                ],
+                check=False,
+            )
+            self.assertEqual(7, completed.returncode)
+            self.assertTrue((cache / "registry/resources/failed-run.json").exists())
+            registry = ResourceRegistry(cache / "registry", (cache / "resources",))
+            lock = registry.acquire_resource_lock("failed-run")
+            self.assertIsNotNone(lock)
+            if lock is not None:
+                lock.release()
+
+    # /// What it's testing: Only an exact uniquely named transient systemd service resolves as an invocation cgroup.
+    # /// Why it matters: Broad runner/local slice counters must remain secondary and cannot contaminate command evidence.
+    def test_invocation_cgroup_resolution_rejects_broad_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cgroups = root / "cgroup"
+            exact = (
+                cgroups
+                / "ironmain.slice"
+                / "ironmain-ci.slice"
+                / "ironmain-ci-runner.slice"
+                / "ironmain-ci-runner-invocations.slice"
+                / "ironmain-ci-invocation-exact-one.service"
+            )
+            exact.mkdir(parents=True)
+            proc_cgroup = root / "self.cgroup"
+            proc_cgroup.write_text(
+                "0::/ironmain.slice/ironmain-ci.slice/ironmain-ci-runner.slice/"
+                "ironmain-ci-runner-invocations.slice/"
+                "ironmain-ci-invocation-exact-one.service\n"
+            )
+            self.assertEqual(
+                exact,
+                slots._invocation_cgroup_path(
+                    "exact-one", proc_cgroup=proc_cgroup, cgroup_root=cgroups
+                ),
+            )
+            proc_cgroup.write_text("0::/ironmain-ci-runner.slice\n")
+            self.assertIsNone(
+                slots._invocation_cgroup_path(
+                    "exact-one", proc_cgroup=proc_cgroup, cgroup_root=cgroups
+                )
+            )
+
+    # /// What it's testing: The root registration command creates state that a read-only runner can lock.
+    # /// Why it matters: The cleanup timer needs a production producer, not only direct test calls into ResourceRegistry.
+    def test_cli_registration_produces_runner_consumable_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "cache"
+            SlotAllocator(root).initialize()
+            resource = root / "resources" / "abandoned"
+            resource.mkdir(parents=True)
+            for relative in ("registry", "registry/locks", "registry/resources"):
+                (root / relative).mkdir(parents=True, exist_ok=True)
+            self.assertEqual(
+                0,
+                slots.main(
+                    [
+                        "--root",
+                        str(root),
+                        "register",
+                        "--resource-id",
+                        "abandoned",
+                        "--resource-kind",
+                        "staging",
+                        "--resource",
+                        str(resource),
+                        "--owner-pid",
+                        str(os.getpid()),
+                    ]
+                ),
+            )
+            for relative in ("registry", "registry/locks", "registry/resources"):
+                os.chmod(root / relative, 0o555)
+            registry = ResourceRegistry(root / "registry", (root / "resources",))
+            lock = registry.acquire_resource_lock("abandoned")
+            self.assertIsNotNone(lock)
+            if lock is not None:
+                lock.release()
+
     # /// What it's testing: Prometheus output reports exact scope counters, slot footprint/reuse, and explicit unavailable telemetry.
     # /// Why it matters: Monitoring must distinguish absent physical I/O from authoritative zero while exposing bounded cache state.
     def test_prometheus_metrics_preserve_scope_availability_and_slot_state(self) -> None:
@@ -647,6 +873,27 @@ class SlotAllocatorTests(unittest.TestCase):
                 "259:0 rbytes=11 wbytes=22 rios=1 wios=2\n"
             )
             missing_local_scope = root / "local.scope"
+            invocation_root = allocator.layout.slot_root(SlotId(0)) / "results"
+            invocation = MeteredCommandResult(
+                invocation_id="exact-one",
+                telemetry=TelemetryAvailability.AVAILABLE,
+                physical_read_bytes=33,
+                physical_write_bytes=44,
+                elapsed_seconds=1.5,
+                artifact_bytes=4,
+                diagnostic="exact invocation cgroup",
+            ).to_state()
+            invocation.update(
+                {
+                    "exit_code": 0,
+                    "slot": "00",
+                    "role": "standard",
+                    "reused": True,
+                }
+            )
+            (invocation_root / "latest-invocation.json").write_text(
+                json.dumps(invocation)
+            )
 
             metrics = render_prometheus_metrics(
                 allocator.layout,
@@ -657,17 +904,25 @@ class SlotAllocatorTests(unittest.TestCase):
             )
 
             self.assertIn(
-                'ironmain_ci_scope_io_available{scope="runner"} 1', metrics
+                'ironmain_ci_aggregate_scope_io_available{scope="runner"} 1', metrics
             )
             self.assertIn(
-                'ironmain_ci_scope_physical_write_bytes_total{scope="runner",major_minor="259:0"} 22',
+                'ironmain_ci_aggregate_scope_physical_write_bytes_total{scope="runner",major_minor="259:0"} 22',
                 metrics,
             )
             self.assertIn(
-                'ironmain_ci_scope_io_available{scope="local"} 0', metrics
+                'ironmain_ci_aggregate_scope_io_available{scope="local"} 0', metrics
             )
             self.assertNotIn(
-                'ironmain_ci_scope_physical_write_bytes_total{scope="local"',
+                'ironmain_ci_aggregate_scope_physical_write_bytes_total{scope="local"',
+                metrics,
+            )
+            self.assertIn(
+                'ironmain_ci_invocation_io_available{slot="00",role="standard"} 1',
+                metrics,
+            )
+            self.assertIn(
+                'ironmain_ci_invocation_physical_write_bytes{slot="00",role="standard"} 44',
                 metrics,
             )
             self.assertIn(
@@ -703,10 +958,10 @@ class SlotAllocatorTests(unittest.TestCase):
             )
 
             self.assertIn(
-                'ironmain_ci_scope_io_available{scope="runner"} 0', metrics
+                'ironmain_ci_aggregate_scope_io_available{scope="runner"} 0', metrics
             )
             self.assertNotIn(
-                'ironmain_ci_scope_physical_write_bytes_total{scope="runner"',
+                'ironmain_ci_aggregate_scope_physical_write_bytes_total{scope="runner"',
                 metrics,
             )
 

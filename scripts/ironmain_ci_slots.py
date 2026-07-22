@@ -13,9 +13,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import pwd
 import re
 import shutil
 import stat
+import subprocess
 import time
 from typing import Callable, Final
 
@@ -431,11 +433,14 @@ def _atomic_json(path: Path, value: dict[str, object]) -> None:
 # /// Pre: The caller is the trusted provisioning or registration authority for the parent.
 # /// Post: The lock and adjacent identity state exist and refer to the same inode.
 # /// Reason: Later callers must distinguish an original lock from a pathname replacement.
-def _provision_lock(path: Path, identity_path: Path) -> DirectoryIdentity:
+def _provision_lock(
+    path: Path, identity_path: Path, *, exclusive: bool = False
+) -> DirectoryIdentity:
     path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(
-        path, os.O_RDONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o444
-    )
+    flags = os.O_RDONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC
+    if exclusive:
+        flags |= os.O_EXCL
+    descriptor = os.open(path, flags, 0o444)
     try:
         identity = DirectoryIdentity.from_descriptor(descriptor)
     finally:
@@ -835,6 +840,13 @@ class ResourceRegistry:
             or heartbeat_ns < 0
         ):
             raise ValueError("heartbeat must be a nonnegative monotonic timestamp")
+        registration_paths = (
+            self._manifest_path(resource_id),
+            self._lock_path(resource_id),
+            self._lock_identity_path(resource_id),
+        )
+        if any(os.path.lexists(path) for path in registration_paths):
+            raise FileExistsError("resource identity is already registered")
         descriptors = _open_directory_chain(
             self.allowed_roots[root_index], relative_parts
         )
@@ -844,7 +856,9 @@ class ResourceRegistry:
         finally:
             _close_directory_chain(descriptors)
         lock_identity = _provision_lock(
-            self._lock_path(resource_id), self._lock_identity_path(resource_id)
+            self._lock_path(resource_id),
+            self._lock_identity_path(resource_id),
+            exclusive=True,
         )
         _atomic_json(
             self._manifest_path(resource_id),
@@ -873,6 +887,29 @@ class ResourceRegistry:
         if registration is None:
             return None
         return self._acquire_registered_lock(registration)
+
+    # /// Description: Removes registration metadata after a successful owner completes.
+    # /// Pre: resource_id and owner match one validated registration and no resource lock is held.
+    # /// Post: The resource remains while its manifest and stable lock metadata are removed under lock.
+    # /// Reason: Successful temporary resources must not later be mistaken for abandoned cleanup candidates.
+    def unregister(self, resource_id: str, owner: ProcessOwner) -> bool:
+        if not _SAFE_IDENTITY.fullmatch(resource_id):
+            raise ValueError("unsafe resource identity")
+        manifest = self._manifest_path(resource_id)
+        registration = self._load_registration(manifest)
+        if registration is None or registration.owner != owner:
+            return False
+        lock = self._acquire_registered_lock(registration)
+        if lock is None:
+            return False
+        with lock:
+            current = self._load_registration(manifest)
+            if current != registration:
+                return False
+            manifest.unlink()
+            self._lock_path(resource_id).unlink()
+            self._lock_identity_path(resource_id).unlink()
+            return True
 
     # /// Description: Attempts the exact lock inode recorded by one validated registration.
     # /// Pre: registration came from _load_registration.
@@ -1243,6 +1280,13 @@ class SlotAllocator:
         os.chmod(self.layout.mirror_root, 0o550)
         self.layout.locks_root.mkdir(parents=True, exist_ok=True)
         os.chmod(self.layout.locks_root, 0o755)
+        for path in (
+            self.layout.root / "resources",
+            self.layout.root / "registry" / "locks",
+            self.layout.root / "registry" / "resources",
+            self.layout.root / "registry" / "quarantine",
+        ):
+            path.mkdir(parents=True, exist_ok=True)
         for slot_id in self.layout.slot_ids:
             slot_root = self.layout.slot_root(slot_id)
             fixed_lock_root = self.layout.locks_root / slot_id.directory_name()
@@ -1514,12 +1558,24 @@ def render_prometheus_metrics(
     layout: SlotLayout, scope_paths: dict[CgroupScope, Path]
 ) -> str:
     lines = [
-        "# HELP ironmain_ci_scope_io_available Whether exact physical cgroup I/O telemetry is available.",
-        "# TYPE ironmain_ci_scope_io_available gauge",
-        "# HELP ironmain_ci_scope_physical_read_bytes_total Exact physical bytes read by the terminal scope.",
-        "# TYPE ironmain_ci_scope_physical_read_bytes_total counter",
-        "# HELP ironmain_ci_scope_physical_write_bytes_total Exact physical bytes written by the terminal scope.",
-        "# TYPE ironmain_ci_scope_physical_write_bytes_total counter",
+        "# HELP ironmain_ci_aggregate_scope_io_available Whether broad aggregate cgroup I/O telemetry is available.",
+        "# TYPE ironmain_ci_aggregate_scope_io_available gauge",
+        "# HELP ironmain_ci_aggregate_scope_physical_read_bytes_total Physical bytes read by the broad aggregate scope.",
+        "# TYPE ironmain_ci_aggregate_scope_physical_read_bytes_total counter",
+        "# HELP ironmain_ci_aggregate_scope_physical_write_bytes_total Physical bytes written by the broad aggregate scope.",
+        "# TYPE ironmain_ci_aggregate_scope_physical_write_bytes_total counter",
+        "# HELP ironmain_ci_invocation_io_available Whether one isolated invocation recorded exact physical I/O.",
+        "# TYPE ironmain_ci_invocation_io_available gauge",
+        "# HELP ironmain_ci_invocation_physical_read_bytes Exact physical bytes read by one completed invocation.",
+        "# TYPE ironmain_ci_invocation_physical_read_bytes gauge",
+        "# HELP ironmain_ci_invocation_physical_write_bytes Exact physical bytes written by one completed invocation.",
+        "# TYPE ironmain_ci_invocation_physical_write_bytes gauge",
+        "# HELP ironmain_ci_invocation_elapsed_seconds Elapsed time for one completed invocation.",
+        "# TYPE ironmain_ci_invocation_elapsed_seconds gauge",
+        "# HELP ironmain_ci_invocation_artifact_bytes Artifact footprint after one completed invocation.",
+        "# TYPE ironmain_ci_invocation_artifact_bytes gauge",
+        "# HELP ironmain_ci_invocation_reused Whether one completed invocation reused compatible role artifacts.",
+        "# TYPE ironmain_ci_invocation_reused gauge",
         "# HELP ironmain_ci_slot_leased Whether allocator state records the slot as active.",
         "# TYPE ironmain_ci_slot_leased gauge",
         "# HELP ironmain_ci_role_bytes Point-in-time bytes retained by a fixed artifact role.",
@@ -1530,16 +1586,85 @@ def render_prometheus_metrics(
     for scope in CgroupScope:
         availability, counters = _read_scope_io(scope_paths[scope])
         lines.append(
-            f'ironmain_ci_scope_io_available{{scope="{scope.value}"}} '
+            f'ironmain_ci_aggregate_scope_io_available{{scope="{scope.value}"}} '
             f'{1 if availability is TelemetryAvailability.AVAILABLE else 0}'
         )
         for device, reads, writes in counters:
             labels = f'scope="{scope.value}",major_minor="{device}"'
             lines.append(
-                f"ironmain_ci_scope_physical_read_bytes_total{{{labels}}} {reads}"
+                f"ironmain_ci_aggregate_scope_physical_read_bytes_total{{{labels}}} {reads}"
             )
             lines.append(
-                f"ironmain_ci_scope_physical_write_bytes_total{{{labels}}} {writes}"
+                f"ironmain_ci_aggregate_scope_physical_write_bytes_total{{{labels}}} {writes}"
+            )
+    invocation_paths = tuple(
+        layout.slot_root(slot_id) / "results" / "latest-invocation.json"
+        for slot_id in layout.slot_ids
+    )
+    for path in invocation_paths:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            expected = {
+                "schema",
+                "invocation_id",
+                "telemetry",
+                "physical_read_bytes",
+                "physical_write_bytes",
+                "elapsed_seconds",
+                "artifact_bytes",
+                "diagnostic",
+                "exit_code",
+                "slot",
+                "role",
+                "reused",
+            }
+            if not isinstance(value, dict) or set(value) != expected:
+                continue
+            invocation_id = value["invocation_id"]
+            if (
+                not isinstance(invocation_id, str)
+                or not _SAFE_IDENTITY.fullmatch(invocation_id)
+                or not isinstance(value["slot"], str)
+                or not re.fullmatch(r"[0-9]{2}", value["slot"])
+                or SlotId(int(value["slot"])).directory_name() != value["slot"]
+                or not isinstance(value["role"], str)
+                or not isinstance(value["reused"], bool)
+                or isinstance(value["exit_code"], bool)
+                or not isinstance(value["exit_code"], int)
+            ):
+                continue
+            role = ArtifactRole(value["role"])
+            result = MeteredCommandResult(
+                invocation_id=invocation_id,
+                telemetry=TelemetryAvailability(value["telemetry"]),
+                physical_read_bytes=value["physical_read_bytes"],
+                physical_write_bytes=value["physical_write_bytes"],
+                elapsed_seconds=value["elapsed_seconds"],
+                artifact_bytes=value["artifact_bytes"],
+                diagnostic=value["diagnostic"],
+            )
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        labels = f'slot="{value["slot"]}",role="{role.value}"'
+        available = int(result.telemetry is TelemetryAvailability.AVAILABLE)
+        lines.append(f"ironmain_ci_invocation_io_available{{{labels}}} {available}")
+        lines.append(
+            f"ironmain_ci_invocation_elapsed_seconds{{{labels}}} {result.elapsed_seconds}"
+        )
+        lines.append(
+            f"ironmain_ci_invocation_artifact_bytes{{{labels}}} {result.artifact_bytes}"
+        )
+        lines.append(
+            f'ironmain_ci_invocation_reused{{{labels}}} {1 if value["reused"] else 0}'
+        )
+        if result.telemetry is TelemetryAvailability.AVAILABLE:
+            lines.append(
+                f"ironmain_ci_invocation_physical_read_bytes{{{labels}}} "
+                f"{result.physical_read_bytes}"
+            )
+            lines.append(
+                f"ironmain_ci_invocation_physical_write_bytes{{{labels}}} "
+                f"{result.physical_write_bytes}"
             )
     for slot_id in layout.slot_ids:
         leased = 0
@@ -1615,6 +1740,239 @@ def _parse_scope_paths(values: list[str]) -> dict[CgroupScope, Path]:
     return paths
 
 
+# /// Description: Loads one exact compatibility record from a caller-owned JSON file.
+# /// Pre: path names a bounded configuration file selected by the command caller.
+# /// Post: Returns typed compatibility only for the canonical complete schema.
+# /// Reason: Production role reuse must apply the same typed compatibility contract as library callers.
+def _load_compatibility(path: Path) -> Compatibility:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    expected = {
+        "toolchain",
+        "lockfile",
+        "cargo_config",
+        "rustflags",
+        "profile",
+        "packages",
+        "features",
+        "nextest_filter",
+        "script_config",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError("compatibility state must use the complete canonical schema")
+    scalar_names = expected - {"packages", "features"}
+    if any(not isinstance(value[name], str) for name in scalar_names):
+        raise ValueError("compatibility scalar fields must be strings")
+    for name in ("packages", "features"):
+        if not isinstance(value[name], list) or any(
+            not isinstance(item, str) for item in value[name]
+        ):
+            raise ValueError(f"compatibility {name} must be a string list")
+    return Compatibility(
+        toolchain=value["toolchain"],
+        lockfile=value["lockfile"],
+        cargo_config=value["cargo_config"],
+        rustflags=value["rustflags"],
+        profile=value["profile"],
+        packages=tuple(value["packages"]),
+        features=tuple(value["features"]),
+        nextest_filter=value["nextest_filter"],
+        script_config=value["script_config"],
+    )
+
+
+# /// Description: Captures one caller process's PID-reuse-resistant identity and verifies its Unix owner.
+# /// Pre: pid identifies the runner process requesting root-mediated registration.
+# /// Post: Returns an owner only when procfs UID matches the sudo caller or current effective UID.
+# /// Reason: A caller must not register resources against an unrelated process to manipulate cleanup liveness.
+def _validated_process_owner(pid: int, proc_root: Path = Path("/proc")) -> ProcessOwner:
+    expected_uid = int(os.environ.get("SUDO_UID", os.geteuid()))
+    process = proc_root / str(pid)
+    status = (process / "status").read_text(encoding="utf-8")
+    uid_line = next(line for line in status.splitlines() if line.startswith("Uid:"))
+    actual_uid = int(uid_line.split()[1])
+    if actual_uid != expected_uid:
+        raise PermissionError("registered owner does not belong to invoking user")
+    raw_stat = (process / "stat").read_text(encoding="utf-8")
+    fields = raw_stat[raw_stat.rfind(")") + 2 :].split()
+    return ProcessOwner(pid, int(fields[19]))
+
+
+# /// Description: Resolves the current process's exact transient invocation cgroup.
+# /// Pre: systemd started this helper in the unit derived from invocation_id.
+# /// Post: Returns the anchored cgroup directory only for that exact unit, otherwise None.
+# /// Reason: Broad runner/local slices are aggregate telemetry and must not be accepted as command evidence.
+def _invocation_cgroup_path(
+    invocation_id: str,
+    proc_cgroup: Path = Path("/proc/self/cgroup"),
+    cgroup_root: Path = Path("/sys/fs/cgroup"),
+) -> Path | None:
+    expected = f"ironmain-ci-invocation-{invocation_id}.service"
+    try:
+        unified = next(
+            line.split("::", 1)[1]
+            for line in proc_cgroup.read_text(encoding="utf-8").splitlines()
+            if line.startswith("0::")
+        )
+        relative = Path(unified.lstrip("/"))
+        if relative.name != expected or ".." in relative.parts:
+            return None
+        candidate = cgroup_root / relative
+        candidate.resolve(strict=True).relative_to(cgroup_root.resolve(strict=True))
+        return candidate
+    except (OSError, StopIteration, ValueError):
+        return None
+
+
+# /// Description: Runs one child while holding a fixed slot, role, and optional registered-resource lock.
+# /// Pre: The system broker placed this process in an invocation-specific cgroup, or telemetry will be unavailable.
+# /// Post: Leases cover the child lifetime, heartbeats refresh, clean/dirty state reflects exit status, and typed telemetry is atomic.
+# /// Reason: Installed callers need the same safe production boundary exercised by allocator tests.
+def _run_leased_command(args: argparse.Namespace, allocator: SlotAllocator) -> int:
+    broker_invocation = os.environ.get("IRONMAIN_CI_BROKER_INVOCATION")
+    if broker_invocation is not None and broker_invocation != args.invocation_id:
+        raise PermissionError("invocation identity differs from trusted broker scope")
+    command = list(args.child_command)
+    if command and command[0] == "--":
+        command.pop(0)
+    if not command:
+        raise ValueError("run requires a child command after --")
+    identity = LeaseIdentity(
+        pwd.getpwuid(os.geteuid()).pw_name, args.repository, args.fork
+    )
+    compatibility = _load_compatibility(args.compatibility)
+    lease = allocator.acquire(identity)
+    role_lease: RoleLease | None = None
+    resource_lock: ResourceLock | None = None
+    registered = False
+    started = time.monotonic()
+    exit_code = 1
+    try:
+        role_lease = allocator.acquire_role(
+            lease.slot_id, ArtifactRole(args.role), compatibility, identity
+        )
+        if args.resource_id is not None:
+            if None in (args.resource_kind, args.resource, args.register_helper):
+                raise ValueError("resource registration requires id, kind, path, and helper")
+            subprocess.run(
+                [
+                    str(args.register_helper),
+                    "register",
+                    "--resource-id",
+                    args.resource_id,
+                    "--resource-kind",
+                    args.resource_kind,
+                    "--resource",
+                    str(args.resource),
+                    "--owner-pid",
+                    str(os.getpid()),
+                ],
+                check=True,
+            )
+            registered = True
+            registry = ResourceRegistry(
+                allocator.layout.root / "registry",
+                (allocator.layout.root / "resources",),
+            )
+            resource_lock = registry.acquire_resource_lock(args.resource_id)
+            if resource_lock is None:
+                raise RuntimeError("registered resource lock is unavailable")
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "IRONMAIN_CI_SLOT": lease.slot_id.directory_name(),
+                "IRONMAIN_CI_MIRROR": str(allocator.layout.mirror_root),
+                "IRONMAIN_CI_HEAD_WORKSPACE": str(
+                    allocator.layout.workspace_root(lease.slot_id, "head")
+                ),
+                "IRONMAIN_CI_BASELINE_WORKSPACE": str(
+                    allocator.layout.workspace_root(lease.slot_id, "baseline")
+                ),
+                "IRONMAIN_CI_ARTIFACT_ROOT": str(role_lease.root),
+                "IRONMAIN_CI_ROLE_REUSED": "1" if role_lease.reused else "0",
+            }
+        )
+        process = subprocess.Popen(command, env=environment)
+        while True:
+            try:
+                exit_code = process.wait(timeout=args.heartbeat_seconds)
+                break
+            except subprocess.TimeoutExpired:
+                lease.heartbeat()
+        cgroup = _invocation_cgroup_path(args.invocation_id)
+        availability, counters = (
+            _read_scope_io(cgroup)
+            if cgroup is not None
+            else (TelemetryAvailability.UNAVAILABLE, [])
+        )
+        elapsed = time.monotonic() - started
+        descriptors = _open_directory_chain(
+            allocator.layout.root,
+            (
+                "slots",
+                lease.slot_id.directory_name(),
+                "artifacts",
+                role_lease.role.value,
+            ),
+        )
+        try:
+            artifact_bytes = _directory_bytes(descriptors[-1])
+        finally:
+            _close_directory_chain(descriptors)
+        if availability is TelemetryAvailability.AVAILABLE:
+            result = MeteredCommandResult(
+                invocation_id=args.invocation_id,
+                telemetry=availability,
+                physical_read_bytes=sum(counter[1] for counter in counters),
+                physical_write_bytes=sum(counter[2] for counter in counters),
+                elapsed_seconds=elapsed,
+                artifact_bytes=artifact_bytes,
+                diagnostic="exact invocation cgroup",
+            )
+        else:
+            result = MeteredCommandResult.unavailable(
+                invocation_id=args.invocation_id,
+                elapsed_seconds=elapsed,
+                artifact_bytes=artifact_bytes,
+                diagnostic="not in exact invocation cgroup",
+            )
+        state = result.to_state()
+        state.update(
+            {
+                "exit_code": exit_code,
+                "slot": lease.slot_id.directory_name(),
+                "role": role_lease.role.value,
+                "reused": role_lease.reused,
+            }
+        )
+        output = args.result or (
+            allocator.layout.slot_root(lease.slot_id)
+            / "results"
+            / "latest-invocation.json"
+        )
+        _atomic_json(output, state)
+        return exit_code
+    finally:
+        if resource_lock is not None:
+            resource_lock.release()
+        try:
+            if registered and exit_code == 0:
+                subprocess.run(
+                    [
+                        str(args.register_helper),
+                        "unregister",
+                        "--resource-id",
+                        args.resource_id,
+                        "--owner-pid",
+                        str(os.getpid()),
+                    ],
+                    check=True,
+                )
+        finally:
+            if role_lease is not None:
+                role_lease.release(clean=exit_code == 0)
+            lease.release(cancelled=exit_code != 0)
+
+
 # /// Description: Parses the small system-owned allocator command-line interface.
 # /// Pre: argv contains trusted system-service arguments or an administrator invocation.
 # /// Post: Returns a validated command namespace under one configured root.
@@ -1622,11 +1980,41 @@ def _parse_scope_paths(values: list[str]) -> dict[CgroupScope, Path]:
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument(
-        "command", choices=("initialize", "describe", "pressure", "cleanup", "metrics")
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("initialize", "describe", "pressure", "cleanup"):
+        commands.add_parser(name)
+    metrics = commands.add_parser("metrics")
+    metrics.add_argument("--output", type=Path, required=True)
+    metrics.add_argument("--scope", action="append", default=[])
+    register = commands.add_parser("register")
+    register.add_argument("--resource-id", required=True)
+    register.add_argument(
+        "--resource-kind",
+        choices=tuple(kind.value for kind in RegisteredResourceKind),
+        required=True,
     )
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--scope", action="append", default=[])
+    register.add_argument("--resource", type=Path, required=True)
+    register.add_argument("--owner-pid", type=int, required=True)
+    unregister = commands.add_parser("unregister")
+    unregister.add_argument("--resource-id", required=True)
+    unregister.add_argument("--owner-pid", type=int, required=True)
+    run = commands.add_parser("run")
+    run.add_argument("--invocation-id", required=True)
+    run.add_argument("--repository", required=True)
+    run.add_argument("--fork", required=True)
+    run.add_argument(
+        "--role", choices=tuple(role.value for role in ArtifactRole), required=True
+    )
+    run.add_argument("--compatibility", type=Path, required=True)
+    run.add_argument("--result", type=Path)
+    run.add_argument("--heartbeat-seconds", type=float, default=30.0)
+    run.add_argument("--register-helper", type=Path)
+    run.add_argument("--resource-id")
+    run.add_argument(
+        "--resource-kind", choices=tuple(kind.value for kind in RegisteredResourceKind)
+    )
+    run.add_argument("--resource", type=Path)
+    run.add_argument("child_command", nargs=argparse.REMAINDER)
     return parser.parse_args(argv)
 
 
@@ -1661,9 +2049,27 @@ def main(argv: list[str] | None = None) -> int:
             (allocator.layout.root / "resources",),
         )
         registry.cleanup_stale()
+    elif args.command in ("register", "unregister"):
+        owner = _validated_process_owner(args.owner_pid)
+        registry = ResourceRegistry(
+            allocator.layout.root / "registry",
+            (allocator.layout.root / "resources",),
+        )
+        if args.command == "register":
+            registry.register(
+                args.resource_id,
+                RegisteredResourceKind(args.resource_kind),
+                args.resource,
+                owner,
+                heartbeat_ns=time.monotonic_ns(),
+            )
+        elif not registry.unregister(args.resource_id, owner):
+            raise RuntimeError("registration is missing, changed, active, or not owned")
+    elif args.command == "run":
+        if args.heartbeat_seconds <= 0:
+            raise ValueError("heartbeat interval must be positive")
+        return _run_leased_command(args, allocator)
     else:
-        if args.output is None:
-            raise ValueError("metrics requires --output")
         _atomic_text(
             args.output,
             render_prometheus_metrics(

@@ -161,14 +161,14 @@ in
                   expr: rate(user_cgroup_io_write_operations_total[5m])
                 - record: user_cgroup_io_written_bytes_1d
                   expr: increase(user_cgroup_io_write_bytes_total[1d])
-                - record: ironmain_ci_scope_physical_write_bytes_per_second
-                  expr: rate(ironmain_ci_scope_physical_write_bytes_total[5m])
-                - record: ironmain_ci_scope_physical_read_bytes_per_second
-                  expr: rate(ironmain_ci_scope_physical_read_bytes_total[5m])
+                - record: ironmain_ci_aggregate_scope_physical_write_bytes_per_second
+                  expr: rate(ironmain_ci_aggregate_scope_physical_write_bytes_total[5m])
+                - record: ironmain_ci_aggregate_scope_physical_read_bytes_per_second
+                  expr: rate(ironmain_ci_aggregate_scope_physical_read_bytes_total[5m])
                 - record: ironmain_ci_retained_role_bytes
                   expr: sum(ironmain_ci_role_bytes)
                 - record: ironmain_ci_exact_io_unavailable
-                  expr: 1 - ironmain_ci_scope_io_available
+                  expr: 1 - ironmain_ci_invocation_io_available
         ''
       ];
 

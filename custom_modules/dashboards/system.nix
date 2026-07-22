@@ -848,36 +848,36 @@
     # Row 10: IronMain CI exact physical I/O and bounded cache state
     {
       type = "timeseries";
-      title = "IronMain Exact Physical I/O";
-      description = "Physical cgroup bytes are shown only when exact scope telemetry is available.";
+      title = "IronMain Exact Invocation Physical I/O";
+      description = "Completed invocation bytes are shown only for a unique transient command cgroup.";
       gridPos = {
         h = 7;
         w = 8;
         x = 0;
         y = 70;
       };
-      fieldConfig.defaults.unit = "Bps";
+      fieldConfig.defaults.unit = "bytes";
       options.legend = {
         displayMode = "list";
         placement = "bottom";
       };
       targets = [
         {
-          expr = "ironmain_ci_scope_physical_write_bytes_per_second";
-          legendFormat = "{{scope}} write {{major_minor}}";
+          expr = "ironmain_ci_invocation_physical_write_bytes";
+          legendFormat = "slot {{slot}} {{role}} write";
           refId = "A";
         }
         {
-          expr = "ironmain_ci_scope_physical_read_bytes_per_second";
-          legendFormat = "{{scope}} read {{major_minor}}";
+          expr = "ironmain_ci_invocation_physical_read_bytes";
+          legendFormat = "slot {{slot}} {{role}} read";
           refId = "B";
         }
       ];
     }
     {
       type = "stat";
-      title = "IronMain Exact I/O Availability";
-      description = "Unavailable is explicit and is never interpreted as zero physical bytes.";
+      title = "IronMain Invocation I/O Availability";
+      description = "Each isolated invocation is explicitly available or unavailable; missing counters are never zero.";
       gridPos = {
         h = 7;
         w = 4;
@@ -920,8 +920,8 @@
       };
       targets = [
         {
-          expr = "ironmain_ci_scope_io_available";
-          legendFormat = "{{scope}}";
+          expr = "ironmain_ci_invocation_io_available";
+          legendFormat = "slot {{slot}} {{role}}";
           refId = "A";
         }
       ];
