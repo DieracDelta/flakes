@@ -84,24 +84,64 @@ let
         echo "invocation broker requires sudo UID/GID identity" >&2
         exit 77
       fi
-      exec systemd-run \
+      unit="ironmain-ci-invocation-$invocation.service"
+      unit_description="IronMain invocation $invocation broker $BASHPID"
+      systemd_run_pid=
+      cancellation_status=0
+
+      # /// Description: Stops the exact transient invocation when its waiting caller is cancelled.
+      # /// Pre: A trusted invocation unit may be starting or active under systemd_run_pid.
+      # /// Post: No child remains in the unit; the broker returns the conventional signal status.
+      # /// Reason: Killing systemd-run alone does not stop the system-owned transient service.
+      cancel() {
+        cancellation_status="$1"
+        if [ -z "$systemd_run_pid" ]; then
+          return
+        fi
+        trap : HUP INT TERM
+        kill -TERM "$systemd_run_pid" 2>/dev/null || true
+        wait "$systemd_run_pid" 2>/dev/null || true
+        observed_description="$(systemctl show "$unit" --property=Description --value 2>/dev/null || true)"
+        if [ "$observed_description" = "$unit_description" ]; then
+          systemctl stop "$unit" >/dev/null 2>&1 || true
+        fi
+        exit "$cancellation_status"
+      }
+      trap 'cancel 129' HUP
+      trap 'cancel 130' INT
+      trap 'cancel 143' TERM
+
+      systemd-run \
         --quiet \
         --wait \
         --pipe \
         --collect \
         --service-type=exec \
-        --unit="ironmain-ci-invocation-$invocation" \
+        --unit="$unit" \
+        --description="$unit_description" \
         --slice="$slice" \
         --uid="$SUDO_UID" \
         --gid="$SUDO_GID" \
         --property="WorkingDirectory=$PWD" \
+        --property=KillMode=control-group \
+        --property=TimeoutStopSec=10s \
         --setenv="IRONMAIN_CI_BROKER_INVOCATION=$invocation" \
         ${helper}/bin/ironmain-ci-slots \
         --root ${lib.escapeShellArg cfg.root} \
         run \
         --invocation-id "$invocation" \
         --register-helper ${rootRegistrar}/bin/ironmain-ci-root-registrar \
-        "$@"
+        "$@" &
+      systemd_run_pid=$!
+      if [ "$cancellation_status" -ne 0 ]; then
+        cancel "$cancellation_status"
+      fi
+      set +e
+      wait "$systemd_run_pid"
+      status=$?
+      set -e
+      trap - HUP INT TERM
+      exit "$status"
     '';
   };
   invocationCommand = pkgs.writeShellApplication {

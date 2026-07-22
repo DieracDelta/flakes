@@ -6,9 +6,12 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import pwd
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -701,6 +704,99 @@ class SlotAllocatorTests(unittest.TestCase):
                 state = json.loads(result.read_text())
                 self.assertEqual("unavailable", state["telemetry"])
                 self.assertIsNone(state["physical_write_bytes"])
+
+    # /// What it's testing: The privileged systemd broker traps cancellation and tears down its exact unit.
+    # /// Why it matters: Killing the outer command must not leave expensive work or fixed slot locks running.
+    def test_nix_broker_has_explicit_cancellation_teardown(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn("trap 'cancel 143' TERM", module)
+        self.assertIn('systemctl stop "$unit"', module)
+        self.assertIn('kill -TERM "$systemd_run_pid"', module)
+        self.assertIn(
+            'if [ "$observed_description" = "$unit_description" ]; then', module
+        )
+        self.assertNotIn("exec systemd-run \\", module)
+
+    # /// What it's testing: Control-group termination closes child, slot, and role descriptors for immediate recovery.
+    # /// Why it matters: The broker's systemd stop must recover bounded capacity even when Python cannot run finally blocks.
+    def test_cancelled_command_group_releases_child_slot_and_role(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cache = root / "cache"
+            allocator = SlotAllocator(cache)
+            allocator.initialize()
+            compatibility_path = root / "compatibility.json"
+            compatibility_state = {
+                "toolchain": "tool",
+                "lockfile": "lock",
+                "cargo_config": "cargo",
+                "rustflags": "flags",
+                "profile": "profile",
+                "packages": [],
+                "features": [],
+                "nextest_filter": "filter",
+                "script_config": "script",
+            }
+            compatibility_path.write_text(json.dumps(compatibility_state))
+            started = root / "started.json"
+            command = subprocess.Popen(
+                [
+                    sys.executable,
+                    str(Path(slots.__file__)),
+                    "--root",
+                    str(cache),
+                    "run",
+                    "--invocation-id",
+                    "cancelled-run",
+                    "--repository",
+                    "ironmain",
+                    "--fork",
+                    "trusted",
+                    "--role",
+                    "standard",
+                    "--compatibility",
+                    str(compatibility_path),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    (
+                        "import json,os,time; "
+                        f"open({str(started)!r},'w').write(json.dumps("
+                        "{'pid':os.getpid(),'slot':os.environ['IRONMAIN_CI_SLOT']})); "
+                        "time.sleep(60)"
+                    ),
+                ],
+                start_new_session=True,
+            )
+            for _ in range(100):
+                if started.exists():
+                    break
+                time.sleep(0.02)
+            self.assertTrue(started.exists())
+            child = json.loads(started.read_text())
+            os.killpg(command.pid, signal.SIGTERM)
+            command.wait(timeout=5)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(child["pid"], 0)
+
+            identity = LeaseIdentity(
+                pwd.getpwuid(os.geteuid()).pw_name, "ironmain", "trusted"
+            )
+            lease = allocator.acquire(identity)
+            self.assertEqual(child["slot"], lease.slot_id.directory_name())
+            compatibility = Compatibility(
+                "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+            )
+            role = allocator.acquire_role(
+                lease.slot_id, ArtifactRole.STANDARD, compatibility, identity
+            )
+            self.assertFalse(role.reused)
+            role.release(clean=False)
+            lease.release(cancelled=True)
 
     # /// What it's testing: A failed installed-style run registers and retains its resource as a cleanup candidate.
     # /// Why it matters: Interrupted dirty/staging work must have a production registration producer and released lock.
