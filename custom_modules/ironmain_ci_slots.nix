@@ -55,6 +55,13 @@ let
       exec ironmain-ci-slots --root ${lib.escapeShellArg cfg.root} "$@"
     '';
   };
+  registrationClient = pkgs.writeShellApplication {
+    name = "ironmain-ci-register";
+    runtimeInputs = [ pkgs.sudo ];
+    text = ''
+      exec /run/wrappers/bin/sudo ${rootRegistrar}/bin/ironmain-ci-root-registrar "$@"
+    '';
+  };
   invocationBroker = pkgs.writeShellApplication {
     name = "ironmain-ci-invocation-broker";
     runtimeInputs = [
@@ -180,7 +187,7 @@ let
         --root ${lib.escapeShellArg cfg.root} \
         run \
         --invocation-id "$invocation" \
-        --register-helper ${rootRegistrar}/bin/ironmain-ci-root-registrar \
+        --register-helper ${registrationClient}/bin/ironmain-ci-register \
         "$@" &
       systemd_run_pid=$!
       if [ "$cancellation_status" -ne 0 ]; then

@@ -737,6 +737,28 @@ class SlotAllocatorTests(unittest.TestCase):
         self.assertIn("security.sudo-rs.extraRules = [", module)
         self.assertNotIn("security.sudo.extraRules = [", module)
 
+    # /// What it's testing: The unprivileged invocation helper reaches registration through a sudo client authorized for the root registrar.
+    # /// Why it matters: Passing the root registrar executable directly leaves it at runner UID and unable to create root-owned registry locks.
+    def test_nix_broker_uses_privileged_registration_client(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn("registrationClient = pkgs.writeShellApplication", module)
+        self.assertIn(
+            "exec /run/wrappers/bin/sudo ${rootRegistrar}/bin/ironmain-ci-root-registrar",
+            module,
+        )
+        self.assertIn(
+            "--register-helper ${registrationClient}/bin/ironmain-ci-register",
+            module,
+        )
+        self.assertNotIn(
+            "--register-helper ${rootRegistrar}/bin/ironmain-ci-root-registrar",
+            module,
+        )
+
     # /// What it's testing: Provisioning repairs mutable-resource and root-only registry ownership after allocator initialization.
     # /// Why it matters: Initialize may create missing directories after tmpfiles, so deployed registration must not inherit root-only defaults or writable registry subdirectories.
     def test_nix_provision_repairs_resource_and_registry_permissions(self) -> None:
