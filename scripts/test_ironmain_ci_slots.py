@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import ironmain_ci_slots as slots  # noqa: E402
 from ironmain_ci_slots import (  # noqa: E402
     ArtifactRole,
+    CgroupScope,
     Compatibility,
     LeaseIdentity,
     Liveness,
@@ -31,6 +32,7 @@ from ironmain_ci_slots import (  # noqa: E402
     _owner_liveness,
     _reference_liveness,
     redact_secrets,
+    render_prometheus_metrics,
 )
 
 
@@ -622,6 +624,91 @@ class SlotAllocatorTests(unittest.TestCase):
             )
             self.assertTrue((role.root / "artifact").exists())
             role.release(clean=True)
+
+    # /// What it's testing: Prometheus output reports exact scope counters, slot footprint/reuse, and explicit unavailable telemetry.
+    # /// Why it matters: Monitoring must distinguish absent physical I/O from authoritative zero while exposing bounded cache state.
+    def test_prometheus_metrics_preserve_scope_availability_and_slot_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            allocator = SlotAllocator(root / "cache")
+            allocator.initialize()
+            identity = LeaseIdentity("runner", "ironmain", "trusted")
+            compatibility = Compatibility(
+                "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+            )
+            role = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+            (role.root / "artifact").write_bytes(b"1234")
+            role.release(clean=True)
+            runner_scope = root / "runner.scope"
+            runner_scope.mkdir()
+            (runner_scope / "io.stat").write_text(
+                "259:0 rbytes=11 wbytes=22 rios=1 wios=2\n"
+            )
+            missing_local_scope = root / "local.scope"
+
+            metrics = render_prometheus_metrics(
+                allocator.layout,
+                {
+                    CgroupScope.RUNNER: runner_scope,
+                    CgroupScope.LOCAL: missing_local_scope,
+                },
+            )
+
+            self.assertIn(
+                'ironmain_ci_scope_io_available{scope="runner"} 1', metrics
+            )
+            self.assertIn(
+                'ironmain_ci_scope_physical_write_bytes_total{scope="runner",major_minor="259:0"} 22',
+                metrics,
+            )
+            self.assertIn(
+                'ironmain_ci_scope_io_available{scope="local"} 0', metrics
+            )
+            self.assertNotIn(
+                'ironmain_ci_scope_physical_write_bytes_total{scope="local"',
+                metrics,
+            )
+            self.assertIn(
+                'ironmain_ci_role_reusable{slot="00",role="standard"} 1',
+                metrics,
+            )
+            self.assertIn(
+                'ironmain_ci_role_bytes{slot="00",role="standard"} 4', metrics
+            )
+
+    # /// What it's testing: One malformed device line makes the complete cgroup scope unavailable.
+    # /// Why it matters: Exporting only a valid subset would undercount writes while falsely claiming exact telemetry.
+    def test_prometheus_metrics_reject_partial_scope_io(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            allocator = SlotAllocator(root / "cache")
+            allocator.initialize()
+            runner_scope = root / "runner.scope"
+            local_scope = root / "local.scope"
+            runner_scope.mkdir()
+            local_scope.mkdir()
+            (runner_scope / "io.stat").write_text(
+                "259:0 rbytes=11 wbytes=22\n8:0 rbytes=bad wbytes=7\n"
+            )
+            (local_scope / "io.stat").write_text("8:0 rbytes=1 wbytes=2\n")
+
+            metrics = render_prometheus_metrics(
+                allocator.layout,
+                {
+                    CgroupScope.RUNNER: runner_scope,
+                    CgroupScope.LOCAL: local_scope,
+                },
+            )
+
+            self.assertIn(
+                'ironmain_ci_scope_io_available{scope="runner"} 0', metrics
+            )
+            self.assertNotIn(
+                'ironmain_ci_scope_physical_write_bytes_total{scope="runner"',
+                metrics,
+            )
 
     # /// What it's testing: Metering keeps unavailable physical I/O as null and emits only safe typed state.
     # /// Why it matters: Missing cgroup counters must never be misreported as authoritative zero or leak secrets.

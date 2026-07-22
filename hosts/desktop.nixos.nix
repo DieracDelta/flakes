@@ -66,6 +66,9 @@ let
         -X ${pkgs.coreutils}/bin/rm -rf --
     }
 
+    # Stable IronMain slots and their healthy role artifacts are deliberately
+    # absent from age-based pruning. The registered cleanup/pressure services
+    # own those paths; this legacy cleanup remains only for migration roots.
     prune_dirs_older_than /var/tmp/ironmain-ci-work 1d
 
     for cache_root in \
@@ -145,6 +148,7 @@ in
   custom_modules.network_monitor.enableNtopng = false;
   custom_modules.nethog_monitor.enable = true;
   custom_modules.monitoring.enable = true;
+  custom_modules.ironmain_ci_slots.enable = true;
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
   custom_modules.comfyui.enable = false;

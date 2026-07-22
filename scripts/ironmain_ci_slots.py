@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import time
 from typing import Callable, Final
 
@@ -48,6 +49,13 @@ class TelemetryAvailability(Enum):
 
     AVAILABLE = "available"
     UNAVAILABLE = "unavailable"
+
+
+class CgroupScope(Enum):
+    """System-owned terminal execution scopes exported as exact I/O metrics."""
+
+    RUNNER = "runner"
+    LOCAL = "local"
 
 
 class Liveness(Enum):
@@ -1432,27 +1440,206 @@ class SlotAllocator:
         return evicted
 
 
-# /// Description: Parses the small provisioning command-line interface.
+# /// Description: Computes regular-file bytes beneath one already anchored directory.
+# /// Pre: descriptor names a trusted no-follow directory and the caller accepts a point-in-time gauge.
+# /// Post: Returns nonnegative bytes without following symlinks outside the directory tree.
+# /// Reason: Slot footprint metrics must not traverse mutable external paths.
+def _directory_bytes(descriptor: int) -> int:
+    total = 0
+    for entry in tuple(os.scandir(descriptor)):
+        try:
+            child = os.open(
+                entry.name, _DIRECTORY_OPEN_FLAGS, dir_fd=descriptor
+            )
+        except OSError as error:
+            if error.errno not in (errno.ENOTDIR, errno.ELOOP):
+                continue
+            try:
+                state = os.stat(
+                    entry.name, dir_fd=descriptor, follow_symlinks=False
+                )
+            except OSError:
+                continue
+            if stat.S_ISREG(state.st_mode):
+                total += state.st_size
+            continue
+        try:
+            total += _directory_bytes(child)
+        finally:
+            os.close(child)
+    return total
+
+
+# /// Description: Reads exact cgroup-v2 physical I/O counters for one named terminal scope.
+# /// Pre: path is the system-selected cgroup directory for that scope.
+# /// Post: Returns availability plus validated device counters; missing/malformed data is unavailable with no zero counters.
+# /// Reason: Missing physical telemetry must never be represented as authoritative zero.
+def _read_scope_io(path: Path) -> tuple[TelemetryAvailability, list[tuple[str, int, int]]]:
+    try:
+        lines = (path / "io.stat").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return TelemetryAvailability.UNAVAILABLE, []
+    counters: list[tuple[str, int, int]] = []
+    devices: set[str] = set()
+    for line in lines:
+        fields = line.split()
+        if not fields:
+            continue
+        if not re.fullmatch(r"[0-9]+:[0-9]+", fields[0]) or fields[0] in devices:
+            return TelemetryAvailability.UNAVAILABLE, []
+        devices.add(fields[0])
+        values: dict[str, int] = {}
+        for field in fields[1:]:
+            try:
+                key, raw = field.split("=", 1)
+                value = int(raw)
+            except ValueError:
+                return TelemetryAvailability.UNAVAILABLE, []
+            if not key or key in values or value < 0:
+                return TelemetryAvailability.UNAVAILABLE, []
+            values[key] = value
+        if "rbytes" not in values or "wbytes" not in values:
+            return TelemetryAvailability.UNAVAILABLE, []
+        counters.append((fields[0], values["rbytes"], values["wbytes"]))
+    if not counters:
+        return TelemetryAvailability.UNAVAILABLE, []
+    return TelemetryAvailability.AVAILABLE, counters
+
+
+# /// Description: Renders exact scope I/O and bounded slot/cache state in Prometheus text format.
+# /// Pre: layout is initialized and scope_paths maps typed scopes to their intended cgroups.
+# /// Post: Available counters are emitted exactly; unavailable scopes emit only an availability gauge.
+# /// Reason: Monitoring and acceptance need truthful physical I/O, footprint, lease, and reuse evidence.
+def render_prometheus_metrics(
+    layout: SlotLayout, scope_paths: dict[CgroupScope, Path]
+) -> str:
+    lines = [
+        "# HELP ironmain_ci_scope_io_available Whether exact physical cgroup I/O telemetry is available.",
+        "# TYPE ironmain_ci_scope_io_available gauge",
+        "# HELP ironmain_ci_scope_physical_read_bytes_total Exact physical bytes read by the terminal scope.",
+        "# TYPE ironmain_ci_scope_physical_read_bytes_total counter",
+        "# HELP ironmain_ci_scope_physical_write_bytes_total Exact physical bytes written by the terminal scope.",
+        "# TYPE ironmain_ci_scope_physical_write_bytes_total counter",
+        "# HELP ironmain_ci_slot_leased Whether allocator state records the slot as active.",
+        "# TYPE ironmain_ci_slot_leased gauge",
+        "# HELP ironmain_ci_role_bytes Point-in-time bytes retained by a fixed artifact role.",
+        "# TYPE ironmain_ci_role_bytes gauge",
+        "# HELP ironmain_ci_role_reusable Whether role state is complete, clean, and reusable.",
+        "# TYPE ironmain_ci_role_reusable gauge",
+    ]
+    for scope in CgroupScope:
+        availability, counters = _read_scope_io(scope_paths[scope])
+        lines.append(
+            f'ironmain_ci_scope_io_available{{scope="{scope.value}"}} '
+            f'{1 if availability is TelemetryAvailability.AVAILABLE else 0}'
+        )
+        for device, reads, writes in counters:
+            labels = f'scope="{scope.value}",major_minor="{device}"'
+            lines.append(
+                f"ironmain_ci_scope_physical_read_bytes_total{{{labels}}} {reads}"
+            )
+            lines.append(
+                f"ironmain_ci_scope_physical_write_bytes_total{{{labels}}} {writes}"
+            )
+    for slot_id in layout.slot_ids:
+        leased = 0
+        try:
+            slot_state = json.loads(
+                layout.slot_state(slot_id).read_text(encoding="utf-8")
+            )
+            leased = int(
+                isinstance(slot_state, dict)
+                and slot_state.get("schema") == 1
+                and slot_state.get("state") == "active"
+            )
+        except (OSError, TypeError, json.JSONDecodeError):
+            pass
+        lines.append(
+            f'ironmain_ci_slot_leased{{slot="{slot_id.directory_name()}"}} {leased}'
+        )
+        for role in ArtifactRole:
+            state: ArtifactStateRecord | None = None
+            try:
+                state = _parse_artifact_state(
+                    json.loads(
+                        layout.role_state(slot_id, role).read_text(encoding="utf-8")
+                    )
+                )
+            except (OSError, TypeError, json.JSONDecodeError):
+                pass
+            reusable = int(
+                state is not None and state.state is ArtifactState.CLEAN
+            )
+            descriptors = _open_directory_chain(
+                layout.root,
+                ("slots", slot_id.directory_name(), "artifacts", role.value),
+            )
+            try:
+                role_bytes = _directory_bytes(descriptors[-1])
+            finally:
+                _close_directory_chain(descriptors)
+            labels = f'slot="{slot_id.directory_name()}",role="{role.value}"'
+            lines.append(f"ironmain_ci_role_bytes{{{labels}}} {role_bytes}")
+            lines.append(f"ironmain_ci_role_reusable{{{labels}}} {reusable}")
+    return "\n".join(lines) + "\n"
+
+
+# /// Description: Atomically publishes Prometheus text output for node_exporter.
+# /// Pre: The parent is the configured textfile collector directory and text is complete.
+# /// Post: Readers observe one complete old or new metrics file with mode 0644.
+# /// Reason: Collector scrapes must not consume partial telemetry.
+def _atomic_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
+    temporary.write_text(text, encoding="utf-8")
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, path)
+
+
+# /// Description: Parses typed scope=path command-line values.
+# /// Pre: Each value came from trusted system service configuration.
+# /// Post: Returns exactly one path for runner and local or raises a parser error.
+# /// Reason: Metrics must never silently merge or omit a terminal scope namespace.
+def _parse_scope_paths(values: list[str]) -> dict[CgroupScope, Path]:
+    paths: dict[CgroupScope, Path] = {}
+    for value in values:
+        name, separator, raw_path = value.partition("=")
+        if not separator or not raw_path:
+            raise ValueError("scope must use NAME=PATH")
+        scope = CgroupScope(name)
+        if scope in paths:
+            raise ValueError(f"duplicate scope: {scope.value}")
+        paths[scope] = Path(raw_path)
+    if set(paths) != set(CgroupScope):
+        raise ValueError("runner and local scopes are both required")
+    return paths
+
+
+# /// Description: Parses the small system-owned allocator command-line interface.
 # /// Pre: argv contains trusted system-service arguments or an administrator invocation.
-# /// Post: Returns a namespace selecting initialize or describe under one configured root.
-# /// Reason: The Nix module needs a stable executable boundary for provisioning and audits.
+# /// Post: Returns a validated command namespace under one configured root.
+# /// Reason: Provisioning, pressure, cleanup, and monitoring need one stable executable boundary.
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("command", choices=("initialize", "describe"))
+    parser.add_argument(
+        "command", choices=("initialize", "describe", "pressure", "cleanup", "metrics")
+    )
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--scope", action="append", default=[])
     return parser.parse_args(argv)
 
 
-# /// Description: Provisions or describes the fixed IronMain CI slot layout.
+# /// Description: Executes provisioning, audit, pressure, registered cleanup, or metrics publication.
 # /// Pre: argv passes _parse_args validation and root is system-selected.
-# /// Post: Initialize creates the layout; describe emits its typed fixed cardinality and roles.
-# /// Reason: Deployment and closure checks need one machine-readable allocator entrypoint.
+# /// Post: The selected operation completes without broad unregistered cleanup or fabricated telemetry.
+# /// Reason: NixOS services require one reviewed authority for the fixed substrate lifecycle.
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     allocator = SlotAllocator(args.root)
     if args.command == "initialize":
         allocator.initialize()
-    else:
+    elif args.command == "describe":
         print(
             json.dumps(
                 {
@@ -1465,6 +1652,23 @@ def main(argv: list[str] | None = None) -> int:
                 },
                 sort_keys=True,
             )
+        )
+    elif args.command == "pressure":
+        allocator.evict_under_pressure()
+    elif args.command == "cleanup":
+        registry = ResourceRegistry(
+            allocator.layout.root / "registry",
+            (allocator.layout.root / "resources",),
+        )
+        registry.cleanup_stale()
+    else:
+        if args.output is None:
+            raise ValueError("metrics requires --output")
+        _atomic_text(
+            args.output,
+            render_prometheus_metrics(
+                allocator.layout, _parse_scope_paths(args.scope)
+            ),
         )
     return 0
 

@@ -845,6 +845,141 @@
         }
       ];
     }
+    # Row 10: IronMain CI exact physical I/O and bounded cache state
+    {
+      type = "timeseries";
+      title = "IronMain Exact Physical I/O";
+      description = "Physical cgroup bytes are shown only when exact scope telemetry is available.";
+      gridPos = {
+        h = 7;
+        w = 8;
+        x = 0;
+        y = 70;
+      };
+      fieldConfig.defaults.unit = "Bps";
+      options.legend = {
+        displayMode = "list";
+        placement = "bottom";
+      };
+      targets = [
+        {
+          expr = "ironmain_ci_scope_physical_write_bytes_per_second";
+          legendFormat = "{{scope}} write {{major_minor}}";
+          refId = "A";
+        }
+        {
+          expr = "ironmain_ci_scope_physical_read_bytes_per_second";
+          legendFormat = "{{scope}} read {{major_minor}}";
+          refId = "B";
+        }
+      ];
+    }
+    {
+      type = "stat";
+      title = "IronMain Exact I/O Availability";
+      description = "Unavailable is explicit and is never interpreted as zero physical bytes.";
+      gridPos = {
+        h = 7;
+        w = 4;
+        x = 8;
+        y = 70;
+      };
+      fieldConfig.defaults = {
+        mappings = [
+          {
+            type = "value";
+            options = {
+              "0" = {
+                text = "Unavailable";
+                color = "red";
+              };
+              "1" = {
+                text = "Available";
+                color = "green";
+              };
+            };
+          }
+        ];
+        thresholds = {
+          mode = "absolute";
+          steps = [
+            {
+              color = "red";
+              value = null;
+            }
+            {
+              color = "green";
+              value = 1;
+            }
+          ];
+        };
+      };
+      options = {
+        colorMode = "background";
+        reduceOptions.calcs = [ "lastNotNull" ];
+      };
+      targets = [
+        {
+          expr = "ironmain_ci_scope_io_available";
+          legendFormat = "{{scope}}";
+          refId = "A";
+        }
+      ];
+    }
+    {
+      type = "timeseries";
+      title = "IronMain Fixed Role Footprint";
+      gridPos = {
+        h = 7;
+        w = 6;
+        x = 12;
+        y = 70;
+      };
+      fieldConfig.defaults.unit = "bytes";
+      options.legend = {
+        displayMode = "table";
+        placement = "bottom";
+      };
+      targets = [
+        {
+          expr = "ironmain_ci_role_bytes";
+          legendFormat = "slot {{slot}} {{role}}";
+          refId = "A";
+        }
+      ];
+    }
+    {
+      type = "stat";
+      title = "IronMain Slot and Role State";
+      gridPos = {
+        h = 7;
+        w = 6;
+        x = 18;
+        y = 70;
+      };
+      fieldConfig.defaults.mappings = [
+        {
+          type = "value";
+          options = {
+            "0".text = "Idle / Not reusable";
+            "1".text = "Leased / Reusable";
+          };
+        }
+      ];
+      options.reduceOptions.calcs = [ "lastNotNull" ];
+      targets = [
+        {
+          expr = "ironmain_ci_slot_leased";
+          legendFormat = "slot {{slot}} leased";
+          refId = "A";
+        }
+        {
+          expr = "ironmain_ci_role_reusable";
+          legendFormat = "slot {{slot}} {{role}} reusable";
+          refId = "B";
+        }
+      ];
+    }
   ];
   refresh = "30s";
   schemaVersion = 39;
