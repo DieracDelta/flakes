@@ -705,6 +705,27 @@ class SlotAllocatorTests(unittest.TestCase):
                 self.assertEqual("unavailable", state["telemetry"])
                 self.assertIsNone(state["physical_write_bytes"])
 
+    # /// What it's testing: The mirror reads Forgejo's host-local repository with an explicit safe upload-pack.
+    # /// Why it matters: A private repository cannot be mirrored through unauthenticated HTTP, and Git rejects its forgejo-owned path when root does not explicitly trust that exact source.
+    def test_nix_mirror_uses_local_forgejo_source_without_http_auth(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'default = "/var/lib/forgejo/repositories/jrestivo/ironmain.git";',
+            module,
+        )
+        self.assertIn("safe.directory=${cfg.mirrorSource}", module)
+        self.assertIn(
+            "--upload-pack=${lib.escapeShellArg mirrorUploadPack}", module
+        )
+        self.assertNotIn(
+            'default = "http://127.0.0.1:3010/jrestivo/ironmain.git";',
+            module,
+        )
+
     # /// What it's testing: The privileged systemd broker traps cancellation and tears down its exact unit.
     # /// Why it matters: Killing the outer command must not leave expensive work or fixed slot locks running.
     def test_nix_broker_has_explicit_cancellation_teardown(self) -> None:

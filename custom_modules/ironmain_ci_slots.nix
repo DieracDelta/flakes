@@ -151,6 +151,7 @@ let
       exec /run/wrappers/bin/sudo ${invocationBroker}/bin/ironmain-ci-invocation-broker "$@"
     '';
   };
+  mirrorUploadPack = "${pkgs.git}/bin/git -c safe.directory=${cfg.mirrorSource} upload-pack";
   mirrorUpdate = pkgs.writeShellApplication {
     name = "ironmain-ci-mirror-update";
     runtimeInputs = [
@@ -166,7 +167,12 @@ let
       else
         git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} remote add origin ${lib.escapeShellArg cfg.mirrorSource}
       fi
-      git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} fetch --prune origin '+refs/*:refs/*'
+      git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} \
+        fetch \
+        --upload-pack=${lib.escapeShellArg mirrorUploadPack} \
+        --prune \
+        origin \
+        '+refs/*:refs/*'
       chown -R root:${lib.escapeShellArg cfg.runnerGroup} ${lib.escapeShellArg "${cfg.root}/mirror.git"}
       chmod -R g-w,o-rwx ${lib.escapeShellArg "${cfg.root}/mirror.git"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
@@ -239,9 +245,9 @@ in
     };
 
     mirrorSource = lib.mkOption {
-      type = lib.types.str;
-      default = "http://127.0.0.1:3010/jrestivo/ironmain.git";
-      description = "Local Forgejo URL used by root to refresh the job-read-only mirror without credentials.";
+      type = lib.types.path;
+      default = "/var/lib/forgejo/repositories/jrestivo/ironmain.git";
+      description = "Host-local Forgejo repository used by root to refresh the job-read-only mirror without credentials.";
     };
 
     metricsOutput = lib.mkOption {
