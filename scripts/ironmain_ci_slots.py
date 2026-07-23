@@ -328,6 +328,14 @@ class SlotLayout:
         return self.root / "mirror.git"
 
     @property
+    # /// Description: Returns the fixed mirror publication reader/writer lock.
+    # /// Pre: The layout has a cache root.
+    # /// Post: The path is independent of caller, job, and repository revision.
+    # /// Reason: Root publication and short history reads must not observe partial ref updates.
+    def mirror_lock(self) -> Path:
+        return self.root / "mirror.lock"
+
+    @property
     # /// Description: Returns the fixed slots container.
     # /// Pre: The layout has a cache root.
     # /// Post: The result is the sole parent of numbered persistent slots.
@@ -1901,6 +1909,7 @@ def _run_leased_command(args: argparse.Namespace, allocator: SlotAllocator) -> i
             {
                 "IRONMAIN_CI_SLOT": lease.slot_id.directory_name(),
                 "IRONMAIN_CI_MIRROR": str(allocator.layout.mirror_root),
+                "IRONMAIN_CI_MIRROR_LOCK": str(allocator.layout.mirror_lock),
                 "IRONMAIN_CI_HEAD_WORKSPACE": str(
                     allocator.layout.workspace_root(lease.slot_id, "head")
                 ),

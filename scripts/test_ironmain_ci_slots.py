@@ -431,6 +431,14 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertFalse((recovered.root / "corrupt-state").exists())
             recovered.release(clean=True)
 
+    # /// What it's testing: The fixed mirror has one identity-independent reader/writer lock path.
+    # /// Why it matters: Publisher retries and history readers must serialize without per-run locks.
+    def test_layout_has_one_fixed_mirror_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            allocator = SlotAllocator(Path(directory))
+            allocator.initialize()
+            self.assertEqual(Path(directory) / "mirror.lock", allocator.layout.mirror_lock)
+
     # /// What it's testing: Stable workspaces reference one read-only mirror through Git alternates.
     # /// Why it matters: Jobs must not duplicate checkout object trees or gain mirror write access.
     def test_workspaces_reference_job_read_only_mirror(self) -> None:
@@ -775,6 +783,9 @@ class SlotAllocatorTests(unittest.TestCase):
         self.assertIn(
             "--upload-pack=${lib.escapeShellArg mirrorUploadPack}", module
         )
+        self.assertIn("flock --exclusive 9", module)
+        self.assertIn("for attempt in $(seq 1 5)", module)
+        self.assertIn('mirror_lock = "${cfg.root}/mirror.lock"', module)
         self.assertNotIn(
             'default = "http://127.0.0.1:3010/jrestivo/ironmain.git";',
             module,
@@ -910,7 +921,8 @@ class SlotAllocatorTests(unittest.TestCase):
                         "pathlib.Path(os.environ['IRONMAIN_CI_ARTIFACT_ROOT'], "
                         "'warm-state').write_text('active'); "
                         f"open({str(started)!r},'w').write(json.dumps("
-                        "{'pid':os.getpid(),'slot':os.environ['IRONMAIN_CI_SLOT']})); "
+                        "{'pid':os.getpid(),'slot':os.environ['IRONMAIN_CI_SLOT'],"
+                        "'mirror_lock':os.environ['IRONMAIN_CI_MIRROR_LOCK']})); "
                         "time.sleep(60)"
                     ),
                 ],
@@ -922,6 +934,7 @@ class SlotAllocatorTests(unittest.TestCase):
                 time.sleep(0.02)
             self.assertTrue(started.exists())
             child = json.loads(started.read_text())
+            self.assertEqual(str(cache / "mirror.lock"), child["mirror_lock"])
             os.killpg(command.pid, signal.SIGTERM)
             command.wait(timeout=5)
             child_stat = Path("/proc") / str(child["pid"]) / "stat"

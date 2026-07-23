@@ -22,6 +22,7 @@ let
     slots = slotNames;
     inherit roles;
     mirror = "${cfg.root}/mirror.git";
+    mirror_lock = "${cfg.root}/mirror.lock";
     locks = "${cfg.root}/locks";
     registry = "${cfg.root}/registry";
     quarantine = "${cfg.root}/registry/quarantine";
@@ -215,8 +216,11 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.git
+      pkgs.util-linux
     ];
     text = ''
+      exec 9>${lib.escapeShellArg "${cfg.root}/mirror.lock"}
+      flock --exclusive 9
       if [ ! -f ${lib.escapeShellArg "${cfg.root}/mirror.git/HEAD"} ]; then
         git init --bare ${lib.escapeShellArg "${cfg.root}/mirror.git"}
       fi
@@ -225,12 +229,24 @@ let
       else
         git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} remote add origin ${lib.escapeShellArg cfg.mirrorSource}
       fi
-      git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} \
-        fetch \
-        --upload-pack=${lib.escapeShellArg mirrorUploadPack} \
-        --prune \
-        origin \
-        '+refs/*:refs/*'
+      fetch_status=1
+      for attempt in $(seq 1 5); do
+        if git --git-dir=${lib.escapeShellArg "${cfg.root}/mirror.git"} \
+          fetch \
+          --upload-pack=${lib.escapeShellArg mirrorUploadPack} \
+          --prune \
+          origin \
+          '+refs/*:refs/*'; then
+          fetch_status=0
+          break
+        fi
+        echo "mirror refresh attempt $attempt failed; retrying" >&2
+        sleep 1
+      done
+      if [ "$fetch_status" -ne 0 ]; then
+        echo "mirror refresh remained incomplete after 5 attempts" >&2
+        exit "$fetch_status"
+      fi
       chown -R root:${lib.escapeShellArg cfg.runnerGroup} ${lib.escapeShellArg "${cfg.root}/mirror.git"}
       chmod -R g-w,o-rwx ${lib.escapeShellArg "${cfg.root}/mirror.git"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
@@ -380,6 +396,7 @@ in
       systemd.tmpfiles.rules = [
         "d ${cfg.root} 0750 root ${cfg.runnerGroup} -"
         "d ${cfg.root}/mirror.git 0750 root ${cfg.runnerGroup} -"
+        "f ${cfg.root}/mirror.lock 0660 root ${cfg.runnerGroup} -"
         "d ${cfg.root}/locks 0555 root root -"
         "d ${cfg.root}/registry 0555 root root -"
         "d ${cfg.root}/registry/locks 0555 root root -"
