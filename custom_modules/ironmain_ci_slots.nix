@@ -294,6 +294,9 @@ let
         ${lib.escapeShellArg "${cfg.root}/registry/resources"}
       chmod 0770 ${lib.escapeShellArg "${cfg.root}/resources"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
+      touch ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
+      chown root:root ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
+      chmod 0644 ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
     '';
   };
 in
@@ -396,7 +399,7 @@ in
       systemd.tmpfiles.rules = [
         "d ${cfg.root} 0750 root ${cfg.runnerGroup} -"
         "d ${cfg.root}/mirror.git 0750 root ${cfg.runnerGroup} -"
-        "f ${cfg.root}/mirror.lock 0660 root ${cfg.runnerGroup} -"
+        "f+ ${cfg.root}/mirror.lock 0644 root root -"
         "d ${cfg.root}/locks 0555 root root -"
         "d ${cfg.root}/registry 0555 root root -"
         "d ${cfg.root}/registry/locks 0555 root root -"

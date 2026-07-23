@@ -786,6 +786,8 @@ class SlotAllocatorTests(unittest.TestCase):
         self.assertIn("flock --exclusive 9", module)
         self.assertIn("for attempt in $(seq 1 5)", module)
         self.assertIn('mirror_lock = "${cfg.root}/mirror.lock"', module)
+        self.assertIn('"f+ ${cfg.root}/mirror.lock 0644 root root -"', module)
+        self.assertIn('chmod 0644 ${lib.escapeShellArg "${cfg.root}/mirror.lock"}', module)
         self.assertNotIn(
             'default = "http://127.0.0.1:3010/jrestivo/ironmain.git";',
             module,
