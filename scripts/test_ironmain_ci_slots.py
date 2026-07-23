@@ -270,58 +270,85 @@ class SlotAllocatorTests(unittest.TestCase):
                         (external / ArtifactRole.STANDARD.value / "important").exists()
                     )
 
-    # /// What it's testing: Dirty and incompatible unlocked roles recycle in place without changing their path.
-    # /// Why it matters: Recovery must remove poisoned artifacts without recreating source-keyed target directories.
-    def test_dirty_and_incompatible_roles_recycle_in_place(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            allocator = SlotAllocator(Path(directory))
-            allocator.initialize()
-            original = Compatibility(
-                "tool-a",
-                "lock",
-                "cargo",
-                "flags",
-                "profile",
-                (),
-                (),
-                "filter",
-                "script",
-            )
-            changed = Compatibility(
-                "tool-b",
-                "lock",
-                "cargo",
-                "flags",
-                "profile",
-                (),
-                (),
-                "filter",
-                "script",
-            )
+    # /// What it's testing: Every fixed role retains compiler state across dirty completion and each broad compatibility change.
+    # /// Why it matters: Outer workflow identity and result changes must not delete recoverable Cargo state before IronMain applies typed compatibility.
+    def test_roles_retain_dirty_and_broadly_changed_state(self) -> None:
+        original_fields = {
+            "toolchain": "tool-a",
+            "lockfile": "lock",
+            "cargo_config": "cargo",
+            "rustflags": "flags",
+            "profile": "profile",
+            "packages": (),
+            "features": (),
+            "nextest_filter": "filter",
+            "script_config": "script",
+        }
+        changes = {
+            "toolchain": "tool-b",
+            "lockfile": "lock-b",
+            "cargo_config": "cargo-b",
+            "rustflags": "flags-b",
+            "profile": "profile-b",
+            "packages": ("package-b",),
+            "features": ("feature-b",),
+            "nextest_filter": "filter-b",
+            "script_config": "script-b",
+        }
+        identity = LeaseIdentity("runner", "ironmain", "trusted")
 
-            identity = LeaseIdentity("runner", "ironmain", "trusted")
-            dirty = allocator.acquire_role(
-                SlotId(0), ArtifactRole.COVERAGE_BASELINE, original, identity
-            )
-            root = dirty.root
-            (root / "poison").write_text("partial")
-            dirty.release(clean=False)
-            recovered = allocator.acquire_role(
-                SlotId(0), ArtifactRole.COVERAGE_BASELINE, original, identity
-            )
-            self.assertEqual(root, recovered.root)
-            self.assertFalse(recovered.reused)
-            self.assertFalse((root / "poison").exists())
-            (root / "old").write_text("old")
-            recovered.release(clean=True)
+        for role in ArtifactRole:
+            for field, value in changes.items():
+                with self.subTest(
+                    role=role.value, field=field
+                ), tempfile.TemporaryDirectory() as directory:
+                    allocator = SlotAllocator(Path(directory))
+                    allocator.initialize()
+                    original = Compatibility(**original_fields)
+                    changed_fields = dict(original_fields)
+                    changed_fields[field] = value
+                    changed = Compatibility(**changed_fields)
+                    first = allocator.acquire_role(SlotId(0), role, original, identity)
+                    root = first.root
+                    sentinel = root / "warm-state"
+                    sentinel.write_text("partial")
+                    first.release(clean=False)
 
-            invalidated = allocator.acquire_role(
-                SlotId(0), ArtifactRole.COVERAGE_BASELINE, changed, identity
-            )
-            self.assertEqual(root, invalidated.root)
-            self.assertFalse(invalidated.reused)
-            self.assertFalse((root / "old").exists())
-            invalidated.release(clean=True)
+                    retained = allocator.acquire_role(SlotId(0), role, changed, identity)
+
+                    self.assertEqual(root, retained.root)
+                    self.assertTrue(retained.reused)
+                    self.assertEqual("partial", sentinel.read_text())
+                    retained.release(clean=True)
+
+    # /// What it's testing: Active, clean, and dirty metadata retain sentinels in every fixed role.
+    # /// Why it matters: Cancellation and completion status invalidate results, not independently healthy compiler storage.
+    def test_all_valid_lifecycle_states_retain_every_role(self) -> None:
+        compatibility = Compatibility(
+            "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+        )
+        identity = LeaseIdentity("runner", "ironmain", "trusted")
+        for role in ArtifactRole:
+            for lifecycle in ("active", "clean", "dirty"):
+                with self.subTest(
+                    role=role.value, lifecycle=lifecycle
+                ), tempfile.TemporaryDirectory() as directory:
+                    allocator = SlotAllocator(Path(directory))
+                    allocator.initialize()
+                    first = allocator.acquire_role(SlotId(0), role, compatibility, identity)
+                    sentinel = first.root / "warm-state"
+                    sentinel.write_text(lifecycle)
+                    first.release(clean=True)
+                    state_path = allocator.layout.role_state(SlotId(0), role)
+                    state = json.loads(state_path.read_text())
+                    state["state"] = lifecycle
+                    state_path.write_text(json.dumps(state))
+
+                    retained = allocator.acquire_role(SlotId(0), role, compatibility, identity)
+
+                    self.assertTrue(retained.reused)
+                    self.assertEqual(lifecycle, sentinel.read_text())
+                    retained.release(clean=True)
 
     # /// What it's testing: Structurally incomplete or extended role state cannot authorize cache reuse.
     # /// Why it matters: The same complete schema must govern semantic reuse and destructive pressure decisions.
@@ -353,9 +380,9 @@ class SlotAllocatorTests(unittest.TestCase):
             self.assertFalse((second.root / "artifact").exists())
             second.release(clean=True)
 
-    # /// What it's testing: Compatible role artifacts do not cross validated user or fork trust namespaces.
-    # /// Why it matters: Shared runner storage must not allow one caller to consume another caller's mutable outputs.
-    def test_role_reuse_is_isolated_by_trust_namespace(self) -> None:
+    # /// What it's testing: Fixed role storage survives validated user and fork namespace changes.
+    # /// Why it matters: The accepted same-UID runner model delegates exact-result trust to IronMain instead of deleting compiler state.
+    def test_role_storage_is_retained_across_trust_namespace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             allocator = SlotAllocator(Path(directory))
             allocator.initialize()
@@ -370,12 +397,39 @@ class SlotAllocatorTests(unittest.TestCase):
             (first.root / "trusted-artifact").write_text("trusted")
             first.release(clean=True)
 
-            isolated = allocator.acquire_role(
+            retained = allocator.acquire_role(
                 SlotId(0), ArtifactRole.STANDARD, compatibility, forked
             )
-            self.assertFalse(isolated.reused)
-            self.assertFalse((isolated.root / "trusted-artifact").exists())
-            isolated.release(clean=True)
+            self.assertTrue(retained.reused)
+            self.assertTrue((retained.root / "trusted-artifact").exists())
+            retained.release(clean=True)
+
+    # /// What it's testing: Invalid JSON role metadata recycles only the affected fixed role before reuse.
+    # /// Why it matters: Narrow corruption recovery must fail closed without broad compatibility churn.
+    def test_invalid_json_role_state_recycles_affected_role(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            allocator = SlotAllocator(Path(directory))
+            allocator.initialize()
+            compatibility = Compatibility(
+                "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+            )
+            identity = LeaseIdentity("runner", "ironmain", "trusted")
+            first = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+            (first.root / "corrupt-state").write_text("untrusted")
+            first.release(clean=True)
+            allocator.layout.role_state(
+                SlotId(0), ArtifactRole.STANDARD
+            ).write_text("{not-json")
+
+            recovered = allocator.acquire_role(
+                SlotId(0), ArtifactRole.STANDARD, compatibility, identity
+            )
+
+            self.assertFalse(recovered.reused)
+            self.assertFalse((recovered.root / "corrupt-state").exists())
+            recovered.release(clean=True)
 
     # /// What it's testing: Stable workspaces reference one read-only mirror through Git alternates.
     # /// Why it matters: Jobs must not duplicate checkout object trees or gain mirror write access.
@@ -852,7 +906,9 @@ class SlotAllocatorTests(unittest.TestCase):
                     sys.executable,
                     "-c",
                     (
-                        "import json,os,time; "
+                        "import json,os,time,pathlib; "
+                        "pathlib.Path(os.environ['IRONMAIN_CI_ARTIFACT_ROOT'], "
+                        "'warm-state').write_text('active'); "
                         f"open({str(started)!r},'w').write(json.dumps("
                         "{'pid':os.getpid(),'slot':os.environ['IRONMAIN_CI_SLOT']})); "
                         "time.sleep(60)"
@@ -893,7 +949,8 @@ class SlotAllocatorTests(unittest.TestCase):
             role = allocator.acquire_role(
                 lease.slot_id, ArtifactRole.STANDARD, compatibility, identity
             )
-            self.assertFalse(role.reused)
+            self.assertTrue(role.reused)
+            self.assertEqual("active", (role.root / "warm-state").read_text())
             role.release(clean=False)
             lease.release(cancelled=True)
 
@@ -964,12 +1021,32 @@ class SlotAllocatorTests(unittest.TestCase):
                     "--",
                     sys.executable,
                     "-c",
-                    "raise SystemExit(7)",
+                    (
+                        "import os,pathlib; "
+                        "pathlib.Path(os.environ['IRONMAIN_CI_ARTIFACT_ROOT'], "
+                        "'warm-state').write_text('failed'); "
+                        "raise SystemExit(7)"
+                    ),
                 ],
                 check=False,
             )
             self.assertEqual(7, completed.returncode)
             self.assertTrue((cache / "registry/resources/failed-run.json").exists())
+            allocator = SlotAllocator(cache)
+            identity = LeaseIdentity(
+                pwd.getpwuid(os.geteuid()).pw_name, "ironmain", "trusted"
+            )
+            retained = allocator.acquire_role(
+                SlotId(0),
+                ArtifactRole.STANDARD,
+                Compatibility(
+                    "tool", "lock", "cargo", "flags", "profile", (), (), "filter", "script"
+                ),
+                identity,
+            )
+            self.assertTrue(retained.reused)
+            self.assertEqual("failed", (retained.root / "warm-state").read_text())
+            retained.release(clean=False)
             registry = ResourceRegistry(cache / "registry", (cache / "resources",))
             lock = registry.acquire_resource_lock("failed-run")
             self.assertIsNotNone(lock)

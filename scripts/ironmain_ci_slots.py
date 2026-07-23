@@ -195,7 +195,7 @@ class LeaseIdentity:
 
 @dataclass(frozen=True)
 class Compatibility:
-    """Inputs that determine whether mutable build artifacts can be reused."""
+    """Auditable outer build inputs recorded without deciding compiler-cache retention."""
 
     toolchain: str
     lockfile: str
@@ -1238,10 +1238,10 @@ class RoleLease:
     reused: bool
     _descriptor: int | None
 
-    # /// Description: Publishes clean or dirty role state and releases role mutation ownership.
+    # /// Description: Publishes clean or interrupted role state and releases role mutation ownership.
     # /// Pre: This lease has not already been released.
-    # /// Post: Compatibility, cleanliness, and LRU time are atomically recorded before unlock.
-    # /// Reason: Later callers must reuse only complete compatible output and recover dirty output.
+    # /// Post: Audit compatibility, lifecycle state, and LRU time are atomically recorded before unlock.
+    # /// Reason: Result lifecycle must remain visible without classifying recoverable compiler state.
     def release(self, *, clean: bool, last_used_ns: int | None = None) -> None:
         if self._descriptor is None:
             return
@@ -1357,10 +1357,10 @@ class SlotAllocator:
                 return lease
         raise SlotUnavailable(f"all {SLOT_COUNT} IronMain CI slots are leased")
 
-    # /// Description: Acquires one role for exclusive mutation and applies compatibility recovery.
+    # /// Description: Acquires one fixed role and retains storage described by valid outer metadata.
     # /// Pre: initialize has run and the caller supplies typed slot, role, compatibility, and identity values.
-    # /// Post: Returns a fixed root reused only when clean, compatible, and in the same trust namespace.
-    # /// Reason: Rolling role artifacts reduce writes without allowing concurrent or cross-user poisoned reuse.
+    # /// Post: Valid active, clean, or dirty state retains the root; missing or corrupt state recycles it in place.
+    # /// Reason: IronMain owns typed compiler compatibility while the outer allocator enforces locks and corruption recovery.
     def acquire_role(
         self,
         slot_id: SlotId,
@@ -1377,16 +1377,18 @@ class SlotAllocator:
         state_path = self.layout.role_state(slot_id, role)
         state: ArtifactStateRecord | None = None
         try:
-            if state_path.exists():
-                state = _parse_artifact_state(
-                    json.loads(state_path.read_text(encoding="utf-8"))
-                )
-            reused = (
-                state is not None
-                and state.state is ArtifactState.CLEAN
-                and state.compatibility == compatibility.digest()
-                and state.namespace == identity.namespace()
+            descriptors = _open_directory_chain(
+                self.layout.root,
+                ("slots", slot_id.directory_name(), "artifacts", role.value),
             )
+            _close_directory_chain(descriptors)
+            if state_path.exists():
+                try:
+                    value = json.loads(state_path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    value = None
+                state = _parse_artifact_state(value)
+            reused = state is not None
             if not reused:
                 _recycle_beneath(
                     self.layout.root,
@@ -1592,7 +1594,7 @@ def render_prometheus_metrics(
         "# TYPE ironmain_ci_invocation_elapsed_seconds gauge",
         "# HELP ironmain_ci_invocation_artifact_bytes Artifact footprint after one completed invocation.",
         "# TYPE ironmain_ci_invocation_artifact_bytes gauge",
-        "# HELP ironmain_ci_invocation_reused Whether one completed invocation reused compatible role artifacts.",
+        "# HELP ironmain_ci_invocation_reused Whether one invocation retained valid fixed role storage.",
         "# TYPE ironmain_ci_invocation_reused gauge",
         "# HELP ironmain_ci_slot_leased Whether allocator state records the slot as active.",
         "# TYPE ironmain_ci_slot_leased gauge",
