@@ -56,6 +56,12 @@ in
       description = "AudioMuse-AI core API URL used for sonic analysis features.";
     };
 
+    scheduledScan.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Enable automatic full-library scans; manual scans remain available when disabled.";
+    };
+
     environmentFile = mkOption {
       type = types.nullOr types.path;
       default = null;
@@ -150,6 +156,10 @@ in
           key TEXT PRIMARY KEY NOT NULL,
           value TEXT
         );
+
+        INSERT INTO configuration (key, value)
+        VALUES ('scan_enabled', '${boolToString cfg.scheduledScan.enable}')
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 
         ${optionalString (cfg.audiomuseCoreUrl != null) ''
         INSERT INTO configuration (key, value)

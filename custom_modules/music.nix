@@ -45,6 +45,8 @@ in
     # AudioMuse-AI MusicServer - Open Subsonic-compatible server and web UI
     services.audiomuse-ai-music-server = {
       enable = true;
+      # The library is static; avoid rereading metadata from every track each night.
+      scheduledScan.enable = false;
       musicDir = "/storage/media/musiclibrary";
       environmentFile = "/var/lib/audiomuse-ai/.env";
       audiomuseCoreUrl = "http://127.0.0.1:${toString config.services.audiomuse-ai.port}";
