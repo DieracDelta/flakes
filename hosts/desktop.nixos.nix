@@ -346,9 +346,7 @@ in
   };
 
   services.gitea-actions-runner = {
-    package = pkgs.forgejo-runner.overrideAttrs (oldAttrs: {
-      patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-runner-null-logger-reporter.patch ];
-    });
+    package = pkgs.forgejo-runner;
     instances.desktop = {
       enable = true;
       name = "desktop";
@@ -375,9 +373,10 @@ in
         util-linux
         wget
       ];
+      # Runner lifecycle/result events are emitted at info; warn causes false cancellation.
       settings.log = {
         level = "warn";
-        job_level = "warn";
+        job_level = "info";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
@@ -416,9 +415,10 @@ in
         util-linux
         wget
       ];
+      # Runner lifecycle/result events are emitted at info; warn causes false cancellation.
       settings.log = {
         level = "warn";
-        job_level = "warn";
+        job_level = "info";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
