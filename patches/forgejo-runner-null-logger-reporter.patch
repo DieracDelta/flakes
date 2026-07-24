@@ -1,0 +1,61 @@
+diff --git a/internal/app/run/logging.go b/internal/app/run/logging.go
+index d0e6d1c..d6a037b 100644
+--- a/internal/app/run/logging.go
++++ b/internal/app/run/logging.go
+@@ -15 +15,3 @@ import (
+-type NullLogger struct{}
++type NullLogger struct {
++	hook log.Hook
++}
+@@ -21,0 +24,3 @@ func (n NullLogger) WithJobLogger() *log.Logger {
++	if n.hook != nil {
++		logger.AddHook(n.hook)
++	}
+diff --git a/internal/app/run/logging_test.go b/internal/app/run/logging_test.go
+new file mode 100644
+index 0000000..e625247
+--- /dev/null
++++ b/internal/app/run/logging_test.go
+@@ -0,0 +1,35 @@
++package run
++
++import (
++	"testing"
++
++	log "github.com/sirupsen/logrus"
++	"github.com/stretchr/testify/require"
++)
++
++type recordingHook struct {
++	entries []*log.Entry
++}
++
++// Levels subscribes the test hook to every emitted log level.
++func (h *recordingHook) Levels() []log.Level {
++	return log.AllLevels
++}
++
++// Fire records one entry forwarded by the null logger.
++func (h *recordingHook) Fire(entry *log.Entry) error {
++	h.entries = append(h.entries, entry)
++	return nil
++}
++
++// TestNullLoggerForwardsReporterHook verifies quiet mode suppresses output without dropping lifecycle events.
++func TestNullLoggerForwardsReporterHook(t *testing.T) {
++	hook := &recordingHook{}
++	logger := (NullLogger{hook: hook}).WithJobLogger()
++
++	logger.WithField("jobResult", "success").Info("job completed")
++
++	require.Len(t, hook.entries, 1)
++	require.Equal(t, "success", hook.entries[0].Data["jobResult"])
++	require.Equal(t, "job completed", hook.entries[0].Message)
++}
+diff --git a/internal/app/run/runner.go b/internal/app/run/runner.go
+index 94e0e3b..081cdaa 100644
+--- a/internal/app/run/runner.go
++++ b/internal/app/run/runner.go
+@@ -405 +405 @@ func (r *Runner) run(ctx context.Context, task *runnerv1.Task, reporter *report.
+-		ctx = runner.WithJobLoggerFactory(ctx, NullLogger{})
++		ctx = runner.WithJobLoggerFactory(ctx, NullLogger{hook: reporter})

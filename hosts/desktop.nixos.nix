@@ -346,7 +346,9 @@ in
   };
 
   services.gitea-actions-runner = {
-    package = pkgs.forgejo-runner;
+    package = pkgs.forgejo-runner.overrideAttrs (oldAttrs: {
+      patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-runner-null-logger-reporter.patch ];
+    });
     instances.desktop = {
       enable = true;
       name = "desktop";
@@ -373,10 +375,9 @@ in
         util-linux
         wget
       ];
-      # Temporary IRO-2092 diagnostic: expose task-state cancellation details.
       settings.log = {
-        level = "debug";
-        job_level = "debug";
+        level = "warn";
+        job_level = "warn";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
