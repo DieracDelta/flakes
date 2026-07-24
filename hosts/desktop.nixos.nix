@@ -373,9 +373,10 @@ in
         util-linux
         wget
       ];
+      # Temporary IRO-2092 diagnostic: expose task-state cancellation details.
       settings.log = {
-        level = "warn";
-        job_level = "warn";
+        level = "debug";
+        job_level = "debug";
       };
       settings.runner.capacity = forgejoRunnerCapacity;
       settings.container = {
