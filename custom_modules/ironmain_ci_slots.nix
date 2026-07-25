@@ -88,10 +88,12 @@ let
         echo "unsafe invocation identity" >&2
         exit 64
       fi
+      supplementary_properties=()
       if [ "''${SUDO_USER:-}" = ${lib.escapeShellArg cfg.runnerUser} ]; then
         slice=ironmain-ci-runner-invocations.slice
       elif [ "''${SUDO_USER:-}" = ${lib.escapeShellArg cfg.localUser} ]; then
         slice=ironmain-ci-local-invocations.slice
+        supplementary_properties=(--property=SupplementaryGroups=${lib.escapeShellArg cfg.runnerGroup})
       else
         echo "invocation broker requires an approved sudo caller" >&2
         exit 77
@@ -190,6 +192,7 @@ let
         --property="WorkingDirectory=$PWD" \
         --property=KillMode=control-group \
         --property=TimeoutStopSec=10s \
+        "''${supplementary_properties[@]}" \
         --setenv="IRONMAIN_CI_BROKER_INVOCATION=$invocation" \
         --setenv="IRONMAIN_TEST_PROJECTS_ROOT=${cfg.root}/test-projects/current" \
         ${helper}/bin/ironmain-ci-slots \

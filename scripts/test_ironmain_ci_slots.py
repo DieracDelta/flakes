@@ -813,6 +813,11 @@ class SlotAllocatorTests(unittest.TestCase):
             '--setenv="IRONMAIN_TEST_PROJECTS_ROOT=${cfg.root}/test-projects/current"',
             module,
         )
+        self.assertIn(
+            'supplementary_properties=(--property=SupplementaryGroups=${lib.escapeShellArg cfg.runnerGroup})',
+            module,
+        )
+        self.assertIn('"\'\'${supplementary_properties[@]}"', module)
         self.assertIn('chmod -R a-w "$staging"', module)
         self.assertIn('find "$snapshots"', module)
 
