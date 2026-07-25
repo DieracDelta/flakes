@@ -2,7 +2,12 @@
 # /// Pre: The host supplies an existing runner user/group before enabling the module.
 # /// Post: Configuration exposes exactly twelve fixed slots and one root-managed read-only mirror.
 # /// Reason: CI jobs need bounded private workspaces and reusable role-separated artifacts.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.custom_modules.ironmain_ci_slots;
   # /// Description: Formats one validated configured slot index as a stable directory name.
@@ -23,6 +28,8 @@ let
     inherit roles;
     mirror = "${cfg.root}/mirror.git";
     mirror_lock = "${cfg.root}/mirror.lock";
+    test_projects = "${cfg.root}/test-projects/current";
+    test_projects_pin = "${cfg.root}/test-projects/current.sha";
     locks = "${cfg.root}/locks";
     registry = "${cfg.root}/registry";
     quarantine = "${cfg.root}/registry/quarantine";
@@ -184,6 +191,7 @@ let
         --property=KillMode=control-group \
         --property=TimeoutStopSec=10s \
         --setenv="IRONMAIN_CI_BROKER_INVOCATION=$invocation" \
+        --setenv="IRONMAIN_TEST_PROJECTS_ROOT=${cfg.root}/test-projects/current" \
         ${helper}/bin/ironmain-ci-slots \
         --root ${lib.escapeShellArg cfg.root} \
         run \
@@ -252,6 +260,80 @@ let
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
     '';
   };
+  testProjectsUploadPack = "${pkgs.git}/bin/git -c safe.directory=${cfg.testProjectsSource} upload-pack";
+  testProjectsUpdate = pkgs.writeShellApplication {
+    name = "ironmain-ci-test-projects-update";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.findutils
+      pkgs.git
+      pkgs.gnutar
+      pkgs.util-linux
+    ];
+    text = ''
+      root=${lib.escapeShellArg "${cfg.root}/test-projects"}
+      snapshots="$root/snapshots"
+      mirror="$root/mirror.git"
+      lock=${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
+      mkdir -p "$snapshots" "$mirror"
+      exec 9>"$lock"
+      flock --exclusive 9
+
+      if [ ! -f "$mirror/HEAD" ]; then
+        git init --bare "$mirror"
+      fi
+      if git --git-dir="$mirror" remote get-url origin >/dev/null 2>&1; then
+        git --git-dir="$mirror" remote set-url origin ${lib.escapeShellArg cfg.testProjectsSource}
+      else
+        git --git-dir="$mirror" remote add origin ${lib.escapeShellArg cfg.testProjectsSource}
+      fi
+      git --git-dir="$mirror" fetch \
+        --upload-pack=${lib.escapeShellArg testProjectsUploadPack} \
+        --depth=1 \
+        origin \
+        ${lib.escapeShellArg "+${cfg.testProjectsRef}:refs/remotes/origin/ironmain-test-projects"}
+      commit="$(git --git-dir="$mirror" rev-parse refs/remotes/origin/ironmain-test-projects)"
+      if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+        echo "test-projects publisher resolved an invalid commit" >&2
+        exit 1
+      fi
+
+      snapshot="$snapshots/$commit"
+      if [ ! -d "$snapshot" ]; then
+        staging="$snapshots/.staging-$commit-$$"
+        trap 'rm -rf -- "$staging"' EXIT
+        mkdir "$staging"
+        git --git-dir="$mirror" archive "$commit" | tar -x -C "$staging"
+        sentinel="$staging/do_use/zopeneditor-sample/ASM/ASAM1.asm"
+        if [ ! -f "$sentinel" ]; then
+          echo "test-projects snapshot lacks the required sentinel" >&2
+          exit 1
+        fi
+        chown -R root:${lib.escapeShellArg cfg.runnerGroup} "$staging"
+        chmod -R u=rwX,g=rX,o= "$staging"
+        chmod -R a-w "$staging"
+        mv "$staging" "$snapshot"
+        trap - EXIT
+      fi
+
+      expected="snapshots/$commit"
+      if [ "$(readlink "$root/current" 2>/dev/null || true)" != "$expected" ]; then
+        next_link="$root/.current-$commit-$$"
+        ln -s "snapshots/$commit" "$next_link"
+        mv -Tf "$next_link" "$root/current"
+      fi
+      if [ "$(cat "$root/current.sha" 2>/dev/null || true)" != "$commit" ]; then
+        pin="$root/.current.sha-$commit-$$"
+        printf '%s\n' "$commit" > "$pin"
+        chown root:${lib.escapeShellArg cfg.runnerGroup} "$pin"
+        chmod 0440 "$pin"
+        mv -f "$pin" "$root/current.sha"
+      fi
+
+      find "$snapshots" -mindepth 1 -maxdepth 1 -type d -mtime +21 \
+        ! -path "$snapshot" -exec rm -rf -- {} +
+    '';
+  };
   metricsCollector = pkgs.writeShellApplication {
     name = "ironmain-ci-metrics-collector";
     runtimeInputs = [
@@ -294,9 +376,9 @@ let
         ${lib.escapeShellArg "${cfg.root}/registry/resources"}
       chmod 0770 ${lib.escapeShellArg "${cfg.root}/resources"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
-      touch ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
-      chown root:root ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
-      chmod 0644 ${lib.escapeShellArg "${cfg.root}/mirror.lock"}
+      touch ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
+      chown root:root ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
+      chmod 0644 ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
     '';
   };
 in
@@ -334,6 +416,18 @@ in
       description = "Host-local Forgejo repository used by root to refresh the job-read-only mirror without credentials.";
     };
 
+    testProjectsSource = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/lib/forgejo/repositories/jrestivo/ironmain_test_projects.git";
+      description = "Host-local Forgejo repository published as a pinned read-only shared corpus.";
+    };
+
+    testProjectsRef = lib.mkOption {
+      type = lib.types.str;
+      default = "refs/heads/master";
+      description = "Exact remote ref resolved by the weekly shared-corpus publisher.";
+    };
+
     metricsOutput = lib.mkOption {
       type = lib.types.path;
       default = "/var/lib/node_exporter/textfile_collector/ironmain_ci.prom";
@@ -367,7 +461,9 @@ in
           message = "IronMain CI requires standard, coverage-baseline, and coverage-current roles";
         }
       ];
-      system.build.ironmainCiSlotsLayout = pkgs.writeText "ironmain-ci-slots-layout.json" (builtins.toJSON layout);
+      system.build.ironmainCiSlotsLayout = pkgs.writeText "ironmain-ci-slots-layout.json" (
+        builtins.toJSON layout
+      );
     }
 
     (lib.mkIf cfg.enable {
@@ -400,6 +496,10 @@ in
         "d ${cfg.root} 0750 root ${cfg.runnerGroup} -"
         "d ${cfg.root}/mirror.git 0750 root ${cfg.runnerGroup} -"
         "f+ ${cfg.root}/mirror.lock 0644 root root -"
+        "d ${cfg.root}/test-projects 0750 root ${cfg.runnerGroup} -"
+        "d ${cfg.root}/test-projects/snapshots 0750 root ${cfg.runnerGroup} -"
+        "d ${cfg.root}/test-projects/mirror.git 0750 root ${cfg.runnerGroup} -"
+        "f+ ${cfg.root}/test-projects.lock 0644 root root -"
         "d ${cfg.root}/locks 0555 root root -"
         "d ${cfg.root}/registry 0555 root root -"
         "d ${cfg.root}/registry/locks 0555 root root -"
@@ -416,6 +516,7 @@ in
           "gitea-runner-desktop.service"
           "gitea-runner-desktop\\x2ddocker.service"
           "ironmain-ci-mirror-update.service"
+          "ironmain-ci-test-projects-update.service"
         ];
         serviceConfig = {
           Type = "oneshot";
@@ -460,6 +561,41 @@ in
           OnUnitActiveSec = "1m";
           AccuracySec = "10s";
           Persistent = true;
+        };
+      };
+
+      systemd.services.ironmain-ci-test-projects-update = {
+        description = "Publish one pinned read-only IronMain test-projects snapshot";
+        wantedBy = [ "multi-user.target" ];
+        before = [
+          "gitea-runner-desktop.service"
+          "gitea-runner-desktop\\x2ddocker.service"
+        ];
+        after = [
+          "forgejo.service"
+          "ironmain-ci-slots-provision.service"
+        ];
+        requires = [
+          "forgejo.service"
+          "ironmain-ci-slots-provision.service"
+        ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+          Group = "root";
+          UMask = "0027";
+          ExecStart = "${testProjectsUpdate}/bin/ironmain-ci-test-projects-update";
+          ReadWritePaths = [ cfg.root ];
+        };
+      };
+
+      systemd.timers.ironmain-ci-test-projects-update = {
+        description = "Advance the pinned IronMain test-projects snapshot weekly";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Persistent = true;
+          RandomizedDelaySec = "1h";
         };
       };
 
@@ -556,13 +692,25 @@ in
         };
       };
       systemd.services.gitea-runner-desktop = {
-        after = [ "ironmain-ci-mirror-update.service" ];
-        requires = [ "ironmain-ci-mirror-update.service" ];
+        after = [
+          "ironmain-ci-mirror-update.service"
+          "ironmain-ci-test-projects-update.service"
+        ];
+        requires = [
+          "ironmain-ci-mirror-update.service"
+          "ironmain-ci-test-projects-update.service"
+        ];
         serviceConfig.Slice = "ironmain-ci-runner.slice";
       };
       systemd.services."gitea-runner-desktop\\x2ddocker" = {
-        after = [ "ironmain-ci-mirror-update.service" ];
-        requires = [ "ironmain-ci-mirror-update.service" ];
+        after = [
+          "ironmain-ci-mirror-update.service"
+          "ironmain-ci-test-projects-update.service"
+        ];
+        requires = [
+          "ironmain-ci-mirror-update.service"
+          "ironmain-ci-test-projects-update.service"
+        ];
         serviceConfig.Slice = "ironmain-ci-runner.slice";
       };
 

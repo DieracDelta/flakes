@@ -793,6 +793,29 @@ class SlotAllocatorTests(unittest.TestCase):
             module,
         )
 
+    # /// What it's testing: Root publishes one exact read-only test-corpus snapshot weekly for every slot.
+    # /// Why it matters: Per-job checkout/reset/clean duplicated a 54,185-file corpus and dominated cached-call writes.
+    def test_nix_publishes_weekly_immutable_shared_test_projects(self) -> None:
+        module = (
+            Path(__file__).parent.parent
+            / "custom_modules"
+            / "ironmain_ci_slots.nix"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'default = "/var/lib/forgejo/repositories/jrestivo/ironmain_test_projects.git";',
+            module,
+        )
+        self.assertIn("testProjectsUpdate = pkgs.writeShellApplication", module)
+        self.assertIn('snapshot="$snapshots/$commit"', module)
+        self.assertIn('ln -s "snapshots/$commit" "$next_link"', module)
+        self.assertIn('OnCalendar = "weekly";', module)
+        self.assertIn(
+            '--setenv="IRONMAIN_TEST_PROJECTS_ROOT=${cfg.root}/test-projects/current"',
+            module,
+        )
+        self.assertIn('chmod -R a-w "$staging"', module)
+        self.assertIn('find "$snapshots"', module)
+
     # /// What it's testing: The broker and registrar passwordless rules target the host's enabled sudo-rs implementation.
     # /// Why it matters: A generated rule for disabled legacy sudo leaves every deployed invocation blocked on an interactive password.
     def test_nix_broker_uses_enabled_sudo_rs_rules(self) -> None:
