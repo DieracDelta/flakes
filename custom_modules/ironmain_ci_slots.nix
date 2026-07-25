@@ -278,7 +278,7 @@ let
       snapshots="$root/snapshots"
       mirror="$root/mirror.git"
       lock=${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
-      mkdir -p "$snapshots" "$mirror"
+      install -d -m 0750 -o root -g ${lib.escapeShellArg cfg.runnerGroup} "$root" "$snapshots" "$mirror"
       exec 9>"$lock"
       flock --exclusive 9
 
@@ -379,6 +379,14 @@ let
         ${lib.escapeShellArg "${cfg.root}/registry/resources"}
       chmod 0770 ${lib.escapeShellArg "${cfg.root}/resources"}
       chmod 0750 ${lib.escapeShellArg "${cfg.root}/mirror.git"}
+      chown root:${lib.escapeShellArg cfg.runnerGroup} \
+        ${lib.escapeShellArg "${cfg.root}/test-projects"} \
+        ${lib.escapeShellArg "${cfg.root}/test-projects/snapshots"} \
+        ${lib.escapeShellArg "${cfg.root}/test-projects/mirror.git"}
+      chmod 0750 \
+        ${lib.escapeShellArg "${cfg.root}/test-projects"} \
+        ${lib.escapeShellArg "${cfg.root}/test-projects/snapshots"} \
+        ${lib.escapeShellArg "${cfg.root}/test-projects/mirror.git"}
       touch ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
       chown root:root ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}
       chmod 0644 ${lib.escapeShellArg "${cfg.root}/mirror.lock"} ${lib.escapeShellArg "${cfg.root}/test-projects.lock"}

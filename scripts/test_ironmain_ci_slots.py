@@ -818,6 +818,10 @@ class SlotAllocatorTests(unittest.TestCase):
             module,
         )
         self.assertIn('"\'\'${supplementary_properties[@]}"', module)
+        self.assertIn(
+            'install -d -m 0750 -o root -g ${lib.escapeShellArg cfg.runnerGroup} "$root" "$snapshots" "$mirror"',
+            module,
+        )
         self.assertIn('chmod -R a-w "$staging"', module)
         self.assertIn('find "$snapshots"', module)
 
