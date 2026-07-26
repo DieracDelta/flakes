@@ -132,6 +132,15 @@ in
   ];
   imports = [ ./hw/desktop.nix ];
 
+  # Keep user slice names stable for cgroup I/O accounting and enforcement.
+  users.users = {
+    jachym.uid = 1000;
+    jrestivo.uid = 1001;
+    siraben.uid = 1002;
+    faye.uid = 1003;
+    john.uid = 1004;
+  };
+
   custom_modules.music.enable = true;
   custom_modules.paperless.enable = false;
   custom_modules.nextcloud.enable = false;
@@ -148,6 +157,31 @@ in
   custom_modules.network_monitor.enableNtopng = false;
   custom_modules.nethog_monitor.enable = true;
   custom_modules.monitoring.enable = true;
+  # This limits physical I/O charged directly to each user slice. Work delegated
+  # to nix-daemon or other system services remains separately attributed.
+  custom_modules.user_io_budget = {
+    enable = true;
+    devices = [
+      "/dev/nvme0n1"
+      "/dev/nvme1n1"
+    ];
+    dailyBytes = 300 * 1000 * 1000 * 1000;
+    burstBytesPerSecond = 20 * 1000 * 1000;
+    exhaustedBytesPerSecond = 100 * 1000;
+    warningPercentages = [
+      80
+      90
+    ];
+    terminalNotifications = true;
+    interval = "10min";
+    users = {
+      jachym.uid = 1000;
+      jrestivo.uid = 1001;
+      siraben.uid = 1002;
+      faye.uid = 1003;
+      john.uid = 1004;
+    };
+  };
   custom_modules.ironmain_ci_slots.enable = true;
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
