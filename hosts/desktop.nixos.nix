@@ -165,11 +165,12 @@ in
       "/dev/nvme0n1"
       "/dev/nvme1n1"
     ];
-    dailyBytes = 300 * 1000 * 1000 * 1000;
+    dailyBytes = 500 * 1000 * 1000 * 1000;
     burstBytesPerSecond = 20 * 1000 * 1000;
     exhaustedBytesPerSecond = 100 * 1000;
     warningPercentages = [
-      80
+      50
+      75
       90
     ];
     terminalNotifications = true;
