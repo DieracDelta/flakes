@@ -28,7 +28,7 @@ class BudgetTestCase(unittest.TestCase):
             "daily_bytes": 1000,
             "burst_bps": 200,
             "exhausted_bps": 10,
-            "warning_percentages": [80, 90],
+            "warning_percentages": [50, 75, 90],
             "terminal_notifications": True,
         }
         self.device_patch = mock.patch.object(
@@ -94,23 +94,24 @@ class BudgetTestCase(unittest.TestCase):
         self.sample(100, start)
         first = self.sample(950, start + 600)
         self.assertEqual(first["used"], 850)
-        self.assertEqual(len(self.notifications), 1)
-        self.assertIn("80%", self.notifications[0][1])
+        self.assertEqual(len(self.notifications), 2)
+        self.assertIn("50%", self.notifications[0][1])
+        self.assertIn("75%", self.notifications[1][1])
 
         second = self.sample(1000, start + 1200)
         self.assertEqual(second["used"], 900)
-        self.assertEqual(len(self.notifications), 2)
-        self.assertIn("90%", self.notifications[1][1])
+        self.assertEqual(len(self.notifications), 3)
+        self.assertIn("90%", self.notifications[2][1])
 
         exhausted = self.sample(1150, start + 1800)
         self.assertEqual(exhausted["used"], 1050)
         self.assertTrue(exhausted["throttled"])
-        self.assertEqual(len(self.notifications), 3)
-        self.assertIn("exhausted", self.notifications[2][1])
+        self.assertEqual(len(self.notifications), 4)
+        self.assertIn("exhausted", self.notifications[3][1])
         self.assertIn("wbps=10", (self.cgroup / "io.max").read_text())
 
         self.sample(1200, start + 2400)
-        self.assertEqual(len(self.notifications), 3)
+        self.assertEqual(len(self.notifications), 4)
 
     def test_counter_reset_is_counted_conservatively(self):
         start = self.local_timestamp(2026, 7, 23, 12, 0)
@@ -225,7 +226,7 @@ class BudgetTestCase(unittest.TestCase):
         self.systemd_mock.side_effect = self.fake_systemd
         result = self.sample(1200, start + 1200)
         self.assertTrue(result["throttled"])
-        self.assertEqual(len(self.notifications), 3)
+        self.assertEqual(len(self.notifications), 4)
 
     def test_backward_date_does_not_grant_a_new_budget(self):
         later = self.local_timestamp(2026, 7, 24, 12, 0)

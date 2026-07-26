@@ -73,7 +73,7 @@ in
 
     dailyBytes = mkOption {
       type = types.ints.positive;
-      default = 300 * 1000 * 1000 * 1000;
+      default = 500 * 1000 * 1000 * 1000;
       description = "Default combined daily physical write budget per user in bytes.";
     };
 
@@ -92,7 +92,8 @@ in
     warningPercentages = mkOption {
       type = types.listOf (types.ints.between 1 99);
       default = [
-        80
+        50
+        75
         90
       ];
       description = "Usage percentages that produce one warning per user and day.";
