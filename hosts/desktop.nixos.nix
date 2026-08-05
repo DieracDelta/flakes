@@ -697,7 +697,8 @@ in
     agent-deck
     codex
     pi-coding-agent
-    pi-subagents
+    # pi-subagents
+    pi-background-tasks
     pi-codex-goal
     context-mode
     forgejoNixosTestSwitch

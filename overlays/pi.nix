@@ -1,16 +1,14 @@
 final: prev: {
   pi-coding-agent = final.buildNpmPackage rec {
     pname = "pi-coding-agent";
-    version = "0.80.6";
+    version = "0.83.0";
 
-    src = final.fetchFromGitHub {
-      owner = "earendil-works";
-      repo = "pi";
-      tag = "v${version}";
-      hash = "sha256-e/wcHruEcBAHDF5tKvwew7LXjVp0eraHh2k+QaL2sCA=";
+    src = final.fetchurl {
+      url = "https://github.com/earendil-works/pi/releases/download/v${version}/pi-${version}-source.tar.gz";
+      hash = "sha256-8iW4fsO0gl3VuU6SKoYpVYrdyjGhtNLCBq5Zio4mksA=";
     };
 
-    npmDepsHash = "sha256-xXEOR0epZcfbXayYGyJdBiFVliamBexqA+1Sd7wlGhU=";
+    npmDepsHash = "sha256-AbSfP1Ion8bN309NUBQb1QSn2cIIUjNONmZgls9vnYE=";
 
     npmWorkspace = "packages/coding-agent";
 
@@ -23,9 +21,9 @@ final: prev: {
     buildPhase = ''
       runHook preBuild
 
-      npx tsgo -p packages/ai/tsconfig.build.json
-      npx tsgo -p packages/tui/tsconfig.build.json
-      npx tsgo -p packages/agent/tsconfig.build.json
+      npm run build --workspace=packages/tui
+      npm run build:offline --workspace=packages/ai
+      npm run build --workspace=packages/agent
       npm run build --workspace=packages/coding-agent
 
       runHook postBuild
@@ -142,6 +140,45 @@ final: prev: {
       description = "Claude Code-style autonomous sub-agents extension for Pi";
       homepage = "https://github.com/tintinweb/pi-subagents";
       license = licenses.mit;
+    };
+  };
+
+  pi-background-tasks = final.buildNpmPackage rec {
+    pname = "pi-background-tasks";
+    version = "2.0.0";
+
+    src = final.fetchurl {
+      url = "https://registry.npmjs.org/pi-background-tasks/-/pi-background-tasks-${version}.tgz";
+      hash = "sha512-LyTFnuPbL2BhzNQaq7l7KN3neV2WyQbH1uEiSTM4cpyAw7489SATqQDoZ9SCqkRIBH/zktP7xvk/VNerpU3QPQ==";
+    };
+
+    npmDepsHash = "sha256-++1/PtmRA5TxUg4lMxbQ3ipOC/3PD0zWAqbaMXFH1Rg=";
+
+    npmFlags = [
+      "--legacy-peer-deps"
+      "--omit=dev"
+    ];
+
+    postPatch = ''
+      sed -i '/  "devDependencies": {/,/^  },$/d' package.json
+      cp ${./pi-background-tasks-package-lock.json} package-lock.json
+    '';
+
+    dontNpmBuild = true;
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p "$out/lib/node_modules/pi-background-tasks"
+      cp -R . "$out/lib/node_modules/pi-background-tasks"
+
+      runHook postInstall
+    '';
+
+    meta = with final.lib; {
+      description = "Durable background tasks, delegated agents, and multi-model Fusion workflows for Pi";
+      homepage = "https://pi.dev/packages/pi-background-tasks";
+      license = licenses.isc;
     };
   };
 

@@ -12,7 +12,7 @@
     EDITOR = "nvim";
     VISP_PI_BINARY = "${pkgs.pi-coding-agent}/bin/pi";
     VISP_PI_MCP_ADAPTER_PACKAGE = "${pkgs.pi-mcp-adapter}/lib/node_modules/pi-mcp-adapter";
-    VISP_PI_SUBAGENTS_PACKAGE = "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents";
+    # VISP_PI_SUBAGENTS_PACKAGE = "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents";
     VISP_PI_CODEX_GOAL_PACKAGE = "${pkgs.pi-codex-goal}/lib/node_modules/pi-codex-goal";
     VISP_PI_WEB_ACCESS_PACKAGE = "${pkgs.pi-web-access}/lib/node_modules/pi-web-access";
     VISP_PI_CONTEXT_MODE_PACKAGE = "${pkgs.context-mode}/lib/node_modules/context-mode";
@@ -22,8 +22,12 @@
     import extension from "${pkgs.pi-mcp-adapter}/lib/node_modules/pi-mcp-adapter/index.ts";
     export default extension;
   '';
-  home.file.".pi/agent/extensions/pi-subagents.ts".text = ''
-    import extension from "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents/dist/index.js";
+  # home.file.".pi/agent/extensions/pi-subagents.ts".text = ''
+  #   import extension from "${pkgs.pi-subagents}/lib/node_modules/@tintinweb/pi-subagents/dist/index.js";
+  #   export default extension;
+  # '';
+  home.file.".pi/agent/extensions/pi-background-tasks.ts".text = ''
+    import extension from "${pkgs.pi-background-tasks}/lib/node_modules/pi-background-tasks/extensions/background-tasks.ts";
     export default extension;
   '';
   home.file.".pi/agent/extensions/pi-codex-goal.ts".text = ''

@@ -13,7 +13,7 @@ in
   imports = [
     (fetchTarball {
       url = "https://github.com/nix-community/nixos-vscode-server/tarball/master";
-      sha256 = "0xjal4zcbmdjdaspfkjbpx1680q7390wfzmj7iad04kp3pc9syf8";
+      sha256 = "179gqv45mby7wxdmrjmk8qqfgxh9316x2l9dkcvmmqrp9i4w5qfs";
     })
   ];
   config = lib.mkIf cfg.enable {
