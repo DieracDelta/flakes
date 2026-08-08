@@ -1,8 +1,8 @@
 diff --git a/routers/api/v1/api.go b/routers/api/v1/api.go
-index 2c10464438..ba97dec0a3 100644
+index 1103a2d..ce3bafa 100644
 --- a/routers/api/v1/api.go
 +++ b/routers/api/v1/api.go
-@@ -1238,6 +1238,11 @@ func Routes() *web.Route {
+@@ -890,6 +890,11 @@ func Routes() *web.Route {
  					m.Group("/runs", func() {
  						m.Get("", repo.ListActionRuns)
  						m.Get("/{run_id}", repo.GetActionRun)
@@ -15,7 +15,7 @@ index 2c10464438..ba97dec0a3 100644
  
  					m.Group("/workflows", func() {
 diff --git a/routers/api/v1/repo/action.go b/routers/api/v1/repo/action.go
-index 63baaf4437..c83c36f0c7 100644
+index 8bf0ce7..b9cd467 100644
 --- a/routers/api/v1/repo/action.go
 +++ b/routers/api/v1/repo/action.go
 @@ -8,10 +8,12 @@ import (
@@ -33,7 +33,7 @@ index 63baaf4437..c83c36f0c7 100644
  	"forgejo.org/modules/web"
 @@ -1031,3 +1033,127 @@ func GetActionRun(ctx *context.APIContext) {
  
- 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer))
+ 	ctx.JSON(http.StatusOK, convert.ToActionRun(ctx, run, ctx.Doer()))
  }
 +
 +func getActionRunForAPI(ctx *context.APIContext, runID int64) (*actions_model.ActionRun, bool) {
@@ -47,11 +47,11 @@ index 63baaf4437..c83c36f0c7 100644
 +		return nil, false
 +	}
 +
-+	if ctx.Repo.Repository.ID != run.RepoID {
++	if ctx.Repo().Repository.ID != run.RepoID {
 +		ctx.Error(http.StatusNotFound, "GetRunByID", util.ErrNotExist)
 +		return nil, false
 +	}
-+	run.Repo = ctx.Repo.Repository
++	run.Repo = ctx.Repo().Repository
 +
 +	return run, true
 +}
@@ -92,7 +92,7 @@ index 63baaf4437..c83c36f0c7 100644
 +		}
 +		return nil, nil, false
 +	}
-+	if job.RunID != run.ID || job.RepoID != ctx.Repo.Repository.ID {
++	if job.RunID != run.ID || job.RepoID != ctx.Repo().Repository.ID {
 +		ctx.Error(http.StatusNotFound, "GetRunJobByID", util.ErrNotExist)
 +		return nil, nil, false
 +	}
@@ -160,7 +160,7 @@ index 63baaf4437..c83c36f0c7 100644
 +	downloadActionRunJobLogs(ctx, true)
 +}
 diff --git a/services/convert/action.go b/services/convert/action.go
-index 703c1f1261..d520a8ee54 100644
+index 703c1f1..d520a8e 100644
 --- a/services/convert/action.go
 +++ b/services/convert/action.go
 @@ -47,3 +47,23 @@ func ToActionRun(ctx context.Context, run *actions_model.ActionRun, doer *user_m

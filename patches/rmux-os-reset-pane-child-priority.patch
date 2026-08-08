@@ -1,10 +1,10 @@
-diff --git a/crates/rmux-os/src/signals.rs b/crates/rmux-os/src/signals.rs
-index cd09c04..4446153 100644
---- a/crates/rmux-os/src/signals.rs
-+++ b/crates/rmux-os/src/signals.rs
-@@ -2,8 +2,8 @@
- 
- use std::io;
+diff --git a/src/signals.rs b/src/signals.rs
+index b32a491..eb7f8aa 100644
+--- a/src/signals.rs
++++ b/src/signals.rs
+@@ -372,8 +372,8 @@ fn wake_signal_listener() {
+     };
+ }
  
 -/// Resets signal dispositions that RMUX may handle in its daemon process back
 -/// to their default behavior before executing a pane child.
@@ -13,7 +13,7 @@ index cd09c04..4446153 100644
  ///
  /// This is a no-op on non-Unix platforms.
  pub fn reset_child_signal_dispositions() -> io::Result<()> {
-@@ -22,6 +22,7 @@ fn reset_child_signal_dispositions_impl() -> io::Result<()> {
+@@ -392,6 +392,7 @@ fn reset_child_signal_dispositions_impl() -> io::Result<()> {
      ] {
          reset_signal(signal)?;
      }
@@ -21,7 +21,7 @@ index cd09c04..4446153 100644
      Ok(())
  }
  
-@@ -54,6 +55,21 @@ fn reset_signal(signal: libc::c_int) -> io::Result<()> {
+@@ -424,6 +425,21 @@ fn reset_signal(signal: libc::c_int) -> io::Result<()> {
      }
  }
  

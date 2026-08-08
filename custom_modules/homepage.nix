@@ -40,7 +40,8 @@ in
                 description = "Subsonic Music Server";
               };
             }
-          ] ++ lib.optionals config.custom_modules.soulseek.enable [
+          ]
+          ++ lib.optionals config.custom_modules.soulseek.enable [
             {
               "Soulseek" = {
                 icon = "mdi-download-network";
@@ -48,7 +49,8 @@ in
                 description = "slskd Soulseek client";
               };
             }
-          ] ++ [
+          ]
+          ++ [
             {
               "Koito" = {
                 icon = "mdi-music-box-multiple";
@@ -70,7 +72,8 @@ in
                 description = "AI Music Analysis & Playlists";
               };
             }
-          ] ++ lib.optionals config.services.audiomuse-ai-music-server.enable [
+          ]
+          ++ lib.optionals config.services.audiomuse-ai-music-server.enable [
             {
               "AudioMuse MusicServer" = {
                 icon = "mdi-music-circle";
@@ -89,31 +92,8 @@ in
                 description = "AI Chat Interface";
               };
             }
-            {
-              "ComfyUI" = {
-                icon = "sh-comfyui";
-                href = "/comfyui/";
-                description = "Stable Diffusion GUI";
-                widget = {
-                  type = "customapi";
-                  url = "http://127.0.0.1:6188/system_stats";
-                  refreshInterval = 5000;
-                  mappings = [
-                    {
-                      field = "system.ram_free";
-                      label = "Free RAM";
-                      format = "bytes";
-                    }
-                    {
-                      field = "devices.0.vram_free";
-                      label = "VRAM Free";
-                      format = "bytes";
-                    }
-                  ];
-                };
-              };
-            }
-          ] ++ lib.optionals config.custom_modules.jitsi-skynet.enable [
+          ]
+          ++ lib.optionals config.custom_modules.jitsi-skynet.enable [
             {
               "Skynet" = {
                 icon = "mdi-brain";

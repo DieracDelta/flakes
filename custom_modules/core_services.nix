@@ -25,41 +25,6 @@ let
       group = config.users.users.jrestivo.group;
     };
   };
-  caddyDistFixed = pkgs.fetchFromGitHub {
-    owner = "caddyserver";
-    repo = "dist";
-    tag = "v${pkgs.caddy.version}";
-    hash = "sha256-Hr6wjpArY3jUdEuV82If63wUv8kMR0xkAA0AgC5skEg=";
-  };
-  caddyWithPluginsFixed =
-    let
-      caddyFixed = pkgs.caddy.overrideAttrs (_finalAttrs: _prevAttrs: {
-        postInstall =
-          ''
-            install -Dm644 ${caddyDistFixed}/init/caddy.service ${caddyDistFixed}/init/caddy-api.service -t $out/lib/systemd/system
-
-            substituteInPlace $out/lib/systemd/system/caddy.service \
-              --replace-fail "/usr/bin/caddy" "$out/bin/caddy"
-            substituteInPlace $out/lib/systemd/system/caddy-api.service \
-              --replace-fail "/usr/bin/caddy" "$out/bin/caddy"
-          ''
-          + lib.optionalString (pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform) ''
-            # Generating man pages and completions fail on cross-compilation
-            # https://github.com/NixOS/nixpkgs/issues/308283
-
-            $out/bin/caddy manpage --directory manpages
-            installManPage manpages/*
-
-            installShellCompletion --cmd caddy \
-              --bash <($out/bin/caddy completion bash) \
-              --fish <($out/bin/caddy completion fish) \
-              --zsh <($out/bin/caddy completion zsh)
-          '';
-      });
-    in
-    pkgs.callPackage (pkgs.path + "/pkgs/by-name/ca/caddy/plugins.nix") {
-      caddy = caddyFixed;
-    };
   cfg = config.custom_modules.core_services;
 in
 {
@@ -116,9 +81,9 @@ in
     services.caddy = {
       enable = true;
 
-      package = caddyWithPluginsFixed {
+      package = pkgs.caddy.withPlugins {
         plugins = [ "github.com/mholt/caddy-ratelimit@v0.1.0" ];
-        hash = "sha256-22FY6UxccW48sXrxWhCpYJKDvv9c7NHJ01sQH2H+ZKI=";
+        hash = "sha256-eET4cfn1OGyl8rtq8/dO95eM+hvjLPi9IyyWz6vT5QQ=";
       };
 
       globalConfig = ''
@@ -205,10 +170,6 @@ in
             reverse_proxy 127.0.0.1:8000 {
               header_up X-Forwarded-Prefix /audiomuse
             }
-          }
-
-          handle_path /comfyui* {
-            reverse_proxy 127.0.0.1:6188
           }
 
           handle_path /osm* {
@@ -694,14 +655,12 @@ in
         "https://cachix.cachix.org"
         # "https://jrestivo.cachix.org"
         "http://nix-community.cachix.org/"
-        "https://comfyui.cachix.org"
       ];
       settings.trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
         "cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-        "comfyui.cachix.org-1:33mf9VzoIjzVbp0zwj+fT51HG0y31ZTK3nzYZAX0rec="
       ];
       gc = {
         automatic = true;
@@ -812,9 +771,7 @@ in
         value = "-10";
       }
     ];
-    systemd.user.extraConfig = ''
-      DefaultLimitNICE=-10
-    '';
+    systemd.user.settings.Manager.DefaultLimitNICE = -10;
     systemd.services."user@".serviceConfig.LimitNICE = "-10";
     programs.gamescope.enable = true;
 

@@ -1,21 +1,21 @@
 diff --git a/src/backend/common/AbstractComponent.ts b/src/backend/common/AbstractComponent.ts
-index a8df7ec..a54c79f 100644
+index 2dd60da6..ccaedcdb 100644
 --- a/src/backend/common/AbstractComponent.ts
 +++ b/src/backend/common/AbstractComponent.ts
-@@ -81,7 +81,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
+@@ -101,7 +101,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
  
      protected async postInitialize(): Promise<void> {
-         super.postInitialize();
+         await super.postInitialize();
 -        this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
 +        await this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
      }
  
      protected async doBuildDatabase(): Promise<true | string | undefined> {
 diff --git a/src/backend/scrobblers/AbstractScrobbleClient.ts b/src/backend/scrobblers/AbstractScrobbleClient.ts
-index 3fbfc2b..4c6475a 100644
+index bd36ede5..27e52cb7 100644
 --- a/src/backend/scrobblers/AbstractScrobbleClient.ts
 +++ b/src/backend/scrobblers/AbstractScrobbleClient.ts
-@@ -704,7 +704,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+@@ -757,7 +757,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
      }
  
      protected async postInitialize(): Promise<void> {
@@ -24,7 +24,7 @@ index 3fbfc2b..4c6475a 100644
          const {
              options: {
                  refreshInitialCount = this.MAX_INITIAL_SCROBBLES_FETCH
-@@ -799,7 +799,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+@@ -868,7 +868,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
      addScrobbledTrack = async (playObj: PlayObject) => {
          this.emitEvent('scrobble', { play: playObj });
          try {
@@ -36,15 +36,16 @@ index 3fbfc2b..4c6475a 100644
          } catch (e) {
              this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
          }
-@@ -1011,7 +1014,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
-                     }
+@@ -1103,7 +1106,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                      this.emitEvent('queueEmptied', {});
+                     this.setStatus('Waiting for Plays from Sources');
                  }
--                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+-                this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
++
                  await delay(signal, this.scrobbleSleep);
              }
          } catch (e) {
-@@ -1378,7 +1380,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
+@@ -1486,7 +1489,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
              this.deadLetterQueued -= 1;
          }
          if(state === 'scrobbled') {
@@ -57,27 +58,21 @@ index 3fbfc2b..4c6475a 100644
          this.emitEvent('removeDeadLetter', { dead: { id: deadScrobble.uid } });
      }
 diff --git a/src/backend/sources/AbstractSource.ts b/src/backend/sources/AbstractSource.ts
-index 288e5ee..cbe5451 100644
+index 9bcb84d8..d3a0682d 100644
 --- a/src/backend/sources/AbstractSource.ts
 +++ b/src/backend/sources/AbstractSource.ts
-@@ -196,8 +196,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
+@@ -197,8 +197,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                      this.poll({force: false, notify: true}).catch(e => this.logger.error(e));
                  }
                  return true;
 -            } else if(!this.canPoll) {
--                this.componentRepo.updateById(this.dbComponent.id, {lastReadyAt: dayjs()});
+-                this.updateDates({lastReadyAt: dayjs(), force: true});
              }
          }
          return true;
-@@ -356,13 +354,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
-                 options.signal?.throwIfAborted()
-                 const hydratedPlay = await this.addPlayToDiscovered(play);
-                 newDiscoveredPlays.push(hydratedPlay);
--            } else {
--                this.playRepo.updateById(existing.id, {updatedAt: dayjs()});
-             }
-         }
+@@ -406,7 +405,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
          if(newDiscoveredPlays.length > 0) {
+             this.setStatus(`Discovered ${newDiscoveredPlays.length} new Plays${options.discoverLocation !== undefined ? ` from ${options.discoverLocation} ` : ''}`);
              try {
 -                await this.componentRepo.updateById(this.dbComponent.id, {countLive: this.dbComponent.countLive + newDiscoveredPlays.length});
 +                await this.componentRepo.updateById(this.dbComponent.id, {
@@ -87,27 +82,28 @@ index 288e5ee..cbe5451 100644
              } catch (e) {
                  this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
              }
-@@ -704,8 +703,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
-                 this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
+@@ -750,8 +752,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                  this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                  this.setIsSleeping(true);
+                 this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({sleeping: true, wakeAt: this.getWakeAt().toISOString()})
 -                // set last active before we sleep
--                this.componentRepo.updateById(this.dbComponent.id, {lastActiveAt: dayjs(), lastReadyAt: dayjs()});
+-                this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
                  while(dayjs().isBefore(this.getWakeAt())) {
                      // check for polling status every half second and wait till wake up time
                     await delay(signal, 500);
 diff --git a/src/backend/tests/scrobbler/TestScrobbler.ts b/src/backend/tests/scrobbler/TestScrobbler.ts
-index 60eeaea..f00177b 100644
+index 5c1d30b7..469e2915 100644
 --- a/src/backend/tests/scrobbler/TestScrobbler.ts
 +++ b/src/backend/tests/scrobbler/TestScrobbler.ts
-@@ -11,12 +11,14 @@ import { DrizzlePlayRepository, RepositoryCreatePlayOpts } from "../../common/da
- import { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.js";
- import { PlaySelect } from "../../common/database/drizzle/drizzleTypes.js";
- import { loggerDebug } from "@foxxmd/logging";
-+import { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.js";
+@@ -10,6 +10,7 @@ import type { DrizzlePlayRepository} from "../../common/database/drizzle/reposit
+ import type {RepositoryCreatePlayOpts} from "../../common/database/drizzle/repositories/PlayRepository.ts";
+ import type { DrizzleQueueRepository } from "../../common/database/drizzle/repositories/QueueRepository.ts";
+ import type {PlaySelect} from "../../common/database/drizzle/drizzleTypes.ts";
++import type { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.ts";
+ import dayjs from "dayjs";
  
  export class TestScrobbler extends AbstractScrobbleClient {
- 
+@@ -17,6 +18,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
      testRecentScrobbles: PlayObject[] = [];
      getScrobblesForTimeRange: TimeRangeListensFetcher;
  
@@ -115,7 +111,7 @@ index 60eeaea..f00177b 100644
      public playRepoTest: DrizzlePlayRepository;
      public queueRepoTest: DrizzleQueueRepository;
  
-@@ -44,6 +46,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
+@@ -43,6 +45,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
  
      protected async postDatabase(): Promise<void> {
          super.postDatabase();
@@ -123,7 +119,7 @@ index 60eeaea..f00177b 100644
          this.playRepoTest = this.playRepo;
          this.queueRepoTest = this.queueRepo;
      }
-@@ -57,6 +60,11 @@ export class TestScrobbler extends AbstractScrobbleClient {
+@@ -56,6 +59,11 @@ export class TestScrobbler extends AbstractScrobbleClient {
          return await this.playRepoTest.createPlays(newPlayData);
      }
  
@@ -136,10 +132,10 @@ index 60eeaea..f00177b 100644
  
  export class TestAuthScrobbler extends TestScrobbler {
 diff --git a/src/backend/tests/scrobbler/scrobblers.test.ts b/src/backend/tests/scrobbler/scrobblers.test.ts
-index 8c52beb..9c14de3 100644
+index 7560bda9..21090107 100644
 --- a/src/backend/tests/scrobbler/scrobblers.test.ts
 +++ b/src/backend/tests/scrobbler/scrobblers.test.ts
-@@ -511,6 +511,51 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
+@@ -513,6 +513,51 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
      });
  });
  
@@ -192,15 +188,15 @@ index 8c52beb..9c14de3 100644
  
      afterEach(function () {
 diff --git a/src/backend/tests/source/TestSource.ts b/src/backend/tests/source/TestSource.ts
-index e17009a..ab39751 100644
+index a7ed1082..4b3bb762 100644
 --- a/src/backend/tests/source/TestSource.ts
 +++ b/src/backend/tests/source/TestSource.ts
-@@ -2,11 +2,39 @@ import { PlayObject } from "../../../core/Atomic.js";
- import AbstractSource from "../../sources/AbstractSource.js";
- import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.js";
- import MemorySource from "../../sources/MemorySource.js";
-+import { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.js";
-+import { DrizzlePlayRepository } from "../../common/database/drizzle/repositories/PlayRepository.js";
+@@ -2,11 +2,39 @@ import type {PlayObject} from "../../../core/Atomic.ts";
+ import AbstractSource from "../../sources/AbstractSource.ts";
+ import { MemoryPositionalSource } from "../../sources/MemoryPositionalSource.ts";
+ import MemorySource from "../../sources/MemorySource.ts";
++import type { DrizzleComponentRepository } from "../../common/database/drizzle/repositories/ComponentRepository.ts";
++import type { DrizzlePlayRepository } from "../../common/database/drizzle/repositories/PlayRepository.ts";
  
  export class TestSource extends AbstractSource {
 +    public componentRepoTest: DrizzleComponentRepository;
@@ -236,13 +232,13 @@ index e17009a..ab39751 100644
  
  export class TestMemorySource extends MemorySource {
 diff --git a/src/backend/tests/source/source.test.ts b/src/backend/tests/source/source.test.ts
-index 8b04678..c7b9095 100644
+index 800fe161..cb8a3814 100644
 --- a/src/backend/tests/source/source.test.ts
 +++ b/src/backend/tests/source/source.test.ts
-@@ -20,6 +20,8 @@ import { sleep } from "../../utils.js";
- import DeezerInternalSource from "../../sources/DeezerInternalSource.js";
- import { DeezerInternalSourceOptions } from "../../common/infrastructure/config/source/deezer.js";
- import { artistCreditsToNames } from "../../../core/StringUtils.js";
+@@ -20,6 +20,8 @@ import { sleep } from "../../utils.ts";
+ import DeezerInternalSource from "../../sources/DeezerInternalSource.ts";
+ import type {DeezerInternalSourceOptions} from "../../common/infrastructure/config/source/deezer.ts";
+ import { artistCreditsToNames } from "../../../core/StringUtils.ts";
 +import { spy } from "sinon";
 +import { isAbortError } from "abort-controller-x";
  

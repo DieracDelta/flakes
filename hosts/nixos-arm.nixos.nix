@@ -62,7 +62,6 @@
   environment.systemPackages = with pkgs; [
     gh
     bat
-    claude-code
     gemini-cli
     vim
     git

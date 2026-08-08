@@ -50,7 +50,6 @@
     nix-top
     strace-macos
     entr
-    claude-code
     fish
     syncthing # colmena
     zellij # colima

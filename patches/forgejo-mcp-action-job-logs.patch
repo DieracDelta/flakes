@@ -1,17 +1,17 @@
 diff --git a/operation/actions/actions.go b/operation/actions/actions.go
-index 8330d1c..009e86e 100644
+index 5d3afac..3fdc467 100644
 --- a/operation/actions/actions.go
 +++ b/operation/actions/actions.go
 @@ -6,11 +6,11 @@ import (
  	"errors"
  	"fmt"
  
--	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
++	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
  	"codeberg.org/goern/forgejo-mcp/v2/operation/params"
  	"codeberg.org/goern/forgejo-mcp/v2/pkg/forgejo"
  	"codeberg.org/goern/forgejo-mcp/v2/pkg/log"
  	"codeberg.org/goern/forgejo-mcp/v2/pkg/to"
-+	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
+-	forgejo_sdk "codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v3"
  
  	"github.com/mark3labs/mcp-go/mcp"
  	"github.com/mark3labs/mcp-go/server"

@@ -102,15 +102,17 @@ let
   '';
   leanMcpBin = "/home/jrestivo/dev/lean-lsp-mcp/.venv/bin/lean-lsp-mcp";
   leanMcpPort = 8212;
-  leanMcpPath = lib.makeBinPath [
-    pkgs.bash
-    pkgs.coreutils
-    pkgs.curl
-    pkgs.git
-    pkgs.gnumake
-    pkgs.nix
-    pkgs.which
-  ] + ":/home/jrestivo/.elan/bin:/home/jrestivo/.local/bin:/run/current-system/sw/bin";
+  leanMcpPath =
+    lib.makeBinPath [
+      pkgs.bash
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.git
+      pkgs.gnumake
+      pkgs.nix
+      pkgs.which
+    ]
+    + ":/home/jrestivo/.elan/bin:/home/jrestivo/.local/bin:/run/current-system/sw/bin";
 in
 {
 
@@ -186,9 +188,11 @@ in
   custom_modules.ironmain_ci_slots.enable = true;
   custom_modules.monitoring.enableUps = true;
   custom_modules.monitoring.enableGpu = true;
-  custom_modules.comfyui.enable = false;
   custom_modules.actual.enable = true;
-  custom_modules.jitsi-skynet.enable = true;
+  custom_modules.jitsi-skynet = {
+    enable = true;
+    enableStreamingWhisper = false;
+  };
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
@@ -234,10 +238,10 @@ in
   # Discard core dump payloads instead of writing them to persistent storage.
   # Keeping the handler enabled avoids falling back to `core` files in each
   # crashing process's working directory.
-  systemd.coredump.extraConfig = ''
-    Storage=none
-    ProcessSizeMax=0
-  '';
+  systemd.coredump.settings.Coredump = {
+    Storage = "none";
+    ProcessSizeMax = 0;
+  };
 
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;
@@ -695,7 +699,6 @@ in
   environment.systemPackages = with pkgs; [
     linear-cli
     agent-deck
-    codex
     pi-coding-agent
     # pi-subagents
     pi-background-tasks

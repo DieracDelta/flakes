@@ -10,10 +10,17 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     home-manager.url = "github:nix-community/home-manager/master";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     my-nvim.url = "github:DieracDelta/vimconfig";
+    # Its original nested pin predates fetchCargoVendor's crates.io
+    # data-policy User-Agent and deterministically receives HTTP 403. Pin the
+    # first compatible post-fix nixpkgs staging commit: current master cannot
+    # be followed yet because its new neovim `wasmSupport` override API is not
+    # supported by my-nvim's pinned neovim-nightly-overlay.
+    my-nvim.inputs.nixpkgs.url = "github:NixOS/nixpkgs/2a0e0baec1c99cdc087c14f83ac6c31c929d14eb";
 
-    nix.url = "github:NixOS/nix/2.34.6";
+    nix.url = "github:NixOS/nix/2.35.1";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
@@ -26,55 +33,42 @@
 
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
-    comfyui-nix.url = "github:utensils/comfyui-nix";
-
-    # wger workout/nutrition tracker (local development)
-    wger.url = "path:/home/jrestivo/dev/wger";
+    # wger workout/nutrition tracker (pinned upstream; dirty local checkouts are preserved separately)
+    wger.url = "github:wger-project/wger/e1d70bcc38cd56ae4a254dca1713c404d069f319";
     wger.flake = false;
-    wger-react.url = "path:/home/jrestivo/dev/wger-react";
+    wger-react.url = "github:wger-project/react/28f70598160ccfb76c88c04f9bfe2d08ecd482fd";
     wger-react.flake = false;
-    wger-flutter.url = "path:/home/jrestivo/dev/wger-flutter";
+    wger-flutter.url = "github:wger-project/flutter/2.0.3";
     wger-flutter.flake = false;
 
-    # CalDAV calendar web frontend
-    caldav-calendar-web.url = "path:/home/jrestivo/dev/webdav_calendar_view";
+    # CalDAV calendar web frontend; pin the clean upstream commit rather than
+    # consuming the local checkout (which contains an untracked result link).
+    caldav-calendar-web.url = "github:DieracDelta/webdav-cal-simple/fc56170b2a71e1bd7ccf774c3f9b8b81717621de";
 
-    # Rotki portfolio tracker (local premium, no cloud)
-    rotki.url = "path:/home/jrestivo/dev/rotki";
+    # Rotki portfolio tracker: v1.43.2 local-premium/Cardano/NEAR port in an
+    # isolated clean upgrade tree. The original dirty checkout remains intact.
+    rotki.url = "path:/home/jrestivo/dev/rotki-1.43.2-upgrade";
 
-    # Plane MCP server local development overlay
-    plane-mcp-server-src.url = "path:/home/jrestivo/dev/plane-mcp-server";
+    # Plane MCP server (pinned release; the dirty local development checkout is preserved separately)
+    plane-mcp-server-src.url = "github:makeplane/plane-mcp-server/96cf4d51d65cfa5e47d10ff7a4a4caba3b7a98d1";
     plane-mcp-server-src.flake = false;
 
     # Repowise codebase intelligence MCP server
-    repowise-src.url = "github:repowise-dev/repowise/v0.24.0";
+    repowise-src.url = "github:repowise-dev/repowise/v0.39.0";
     repowise-src.flake = false;
 
     # Octo-Fiesta Subsonic proxy for WRhythm/Navidrome testing
-    octo-fiesta-src.url = "path:/home/jrestivo/dev/octo-fiesta";
+    octo-fiesta-src.url = "github:V1ck3s/octo-fiesta/v0.10";
     octo-fiesta-src.flake = false;
 
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
-
-    # Tirith terminal security (local command analysis before execution)
-    tirith.url = "github:sheeki03/tirith";
-    tirith.flake = false;
-
-    # Entire CLI
-    entire-cli.url = "github:DieracDelta/cli";
 
     # PSI coding agent
     psi-coding-agent.url = "git+ssh://forgejo@office-desktop.tail5ca7.ts.net/jrestivo/psi-coding-agent.git?ref=feature/aggregate-prs-63-55-51-33";
 
     # eBPF per-process bandwidth shaping daemon
     shapebpf.url = "github:DieracDelta/shapeBPF";
-
-    # Claude Code and Codex
-    claude-code-nix.url = "github:sadjow/claude-code-nix";
-    # Local Claude Code overlay for faster testing/rollout than the pinned GitHub input
-    claude-code-nix-local.url = "path:/home/jrestivo/dev/claude-code-nix";
-    codex-nix.url = "github:sadjow/codex-nix";
 
     # Declarative Postfix/Dovecot/Rspamd mail stack.
     simple-nixos-mailserver.url = "gitlab:simple-nixos-mailserver/nixos-mailserver/nixos-26.05";
@@ -95,6 +89,7 @@
         src = nixpkgs-unpatched;
         patches = [
           ./PATCH_SUNSHINE
+          ./patches/nixpkgs-replace-stdenv-cross-overlays.patch
           (tmp_pkgs.fetchpatch {
             url = "https://github.com/DieracDelta/nixpkgs/commit/a1d2240eebf50667a42b18c577c6a6f221e23e83.patch";
             hash = "sha256-mnBr3SXqfU4LekbX8v0Pqg2RsUHVijKbokPkUbArW2k=";

@@ -10,13 +10,13 @@ let
 
   plane-sdk = python.pkgs.buildPythonPackage rec {
     pname = "plane-sdk";
-    version = "0.2.8";
+    version = "0.2.20";
     pyproject = true;
 
     src = python.pkgs.fetchPypi {
       pname = "plane_sdk";
       inherit version;
-      hash = "sha256-qMSKvwV6yiSPtpE/5ucmPbMsFrXqwyjS2LnZvio+ots=";
+      hash = "sha256-1FWeACgb4gDjhr0yLlPbqv2fGWi9Uou1VfbtohFVGLQ=";
     };
 
     build-system = [ python.pkgs.setuptools ];
@@ -33,7 +33,7 @@ let
 in
 python.pkgs.buildPythonApplication rec {
   pname = "plane-mcp-server";
-  version = "0.2.9-local";
+  version = "0.2.11";
   pyproject = true;
 
   src = plane-mcp-server-src;
@@ -45,9 +45,12 @@ python.pkgs.buildPythonApplication rec {
     plane-sdk
     mcp
     py-key-value-aio
+    redis
     pyjwt
     authlib
+    boto3
     fakeredis
+    lupa
   ];
 
   # Relax exact version pins (e.g. fastmcp==2.14.4 vs nixpkgs' 2.14.5)

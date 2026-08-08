@@ -1,115 +1,98 @@
 diff --git a/music-server-backend/main.go b/music-server-backend/main.go
-index 3d4c695..29d3ec7 100644
+index bb9b339..743c5b3 100644
 --- a/music-server-backend/main.go
 +++ b/music-server-backend/main.go
-@@ -141,11 +141,12 @@ func main() {
- 	{
- 		// Core endpoints - register both with and without .view suffix
- 		subsonicCompatibilityHandler(subsonic, "GET", "/getLicense", subsonicGetLicense)
--		subsonicCompatibilityHandler(subsonic, "GET", "/stream", subsonicStream)
--		subsonicCompatibilityHandler(subsonic, "GET", "/waveform", subsonicGetWaveform)    // NEW: Fast waveform data
--		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
--		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
--		subsonicCompatibilityHandler(subsonic, "GET", "/scrobble", subsonicScrobble)
-+		subsonicCompatibilityHandler(subsonic, "GET", "/stream", subsonicStream)
-+		subsonicCompatibilityHandler(subsonic, "GET", "/waveform", subsonicGetWaveform)    // NEW: Fast waveform data
-+		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
-+		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
-+		subsonicCompatibilityHandler(subsonic, "GET", "/scrobble", subsonicScrobble)
+@@ -166,6 +166,7 @@ func main() {
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
+ 		subsonicCompatibilityHandler(subsonic, "GET", "/scrobble", subsonicScrobble)
 +		subsonicCompatibilityHandler(subsonic, "GET", "/getNowPlaying", subsonicGetNowPlaying)
  
  		// Browsing endpoints
  		subsonicCompatibilityHandler(subsonic, "GET", "/getMusicFolders", subsonicGetMusicFolders)
 diff --git a/music-server-backend/models.go b/music-server-backend/models.go
-index 8a640fc..d3b11db 100644
+index 99ec6ee..e262aff 100644
 --- a/music-server-backend/models.go
 +++ b/music-server-backend/models.go
-@@ -184,16 +184,36 @@ type SubsonicPlaylist struct {
- 	Duration  int      `xml:"duration,attr" json:"duration"`
+@@ -305,6 +305,26 @@ type SubsonicScanStatus struct {
+ 	Count    int64    `xml:"count,attr" json:"count"`
  }
  
--type SubsonicScanStatus struct {
--	XMLName  xml.Name `xml:"scanStatus" json:"-"`
--	Scanning bool     `xml:"scanning,attr" json:"scanning"`
--	Count    int64    `xml:"count,attr" json:"count"`
--}
--
--type SubsonicUsers struct {
--	XMLName xml.Name       `xml:"users" json:"-"`
--	Users   []SubsonicUser `xml:"user" json:"user"`
--}
-+type SubsonicScanStatus struct {
-+	XMLName  xml.Name `xml:"scanStatus" json:"-"`
-+	Scanning bool     `xml:"scanning,attr" json:"scanning"`
-+	Count    int64    `xml:"count,attr" json:"count"`
-+}
-+
 +type SubsonicNowPlaying struct {
-+	XMLName xml.Name                   `xml:"nowPlaying" json:"-"`
++	XMLName xml.Name                  `xml:"nowPlaying" json:"-"`
 +	Entries []SubsonicNowPlayingEntry `xml:"entry" json:"entry"`
 +}
 +
 +type SubsonicNowPlayingEntry struct {
-+	XMLName   xml.Name `xml:"entry" json:"-"`
-+	ID        string   `xml:"id,attr" json:"id"`
-+	CoverArt  string   `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
-+	Title     string   `xml:"title,attr" json:"title"`
-+	Artist    string   `xml:"artist,attr" json:"artist"`
-+	Album     string   `xml:"album,attr" json:"album"`
-+	Duration  int      `xml:"duration,attr,omitempty" json:"duration,omitempty"`
-+	PlayCount int      `xml:"playCount,attr,omitempty" json:"playCount,omitempty"`
++	XMLName    xml.Name `xml:"entry" json:"-"`
++	ID         string   `xml:"id,attr" json:"id"`
++	CoverArt   string   `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
++	Title      string   `xml:"title,attr" json:"title"`
++	Artist     string   `xml:"artist,attr" json:"artist"`
++	Album      string   `xml:"album,attr" json:"album"`
++	Duration   int      `xml:"duration,attr,omitempty" json:"duration,omitempty"`
++	PlayCount  int      `xml:"playCount,attr,omitempty" json:"playCount,omitempty"`
 +	LastPlayed string   `xml:"lastPlayed,attr,omitempty" json:"lastPlayed,omitempty"`
-+	MinutesAgo int     `xml:"minutesAgo,attr" json:"minutesAgo"`
-+	PlayerID  string   `xml:"playerId,attr" json:"playerId"`
-+	Username  string   `xml:"username,attr" json:"username"`
++	MinutesAgo int      `xml:"minutesAgo,attr" json:"minutesAgo"`
++	PlayerID   string   `xml:"playerId,attr" json:"playerId"`
++	Username   string   `xml:"username,attr" json:"username"`
 +}
 +
-+type SubsonicUsers struct {
-+	XMLName xml.Name       `xml:"users" json:"-"`
-+	Users   []SubsonicUser `xml:"user" json:"user"`
-+}
+ type SubsonicUsers struct {
+ 	XMLName xml.Name       `xml:"users" json:"-"`
+ 	Users   []SubsonicUser `xml:"user" json:"user"`
+diff --git a/music-server-backend/subsonic_extra_handlers.go b/music-server-backend/subsonic_extra_handlers.go
+index 8e300ce..1aeaa60 100644
+--- a/music-server-backend/subsonic_extra_handlers.go
++++ b/music-server-backend/subsonic_extra_handlers.go
+@@ -62,31 +62,6 @@ func subsonicGetArtistInfo2(c *gin.Context) {
+ 	subsonicRespond(c, newSubsonicResponse(&SubsonicArtistInfo2{SubsonicArtistInfoBase: base}))
+ }
  
- type SubsonicUser struct {
- 	XMLName      xml.Name `xml:"user" json:"-"`
+-// --- getNowPlaying ----------------------------------------------------------
+-
+-// SubsonicNowPlaying is the getNowPlaying response. This server does not track
+-// live streaming sessions, so the entry list is empty (spec-valid).
+-type SubsonicNowPlaying struct {
+-	XMLName xml.Name                  `xml:"nowPlaying" json:"-"`
+-	Entries []SubsonicNowPlayingEntry `xml:"entry" json:"entry"`
+-}
+-
+-// SubsonicNowPlayingEntry is a Child plus the now-playing attributes.
+-type SubsonicNowPlayingEntry struct {
+-	XMLName    xml.Name `xml:"entry" json:"-"`
+-	ID         string   `xml:"id,attr" json:"id"`
+-	IsDir      bool     `xml:"isDir,attr" json:"isDir"`
+-	Title      string   `xml:"title,attr" json:"title"`
+-	Username   string   `xml:"username,attr" json:"username"`
+-	MinutesAgo int      `xml:"minutesAgo,attr" json:"minutesAgo"`
+-	PlayerID   int      `xml:"playerId,attr" json:"playerId"`
+-}
+-
+-func subsonicGetNowPlaying(c *gin.Context) {
+-	_ = c.MustGet("user")
+-	subsonicRespond(c, newSubsonicResponse(&SubsonicNowPlaying{Entries: []SubsonicNowPlayingEntry{}}))
+-}
+-
+ // --- getBookmarks -----------------------------------------------------------
+ 
+ // SubsonicBookmarks is the getBookmarks response. Bookmarks are not stored, so
 diff --git a/music-server-backend/subsonic_music_handlers.go b/music-server-backend/subsonic_music_handlers.go
-index bfa87cc..6b66fad 100644
+index 99cbef7..93367a1 100644
 --- a/music-server-backend/subsonic_music_handlers.go
 +++ b/music-server-backend/subsonic_music_handlers.go
-@@ -13,11 +13,12 @@ import (
- 	"os/exec"
- 	"path/filepath"
- 	"regexp"
--	"sort"
--	"strconv"
--	"strings"
--	"time"
--	"unicode"
-+	"sort"
-+	"strconv"
-+	"strings"
+@@ -16,6 +16,7 @@ import (
+ 	"sort"
+ 	"strconv"
+ 	"strings"
 +	"sync"
-+	"time"
-+	"unicode"
+ 	"time"
+ 	"unicode"
  
- 	"github.com/dhowden/tag"
- 	"github.com/disintegration/imaging"
-@@ -27,12 +28,25 @@ import (
- // --- Subsonic Music Handlers ---
+@@ -34,6 +35,19 @@ type AudioInfo struct {
+ 	Duration int // Duration in seconds
+ }
  
- // AudioInfo represents detected audio file information
--type AudioInfo struct {
--	Format   string
--	Bitrate  int
--	Codec    string
--	Duration int // Duration in seconds
--}
-+type AudioInfo struct {
-+	Format   string
-+	Bitrate  int
-+	Codec    string
-+	Duration int // Duration in seconds
-+}
-+
 +type nowPlayingState struct {
 +	SongID    string
 +	UserID    int
@@ -122,50 +105,15 @@ index bfa87cc..6b66fad 100644
 +	nowPlayingMu     sync.Mutex
 +	nowPlayingByUser = map[int]nowPlayingState{}
 +)
- 
++
  // getDuration extracts the duration of an audio file using ffprobe
  func getDuration(filePath string) int {
-@@ -858,34 +872,127 @@ func subsonicGetWaveform(c *gin.Context) {
- 	})
- }
+ 	cmd := exec.Command("ffprobe",
+@@ -931,23 +945,116 @@ func subsonicScrobble(c *gin.Context) {
+ 		return
+ 	}
  
--func subsonicScrobble(c *gin.Context) {
--	user := c.MustGet("user").(User)
--
--	songID := c.Query("id")
--	if songID == "" {
--		subsonicRespond(c, newSubsonicResponse(nil))
--		return
--	}
--
 -	now := time.Now().Format(time.RFC3339)
--
--	err := UpdateSongPlayCount(db, songID, now)
--	if err != nil {
--		log.Printf("Error updating play count for user '%s' on song '%s': %v", user.Username, songID, err)
--	}
--
--	// Track play history for this user
--	err = InsertPlayHistory(db, user.ID, songID, now)
--	if err != nil {
--		log.Printf("Error inserting play history for user '%s' on song '%s': %v", user.Username, songID, err)
--	}
--
--	log.Printf("Scrobbled song '%s' for user '%s'", songID, user.Username)
--	subsonicRespond(c, newSubsonicResponse(nil))
--}
--
--func subsonicGetArtists(c *gin.Context) {
--	_ = c.MustGet("user") // Auth is handled by middleware
-+func subsonicScrobble(c *gin.Context) {
-+	user := c.MustGet("user").(User)
-+
-+	songID := c.Query("id")
-+	if songID == "" {
-+		subsonicRespond(c, newSubsonicResponse(nil))
-+		return
-+	}
-+
 +	playedAt := time.Now()
 +	if timeParam := c.Query("time"); timeParam != "" {
 +		if unixMillis, err := strconv.ParseInt(timeParam, 10, 64); err == nil && unixMillis > 0 {
@@ -176,7 +124,10 @@ index bfa87cc..6b66fad 100644
 +	}
 +	now := playedAt.Format(time.RFC3339)
 +	submission := strings.ToLower(c.DefaultQuery("submission", "true")) != "false"
-+
+ 
+-	err := UpdateSongPlayCount(db, songID, now)
+-	if err != nil {
+-		log.Printf("Error updating play count for user '%s' on song '%s': %v", user.Username, songID, err)
 +	if submission {
 +		err := UpdateSongPlayCount(db, songID, now)
 +		if err != nil {
@@ -188,8 +139,12 @@ index bfa87cc..6b66fad 100644
 +		if err != nil {
 +			log.Printf("Error inserting play history for user '%s' on song '%s': %v", user.Username, songID, err)
 +		}
-+	}
-+
+ 	}
+ 
+-	// Track play history for this user
+-	err = InsertPlayHistory(db, user.ID, songID, now)
+-	if err != nil {
+-		log.Printf("Error inserting play history for user '%s' on song '%s': %v", user.Username, songID, err)
 +	// Keep a lightweight now-playing view for Subsonic clients such as multi-scrobbler.
 +	// Do not let historical imports with old timestamps appear as currently playing.
 +	if time.Since(playedAt) >= 0 && time.Since(playedAt) < 24*time.Hour {
@@ -206,16 +161,17 @@ index bfa87cc..6b66fad 100644
 +			PlayerID:  playerID,
 +		}
 +		nowPlayingMu.Unlock()
-+	}
-+
+ 	}
+ 
+-	log.Printf("Scrobbled song '%s' for user '%s'", songID, user.Username)
 +	if submission {
 +		log.Printf("Scrobbled song '%s' for user '%s' at %s", songID, user.Username, now)
 +	} else {
 +		log.Printf("Updated now playing song '%s' for user '%s'", songID, user.Username)
 +	}
-+	subsonicRespond(c, newSubsonicResponse(nil))
-+}
-+
+ 	subsonicRespond(c, newSubsonicResponse(nil))
+ }
+ 
 +func subsonicGetNowPlaying(c *gin.Context) {
 +	now := time.Now()
 +
@@ -276,8 +232,6 @@ index bfa87cc..6b66fad 100644
 +	subsonicRespond(c, newSubsonicResponse(&SubsonicNowPlaying{Entries: entries}))
 +}
 +
-+func subsonicGetArtists(c *gin.Context) {
-+	_ = c.MustGet("user") // Auth is handled by middleware
+ func subsonicGetArtists(c *gin.Context) {
+ 	_ = c.MustGet("user") // Auth is handled by middleware
  
- 	// List artists (do not use album_artist fallback) and dedupe by artist name
- 	// OPTIMIZED: Single query with album count aggregation (no N+1 queries)

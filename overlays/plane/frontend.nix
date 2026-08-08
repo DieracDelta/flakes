@@ -4,31 +4,34 @@
   fetchFromGitHub,
   nodejs_22,
   pnpm_10,
+  fetchPnpmDeps,
+  pnpmConfigHook,
   makeWrapper,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "plane-frontend";
-  version = "0-unstable-2026-04-28";
+  version = "1.4.0";
 
   src = fetchFromGitHub {
     owner = "makeplane";
     repo = "plane";
-    rev = "a62fe8a781";
-    hash = "sha256-jVr5UUDveUoV6E4t1yaD4EzZPejlOPbEpZAOe3CbtIE=";
+    rev = "v1.4.0";
+    hash = "sha256-HIt5VcEaJQDN5xCsrShySxrol2DUhjLj24YuGRhrM88=";
   };
 
   patches = [ ./web-base-path.patch ];
 
-  pnpmDeps = pnpm_10.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
-    fetcherVersion = 2;
-    hash = "sha256-bFfoHOoSrsIg8QuHlXvixMYwL5DeraIjix35IcqPXfA=";
+    pnpm = pnpm_10;
+    fetcherVersion = 3;
+    hash = "sha256-1xqXeRkCEpwmF6LUO6DBRd1msDgAvQvGikoRYUoiKlw=";
   };
 
   nativeBuildInputs = [
     nodejs_22
-    pnpm_10.configHook
+    pnpmConfigHook
     pnpm_10
     makeWrapper
   ];
@@ -52,93 +55,93 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   buildPhase = ''
-    runHook preBuild
+        runHook preBuild
 
-    # Patch frontend to support presigned PUT uploads (versitygw doesn't support S3 POST)
-    substituteInPlace packages/services/src/file/file-upload.service.ts \
-      --replace-fail \
-        'async uploadFile(url: string, data: FormData): Promise<void> {' \
-        'async uploadFile(url: string, data: FormData | File, ...args: any[]): Promise<void> {'
+        # Patch frontend to support presigned PUT uploads (versitygw doesn't support S3 POST)
+        substituteInPlace packages/services/src/file/file-upload.service.ts \
+          --replace-fail \
+            'async uploadFile(url: string, data: FormData): Promise<void> {' \
+            'async uploadFile(url: string, data: FormData | File, ...args: any[]): Promise<void> {'
 
-    substituteInPlace packages/services/src/file/file-upload.service.ts \
-      --replace-fail \
-        'return this.post(url, data, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      cancelToken: this.cancelSource.token,
-      withCredentials: false,
-    })' \
-        'const isPut = !(data instanceof FormData);
-    return this.request({
-      method: isPut ? "put" : "post",
-      url,
-      data,
-      headers: isPut ? { "Content-Type": (data as any).type || "application/octet-stream" } : { "Content-Type": "multipart/form-data" },
-      cancelToken: this.cancelSource.token,
-      withCredentials: false,
-    })'
+        substituteInPlace packages/services/src/file/file-upload.service.ts \
+          --replace-fail \
+            'return this.post(url, data, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          cancelToken: this.cancelSource.token,
+          withCredentials: false,
+        })' \
+            'const isPut = !(data instanceof FormData);
+        return this.request({
+          method: isPut ? "put" : "post",
+          url,
+          data,
+          headers: isPut ? { "Content-Type": (data as any).type || "application/octet-stream" } : { "Content-Type": "multipart/form-data" },
+          cancelToken: this.cancelSource.token,
+          withCredentials: false,
+        })'
 
-    substituteInPlace packages/services/src/file/helper.ts \
-      --replace-fail \
-        'export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData => {
-  const formData = new FormData();
-  Object.entries(signedURLResponse.upload_data.fields).forEach(([key, value]) => formData.append(key, value));
-  formData.append("file", file);
-  return formData;
-};' \
-        'export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData | File => {
-  const uploadData = signedURLResponse.upload_data;
-  if ((uploadData as any).method === "PUT") {
-    // Use the content_type from the presigned URL so Content-Type matches the signature
-    return new File([file], file.name, { type: (uploadData as any).content_type || file.type });
-  }
-  const formData = new FormData();
-  Object.entries(uploadData.fields).forEach(([key, value]) => formData.append(key, value));
-  formData.append("file", file);
-  return formData;
-};'
+        substituteInPlace packages/services/src/file/helper.ts \
+          --replace-fail \
+            'export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData => {
+      const formData = new FormData();
+      Object.entries(signedURLResponse.upload_data.fields).forEach(([key, value]) => formData.append(key, value));
+      formData.append("file", file);
+      return formData;
+    };' \
+            'export const generateFileUploadPayload = (signedURLResponse: TFileSignedURLResponse, file: File): FormData | File => {
+      const uploadData = signedURLResponse.upload_data;
+      if ((uploadData as any).method === "PUT") {
+        // Use the content_type from the presigned URL so Content-Type matches the signature
+        return new File([file], file.name, { type: (uploadData as any).content_type || file.type });
+      }
+      const formData = new FormData();
+      Object.entries(uploadData.fields).forEach(([key, value]) => formData.append(key, value));
+      formData.append("file", file);
+      return formData;
+    };'
 
-    # Also patch the web app's own FileUploadService (separate copy from @plane/services)
-    substituteInPlace apps/web/core/services/file-upload.service.ts \
-      --replace-fail \
-        'data: FormData,' \
-        'data: FormData | File,'
+        # Also patch the web app's own FileUploadService (separate copy from @plane/services)
+        substituteInPlace apps/web/core/services/file-upload.service.ts \
+          --replace-fail \
+            'data: FormData,' \
+            'data: FormData | File,'
 
-    substituteInPlace apps/web/core/services/file-upload.service.ts \
-      --replace-fail \
-        'return this.post(url, data, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      cancelToken: this.cancelSource.token,
-      withCredentials: false,
-      onUploadProgress: uploadProgressHandler,
-    })' \
-        'const isPut = !(data instanceof FormData);
-    return this.request({
-      method: isPut ? "put" : "post",
-      url,
-      data,
-      headers: isPut ? { "Content-Type": (data as any).type || "application/octet-stream" } : { "Content-Type": "multipart/form-data" },
-      cancelToken: this.cancelSource.token,
-      withCredentials: false,
-      onUploadProgress: uploadProgressHandler,
-    })'
+        substituteInPlace apps/web/core/services/file-upload.service.ts \
+          --replace-fail \
+            'return this.post(url, data, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          cancelToken: this.cancelSource.token,
+          withCredentials: false,
+          onUploadProgress: uploadProgressHandler,
+        })' \
+            'const isPut = !(data instanceof FormData);
+        return this.request({
+          method: isPut ? "put" : "post",
+          url,
+          data,
+          headers: isPut ? { "Content-Type": (data as any).type || "application/octet-stream" } : { "Content-Type": "multipart/form-data" },
+          cancelToken: this.cancelSource.token,
+          withCredentials: false,
+          onUploadProgress: uploadProgressHandler,
+        })'
 
-    # Remove "Star us on GitHub" button
-    substituteInPlace 'apps/web/app/(all)/[workspaceSlug]/(projects)/star-us-link.tsx' \
-      --replace-fail \
-        'return (' \
-        'return null; // removed
-    const _unused = ('
+        # Remove "Star us on GitHub" button
+        substituteInPlace 'apps/web/app/(all)/[workspaceSlug]/(projects)/star-us-link.tsx' \
+          --replace-fail \
+            'return (' \
+            'return null; // removed
+        const _unused = ('
 
-    # Clear turbo cache so patched sources get recompiled
-    rm -rf node_modules/.cache/turbo .turbo
+        # Clear turbo cache so patched sources get recompiled
+        rm -rf node_modules/.cache/turbo .turbo
 
-    pnpm turbo run build --filter=web --filter=admin --filter=space --filter=live --force
+        pnpm turbo run build --filter=web --filter=admin --filter=space --filter=live --force
 
-    runHook postBuild
+        runHook postBuild
   '';
 
   installPhase = ''

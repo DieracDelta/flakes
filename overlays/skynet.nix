@@ -2,39 +2,6 @@ final: prev:
 let
   python = final.python312;
   pythonPackages = final.python312Packages;
-
-  silero-vad = pythonPackages.buildPythonPackage rec {
-    pname = "silero-vad";
-    version = "6.0.0";
-    pyproject = true;
-
-    src = pythonPackages.fetchPypi {
-      pname = "silero_vad";
-      inherit version;
-      hash = "sha256-TSAstmIRLZy6Dj+8nyxn4uJlyFPzGa3yDjSNEIx5e3Y=";
-    };
-
-    build-system = with pythonPackages; [ hatchling ];
-
-    postPatch = ''
-      substituteInPlace src/silero_vad/utils_vad.py \
-        --replace-fail "    list_backends = torchaudio.list_audio_backends()" "    list_backends = [\"torchcodec\"]"
-    '';
-
-    dependencies = with pythonPackages; [
-      onnxruntime
-      torch
-      torchaudio
-    ];
-
-    pythonImportsCheck = [ "silero_vad" ];
-
-    meta = {
-      description = "Pre-trained enterprise-grade voice activity detector";
-      homepage = "https://github.com/snakers4/silero-vad";
-      license = final.lib.licenses.mit;
-    };
-  };
 in
 {
   skynet = pythonPackages.buildPythonApplication rec {
@@ -134,7 +101,6 @@ in
         python-multipart
         pyyaml
         redis
-        silero-vad
         torch
         torchaudio
         transformers

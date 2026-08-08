@@ -54,14 +54,19 @@ let
   };
 
   palette =
-    if pkgs.stdenv.isDarwin then colors.darwin
-    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then colors.arm
-    else colors.default;
+    if pkgs.stdenv.isDarwin then
+      colors.darwin
+    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then
+      colors.arm
+    else
+      colors.default;
 in
 {
   programs.fzf = {
     enable = true;
     enableFishIntegration = true;
+    # Atuin owns Ctrl-R; keep fzf's other Fish bindings without competing for it.
+    historyWidget.command = "";
     colors = {
       fg = palette.fg;
       bg = palette.bg;

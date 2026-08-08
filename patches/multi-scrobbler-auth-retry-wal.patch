@@ -1,8 +1,8 @@
 diff --git a/src/backend/common/AbstractInitializable.ts b/src/backend/common/AbstractInitializable.ts
-index a034130..c9a6414 100644
+index fce0ef75..83c37597 100644
 --- a/src/backend/common/AbstractInitializable.ts
 +++ b/src/backend/common/AbstractInitializable.ts
-@@ -292,13 +292,12 @@ export default abstract class AbstractInitializable {
+@@ -304,13 +304,12 @@ export default abstract class AbstractInitializable {
          }
  
          if(this.authFailure) {
@@ -22,10 +22,10 @@ index a034130..c9a6414 100644
  
          try {
 diff --git a/src/backend/common/database/drizzle/drizzleUtils.ts b/src/backend/common/database/drizzle/drizzleUtils.ts
-index 516e55a..a2bfaf9 100644
+index da9d7275..6f305d63 100644
 --- a/src/backend/common/database/drizzle/drizzleUtils.ts
 +++ b/src/backend/common/database/drizzle/drizzleUtils.ts
-@@ -78,7 +78,15 @@ export const getDb = (dbVal: string, opts: { logger?: Logger, backupPath?: strin
+@@ -77,7 +77,15 @@ export const getDb = (dbVal: string, opts: { logger?: Logger, backupPath?: strin
    const {
      logger = loggerNoop,
    } = opts;
@@ -43,10 +43,10 @@ index 516e55a..a2bfaf9 100644
  
  export type DbConcrete = ReturnType<typeof getDb>;
 diff --git a/src/backend/tests/database/drizzle.test.ts b/src/backend/tests/database/drizzle.test.ts
-index 2df818d..2359272 100644
+index a1ddcaf8..6eea223c 100644
 --- a/src/backend/tests/database/drizzle.test.ts
 +++ b/src/backend/tests/database/drizzle.test.ts
-@@ -26,6 +26,22 @@ import { migrateApp } from '../../common/database/appMigrator.js';
+@@ -24,6 +24,22 @@ import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
  // would be great to push migrations directly from schema but doesn't seem supported in newest beta
  // https://github.com/drizzle-team/drizzle-orm/discussions/4373
  
@@ -70,10 +70,10 @@ index 2df818d..2359272 100644
  
      it('Detects non-existent db', async function () {
 diff --git a/src/backend/tests/scrobbler/scrobblers.test.ts b/src/backend/tests/scrobbler/scrobblers.test.ts
-index 9c14de3..7f71f67 100644
+index 21090107..b7226cf8 100644
 --- a/src/backend/tests/scrobbler/scrobblers.test.ts
 +++ b/src/backend/tests/scrobbler/scrobblers.test.ts
-@@ -96,7 +96,7 @@ describe('Networking', function () {
+@@ -99,7 +99,7 @@ describe('Networking', function () {
                  }
              ));
  
@@ -82,7 +82,7 @@ index 9c14de3..7f71f67 100644
              withRequestInterception(
                  [
                      http.get('http://example.com', () => {
-@@ -115,6 +115,53 @@ describe('Networking', function () {
+@@ -118,6 +118,53 @@ describe('Networking', function () {
                      assert.isTrue(authScrobbler.authFailure);
                  }
              ));
@@ -136,23 +136,3 @@ index 9c14de3..7f71f67 100644
      });
  });
  
-diff --git a/src/backend/utils/ListenFetchUtils.ts b/src/backend/utils/ListenFetchUtils.ts
-index 1ee078a..8577274 100644
---- a/src/backend/utils/ListenFetchUtils.ts
-+++ b/src/backend/utils/ListenFetchUtils.ts
-@@ -33,11 +33,11 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
-                 const reqOptsHint: string[] = [
-                 ];
-                 if(currOpts.to !== undefined && currOpts.from !== undefined) {
--                    reqOptsHint.push(`Between ${todayAwareFormat(dayjs(currOpts.from))} and ${todayAwareFormat(dayjs(currOpts.to))}`);
-+                    reqOptsHint.push(`Between ${todayAwareFormat(dayjs.unix(currOpts.from))} and ${todayAwareFormat(dayjs.unix(currOpts.to))}`);
-                 } else if(currOpts.to) {
--                    reqOptsHint.push(`Until ${todayAwareFormat(dayjs(currOpts.to))}`);
--                } else if(currOpts.to) {
--                    reqOptsHint.push(`From ${todayAwareFormat(dayjs(currOpts.from))}`);
-+                    reqOptsHint.push(`Until ${todayAwareFormat(dayjs.unix(currOpts.to))}`);
-+                } else if(currOpts.from) {
-+                    reqOptsHint.push(`From ${todayAwareFormat(dayjs.unix(currOpts.from))}`);
-                 }
- 
-                 if(currOpts.limit !== undefined) {

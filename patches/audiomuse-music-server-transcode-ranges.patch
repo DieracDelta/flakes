@@ -1,20 +1,8 @@
+diff --git a/music-server-backend/main.go b/music-server-backend/main.go
+index 743c5b3..14b8033 100644
 --- a/music-server-backend/main.go
 +++ b/music-server-backend/main.go
-@@ -12,12 +12,12 @@
- 	"os"
- 	"os/signal"
- 	"path/filepath"
-+	"strconv"
- 	"strings"
- 	"sync"
- 	"sync/atomic"
- 	"syscall"
- 	"time"
--	"strconv"
- 
- 	"github.com/gin-gonic/gin"
- 	_ "github.com/mattn/go-sqlite3"
-@@ -62,6 +62,9 @@
+@@ -62,6 +62,9 @@ func subsonicCompatibilityHandler(router gin.IRouter, method string, path string
  	case "GET":
  		router.GET(path+".view", handler)
  		router.GET(path, handler) // Also register without .view
@@ -24,7 +12,7 @@
  	case "POST":
  		router.POST(path+".view", handler)
  		router.POST(path, handler)
-@@ -156,6 +159,7 @@
+@@ -162,6 +165,7 @@ func main() {
  		// Core endpoints - register both with and without .view suffix
  		subsonicCompatibilityHandler(subsonic, "GET", "/getLicense", subsonicGetLicense)
  		subsonicCompatibilityHandler(subsonic, "GET", "/stream", subsonicStream)
@@ -32,9 +20,11 @@
  		subsonicCompatibilityHandler(subsonic, "GET", "/waveform", subsonicGetWaveform)    // NEW: Fast waveform data
  		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
  		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
+diff --git a/music-server-backend/subsonic_music_handlers.go b/music-server-backend/subsonic_music_handlers.go
+index 0a8c28f..e0482dc 100644
 --- a/music-server-backend/subsonic_music_handlers.go
 +++ b/music-server-backend/subsonic_music_handlers.go
-@@ -3,7 +3,9 @@
+@@ -3,7 +3,9 @@ package main
  
  import (
  	"bytes"
@@ -44,7 +34,7 @@
  	"encoding/json"
  	"fmt"
  	"io"
-@@ -572,28 +574,6 @@
+@@ -653,28 +655,6 @@ func streamWithTranscoding(c *gin.Context, inputPath string, format string, bitr
  	log.Printf("🎵 TRANSCODING REQUEST: format=%s, bitrate=%dkbps, file=%s, songID=%s",
  		format, bitrate, filepath.Base(inputPath), songID)
  
@@ -73,7 +63,7 @@
  	// FFmpeg format mapping
  	ffmpegFormatMap := map[string]string{
  		"mp3":  "mp3",
-@@ -609,65 +589,22 @@
+@@ -690,65 +670,22 @@ func streamWithTranscoding(c *gin.Context, inputPath string, format string, bitr
  		return
  	}
  
@@ -150,7 +140,7 @@
  	}
  
  	// Set headers
-@@ -686,61 +623,73 @@
+@@ -767,61 +704,73 @@ func streamWithTranscoding(c *gin.Context, inputPath string, format string, bitr
  	c.Header("X-Transcode-Format", format)
  	c.Header("X-Transcode-Bitrate", bitrateStr)
  	c.Header("Cache-Control", "no-cache")
@@ -175,8 +165,13 @@
 -		flusher.Flush()
 -		elapsed := time.Since(startTime).Milliseconds()
 -		log.Printf("⚡ Headers flushed at %dms", elapsed)
--	}
--
++	fileInfo, err := file.Stat()
++	if err != nil {
++		log.Printf("❌ Failed to stat transcoded cache %s: %v", cachePath, err)
++		streamDirect(c, inputPath)
++		return
+ 	}
+ 
 -	// Stream transcoded audio
 -	buf := make([]byte, 4096)
 -	bytesWritten := int64(0)
@@ -188,22 +183,11 @@
 -			written, writeErr := c.Writer.Write(buf[:n])
 -			bytesWritten += int64(written)
 -			chunkCount++
-+	fileInfo, err := file.Stat()
-+	if err != nil {
-+		log.Printf("❌ Failed to stat transcoded cache %s: %v", cachePath, err)
-+		streamDirect(c, inputPath)
-+		return
-+	}
- 
--			if flusher, ok := c.Writer.(http.Flusher); ok {
--				flusher.Flush()
--			}
 +	http.ServeContent(c.Writer, c.Request, fileInfo.Name(), fileInfo.ModTime(), file)
 +}
  
--			if chunkCount == 1 {
--				elapsed := time.Since(startTime).Milliseconds()
--				log.Printf("🚀 FIRST CHUNK SENT at %dms (%d bytes)", elapsed, written)
+-			if flusher, ok := c.Writer.(http.Flusher); ok {
+-				flusher.Flush()
 -			}
 +func transcodeCachePath(inputPath string, format string, bitrate int) (string, error) {
 +	info, err := os.Stat(inputPath)
@@ -219,6 +203,15 @@
 +	return filepath.Join(dir, hex.EncodeToString(sum[:])+"."+format), nil
 +}
  
+-			if chunkCount == 1 {
+-				elapsed := time.Since(startTime).Milliseconds()
+-				log.Printf("🚀 FIRST CHUNK SENT at %dms (%d bytes)", elapsed, written)
+-			}
++func usableCachedTranscode(path string) bool {
++	info, err := os.Stat(path)
++	return err == nil && info.Size() > 0
++}
+ 
 -			if writeErr != nil {
 -				log.Printf("⚠️  Client disconnected: %v", writeErr)
 -				cmd.Process.Kill()
@@ -232,11 +225,6 @@
 -			log.Printf("❌ Read error: %v", err)
 -			break
 -		}
-+func usableCachedTranscode(path string) bool {
-+	info, err := os.Stat(path)
-+	return err == nil && info.Size() > 0
-+}
-+
 +func transcodeToCache(inputPath string, cachePath string, format string, bitrate int, ffmpegFormat string) error {
 +	profileArgs := getTranscodingProfile(format, bitrate)
 +	dir := filepath.Dir(cachePath)

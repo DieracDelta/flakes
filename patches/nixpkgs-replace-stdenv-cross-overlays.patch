@@ -1,0 +1,20 @@
+diff --git a/pkgs/stdenv/custom/default.nix b/pkgs/stdenv/custom/default.nix
+index a61a19ee0ab0..ddf134e30fe4 100644
+--- a/pkgs/stdenv/custom/default.nix
++++ b/pkgs/stdenv/custom/default.nix
+@@ -4,6 +4,7 @@
+   crossSystem,
+   config,
+   overlays,
++  crossOverlays ? [ ],
+ }:
+ 
+ assert crossSystem == localSystem;
+@@ -15,6 +16,7 @@ let
+       localSystem
+       crossSystem
+       overlays
++      crossOverlays
+       ;
+     # Remove config.replaceStdenv to ensure termination.
+     config = removeAttrs config [ "replaceStdenv" ];

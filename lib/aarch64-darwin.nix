@@ -21,7 +21,6 @@ let
     (import ../overlays/tmux-search-panes.nix { })
     (import ../overlays/tmux-gruvbox-themes.nix)
     (import ../overlays/tmux-resurrect-continuum.nix)
-    (import ../overlays/tirith.nix { tirith-src = inputs.tirith; })
   ];
 
   pkgImport =
@@ -57,5 +56,10 @@ let
     };
 in
 {
-  inherit pkgImport pkgs buildDarwinConfiguration system;
+  inherit
+    pkgImport
+    pkgs
+    buildDarwinConfiguration
+    system
+    ;
 }

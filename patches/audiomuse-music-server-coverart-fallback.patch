@@ -1,88 +1,8 @@
---- a/music-server-backend/subsonic_song_metadata.go
-+++ b/music-server-backend/subsonic_song_metadata.go
-@@ -1,12 +1,18 @@
- package main
- 
- import (
-+	"database/sql"
- 	"os"
- 	"path/filepath"
- 	"strings"
- )
- 
- func subsonicSongFromResult(result SongResult) SubsonicSong {
-+	coverArtID := result.ID
-+	if albumCoverArtID, ok := resolveAlbumCoverArtIDForSong(result.ID); ok {
-+		coverArtID = albumCoverArtID
-+	}
-+
- 	s := SubsonicSong{
- 		ID:         result.ID,
- 		Title:      result.Title,
-@@ -16,7 +22,7 @@
- 		Genre:      result.Genre,
- 		Duration:   result.Duration,
- 		PlayCount:  result.PlayCount,
--		CoverArt:   result.ID,
-+		CoverArt:   coverArtID,
- 		Starred:    result.Starred,
- 		LastPlayed: result.LastPlayed,
- 	}
-@@ -24,12 +30,51 @@
- 	return s
- }
- 
-+func resolveAlbumCoverArtIDForSong(songID string) (string, bool) {
-+	if strings.TrimSpace(songID) == "" {
-+		return "", false
-+	}
-+
-+	var coverArtID string
-+	err := db.QueryRow(`
-+		SELECT a.id
-+		FROM songs s
-+		JOIN albums a
-+		  ON a.name = COALESCE(s.album, '')
-+		 AND a.album_path = COALESCE(s.album_path, '')
-+		WHERE s.id = ?
-+		  AND s.cancelled = 0
-+		  AND a.id != ''
-+		LIMIT 1`, songID).Scan(&coverArtID)
-+	if err == nil && strings.TrimSpace(coverArtID) != "" {
-+		return coverArtID, true
-+	}
-+	if err != nil && err != sql.ErrNoRows {
-+		return "", false
-+	}
-+
-+	err = db.QueryRow(`
-+		SELECT a.id
-+		FROM songs s
-+		JOIN albums a
-+		  ON a.name = COALESCE(s.album, '')
-+		WHERE s.id = ?
-+		  AND s.cancelled = 0
-+		  AND a.id != ''
-+		ORDER BY CASE WHEN a.album_path = COALESCE(s.album_path, '') THEN 0 ELSE 1 END
-+		LIMIT 1`, songID).Scan(&coverArtID)
-+	return coverArtID, err == nil && strings.TrimSpace(coverArtID) != ""
-+}
-+
- func enrichSubsonicSong(song *SubsonicSong, path string) {
- 	if path == "" {
- 		return
- 	}
- 
- 	song.Path = path
-+	if coverArtID, ok := resolveAlbumCoverArtIDForSong(song.ID); ok {
-+		song.CoverArt = coverArtID
-+	}
- 
- 	suffix := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
- 	if suffix != "" {
+diff --git a/music-server-backend/subsonic_music_handlers.go b/music-server-backend/subsonic_music_handlers.go
+index e0482dc..f81fc1e 100644
 --- a/music-server-backend/subsonic_music_handlers.go
 +++ b/music-server-backend/subsonic_music_handlers.go
-@@ -1373,17 +1373,30 @@
+@@ -1572,17 +1572,30 @@ func subsonicGetCoverArt(c *gin.Context) {
  }
  
  func handleAlbumArt(c *gin.Context, songID string, size int) {
@@ -117,7 +37,7 @@
  	}
  	defer file.Close()
  
-@@ -1394,7 +1407,7 @@
+@@ -1593,7 +1606,7 @@ func handleAlbumArt(c *gin.Context, songID string, size int) {
  		pic := meta.Picture()
  		log.Printf("[COVER ART] Found embedded picture in %s", path)
  		resizeAndServeImage(c, bytes.NewReader(pic.Data), pic.MIMEType, size)
@@ -126,7 +46,7 @@
  	}
  
  	albumDir := filepath.Dir(path)
-@@ -1404,12 +1417,18 @@
+@@ -1603,12 +1616,18 @@ func handleAlbumArt(c *gin.Context, songID string, size int) {
  		if err == nil {
  			defer localFile.Close()
  			resizeAndServeImage(c, localFile, http.DetectContentType(nil), size)
@@ -148,3 +68,89 @@
  }
  
  func handleArtistArt(c *gin.Context, artistName string, size int) {
+diff --git a/music-server-backend/subsonic_song_builder.go b/music-server-backend/subsonic_song_builder.go
+index 01196ad..920924a 100644
+--- a/music-server-backend/subsonic_song_builder.go
++++ b/music-server-backend/subsonic_song_builder.go
+@@ -73,6 +73,45 @@ func audioContentType(suffix string) string {
+ 	return "application/octet-stream"
+ }
+ 
++// resolveAlbumCoverArtIDForSong returns the representative song ID used as
++// the album cover-art ID. The path-aware lookup avoids conflating distinct
++// albums that happen to share a title.
++func resolveAlbumCoverArtIDForSong(songID string) (string, bool) {
++	if strings.TrimSpace(songID) == "" || db == nil {
++		return "", false
++	}
++
++	var coverArtID string
++	err := db.QueryRow(`
++		SELECT a.id
++		FROM songs s
++		JOIN albums a
++		  ON a.name = COALESCE(s.album, '')
++		 AND a.album_path = COALESCE(s.album_path, '')
++		WHERE s.id = ?
++		  AND s.cancelled = 0
++		  AND a.id != ''
++		LIMIT 1`, songID).Scan(&coverArtID)
++	if err == nil && strings.TrimSpace(coverArtID) != "" {
++		return coverArtID, true
++	}
++	if err != nil && err != sql.ErrNoRows {
++		return "", false
++	}
++
++	// Older databases may not yet have a matching path-aware derived row.
++	err = db.QueryRow(`
++		SELECT a.id
++		FROM songs s
++		JOIN albums a ON a.name = COALESCE(s.album, '')
++		WHERE s.id = ?
++		  AND s.cancelled = 0
++		  AND a.id != ''
++		ORDER BY CASE WHEN a.album_path = COALESCE(s.album_path, '') THEN 0 ELSE 1 END
++		LIMIT 1`, songID).Scan(&coverArtID)
++	return coverArtID, err == nil && strings.TrimSpace(coverArtID) != ""
++}
++
+ // buildReplayGain assembles the OpenSubsonic ReplayGain object from a SongResult.
+ // Returns nil when no replay gain data is present so the field is omitted.
+ func buildReplayGain(r SongResult) *SubsonicReplayGain {
+@@ -124,10 +163,19 @@ func directoryChildFromSong(s SubsonicSong) SubsonicDirectoryChild {
+ // album/artist ids) is filled in centrally so all endpoints emit identical,
+ // compliant song objects. Fields with no underlying data are omitted.
+ func buildSubsonicSong(r SongResult) SubsonicSong {
++	coverArtID := r.AlbumID
++	if coverArtID == "" {
++		if resolvedID, ok := resolveAlbumCoverArtIDForSong(r.ID); ok {
++			coverArtID = resolvedID
++		} else {
++			coverArtID = r.ID
++		}
++	}
++
+ 	s := SubsonicSong{
+ 		ID:           r.ID,
+ 		IsDir:        false,
+-		CoverArt:     r.ID,
++		CoverArt:     coverArtID,
+ 		Title:        r.Title,
+ 		Artist:       r.Artist,
+ 		Album:        r.Album,
+diff --git a/music-server-backend/subsonic_song_builder_test.go b/music-server-backend/subsonic_song_builder_test.go
+index eb48710..ce1ad8c 100644
+--- a/music-server-backend/subsonic_song_builder_test.go
++++ b/music-server-backend/subsonic_song_builder_test.go
+@@ -48,8 +48,8 @@ func TestBuildSubsonicSong_PopulatesSpecFields(t *testing.T) {
+ 	if s.Created != r.Created {
+ 		t.Errorf("created = %q, want %q", s.Created, r.Created)
+ 	}
+-	if s.CoverArt != "song1" {
+-		t.Errorf("coverArt = %q, want song1", s.CoverArt)
++	if s.CoverArt != "albumRep" {
++		t.Errorf("coverArt = %q, want albumRep", s.CoverArt)
+ 	}
+ 	if s.ArtistID != GenerateArtistID("The Artist") {
+ 		t.Errorf("artistId mismatch")

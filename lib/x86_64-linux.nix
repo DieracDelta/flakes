@@ -10,7 +10,6 @@
   overlays,
   home-manager,
   quadlet-nix,
-  comfyui-nix,
 }:
 let
   system = "x86_64-linux";
@@ -57,9 +56,8 @@ let
                   let
                     defaultMkDerivationFromStdenv =
                       stdenv:
-                      (import (pkgs.path + "/pkgs/stdenv/generic/make-derivation.nix") {
-                        inherit (pkgs) lib config;
-                      } stdenv).mkDerivation;
+                      (import (pkgs.path + "/pkgs/stdenv/generic/make-derivation.nix") pkgs.lib pkgs.config stdenv)
+                      .mkDerivation;
                     mkDerivationSuper = (old.mkDerivationFromStdenv or defaultMkDerivationFromStdenv) stdenvSelf;
                   in
                   args:
@@ -138,7 +136,6 @@ let
       };
     }
     quadlet-nix.nixosModules.quadlet
-    comfyui-nix.nixosModules.default
     inputs.bpftop.nixosModules.default
     # inputs.nix-btm.nixosModules.default
     inputs.shapebpf.nixosModules.default

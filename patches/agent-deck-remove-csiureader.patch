@@ -1,11 +1,12 @@
 diff --git a/cmd/agent-deck/main.go b/cmd/agent-deck/main.go
+index 82c9a1b2..f1b00c45 100644
 --- a/cmd/agent-deck/main.go
 +++ b/cmd/agent-deck/main.go
-@@ -610,7 +610,6 @@
- 	p := tea.NewProgram(
+@@ -932,7 +932,6 @@ func main() {
  		homeModel,
  		tea.WithAltScreen(),
  		tea.WithMouseCellMotion(),
 -		tea.WithInput(ui.NewCSIuReader(os.Stdin)),
  	)
  
+ 	// Start maintenance worker (background goroutine, respects config toggle)

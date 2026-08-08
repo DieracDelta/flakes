@@ -1,0 +1,2628 @@
+diff --git a/public/locales/en/translation.json b/public/locales/en/translation.json
+index 83bd027c..54b62091 100644
+--- a/public/locales/en/translation.json
++++ b/public/locales/en/translation.json
+@@ -172,17 +172,67 @@
+     "fat": "Fat",
+     "ofWhichSaturated": "of which saturated",
+     "saturatedFat": "Saturated fat",
++    "unsaturatedFat": "Unsaturated fat",
++    "transFat": "Trans fat",
+     "pseudoMealTitle": "Other logs",
+     "others": "Others",
+-    "fibres": "Fibres",
++    "fiber": "Fiber",
++    "fiberSoluble": "Soluble fiber",
++    "fiberInsoluble": "Insoluble fiber",
+     "sodium": "Sodium",
++    "cholesterol": "Cholesterol",
++    "alcohol": "Alcohol",
++    "caffeine": "Caffeine",
++    "minerals": "Minerals",
++    "potassium": "Potassium",
++    "calcium": "Calcium",
++    "iron": "Iron",
++    "magnesium": "Magnesium",
++    "phosphorus": "Phosphorus",
++    "zinc": "Zinc",
++    "copper": "Copper",
++    "manganese": "Manganese",
++    "selenium": "Selenium",
++    "iodine": "Iodine",
++    "chloride": "Chloride",
++    "vitamins": "Vitamins",
++    "vitaminA": "Vitamin A",
++    "vitaminD": "Vitamin D",
++    "vitaminE": "Vitamin E",
++    "vitaminK": "Vitamin K",
++    "vitaminC": "Vitamin C",
++    "vitaminB1": "Vitamin B1 (Thiamin)",
++    "vitaminB2": "Vitamin B2 (Riboflavin)",
++    "vitaminB3": "Vitamin B3 (Niacin)",
++    "vitaminB5": "Vitamin B5 (Pantothenic acid)",
++    "vitaminB6": "Vitamin B6",
++    "vitaminB9": "Vitamin B9 (Folate)",
++    "vitaminB12": "Vitamin B12",
++    "antioxidants": "Antioxidants",
++    "totalPolyphenols": "Total Polyphenols",
++    "totalFlavonoids": "Total Flavonoids",
++    "quercetin": "Quercetin",
++    "catechins": "Catechins",
++    "anthocyanins": "Anthocyanins",
++    "resveratrol": "Resveratrol",
++    "kaempferol": "Kaempferol",
++    "hesperidin": "Hesperidin",
++    "epicatechin": "Epicatechin",
++    "chlorogenicAcid": "Chlorogenic acid",
+     "planDeleteInfo": "This will delete all nutrition diary entries as well",
+     "mealDeleteInfo": "Nutrition diary entries to this meal will not be deleted and will appear under \"other logs\"",
+     "diaryEntrySaved": "Diary entry successfully saved",
+     "logThisMeal": "Log this meal as-is to the nutrition diary",
+     "logThisMealItem": "Log this ingredient as-is to the nutrition diary",
+     "valueRemaining": "remaining",
+-    "valueTooMany": "too many"
++    "valueTooMany": "too many",
++    "notes": "Notes",
++    "notesPlaceholder": "How did you prepare this? Any notes...",
++    "editNote": "Edit note",
++    "mealNotes": "Meal notes",
++    "mealNotesPlaceholder": "How did you prepare this meal? Cooking methods, seasonings, etc...",
++    "editMealNote": "Edit meal note",
++    "addMealNote": "Add meal note"
+   },
+   "bmi": {
+     "calculator": "BMI calculator",
+diff --git a/src/components/Calendar/Components/CalendarDay.tsx b/src/components/Calendar/Components/CalendarDay.tsx
+index 9dd607e0..38c9874e 100644
+--- a/src/components/Calendar/Components/CalendarDay.tsx
++++ b/src/components/Calendar/Components/CalendarDay.tsx
+@@ -22,9 +22,9 @@ const CalendarDay: React.FC<CalendarDayProps> = ({ day, currentMonth, currentDat
+     const isWeekend = day.date.getDay() === 6 || day.date.getDay() === 0;
+ 
+     const getDayColor = (): string => {
+-        if (isSelected || isToday) return 'white';
+-        if (!isClickable) return 'gray';
+-        return isWeekend ? '#E53945' : 'black';
++        if (isSelected || isToday) return theme.palette.background.paper;
++        if (!isClickable) return theme.palette.text.disabled;
++        return isWeekend ? theme.palette.error.main : theme.palette.text.primary;
+     };
+ 
+     const getDaySize = () => {
+@@ -71,8 +71,8 @@ const CalendarDay: React.FC<CalendarDayProps> = ({ day, currentMonth, currentDat
+                     width: `${daySize}px`,
+                     height: `${daySize}px`,
+                     fontSize: isMobile ? '0.8rem' : isTablet ? '0.9rem' : '1rem',
+-                    color: isSelected ? 'white' : isToday ? 'white' : getDayColor(),
+-                    backgroundColor: isSelected ? '#E53945' : isToday ? '#FEC107' : 'transparent',
++                    color: isSelected ? theme.palette.background.paper : isToday ? theme.palette.background.paper : getDayColor(),
++                    backgroundColor: isSelected ? theme.palette.error.main : isToday ? theme.palette.warning.main : 'transparent',
+                     borderRadius: '50%',
+                     fontWeight: 'bold',
+                     cursor: isClickable ? 'pointer' : 'default',
+@@ -88,7 +88,7 @@ const CalendarDay: React.FC<CalendarDayProps> = ({ day, currentMonth, currentDat
+                     style={{
+                         width: `${dotSize}px`,
+                         height: `${dotSize}px`,
+-                        backgroundColor: 'black',
++                        backgroundColor: theme.palette.primary.main,
+                         borderRadius: '50%',
+                         position: 'absolute',
+                         bottom: 0,
+diff --git a/src/components/Dashboard/MeasurementCard.tsx b/src/components/Dashboard/MeasurementCard.tsx
+index 47ff10a8..c0802d6c 100644
+--- a/src/components/Dashboard/MeasurementCard.tsx
++++ b/src/components/Dashboard/MeasurementCard.tsx
+@@ -8,7 +8,7 @@ import {
+     useMeasurementsCategoryQuery
+ } from "@/components/Measurements";
+ import i18n from "@/i18n";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ import "slick-carousel/slick/slick.css";
+ import Button from "@mui/material/Button";
+ import Table from "@mui/material/Table";
+@@ -64,7 +64,7 @@ const MeasurementCardContent = (props: { categories: MeasurementCategory[] }) =>
+                 <>
+                     <Button
+                         size="small"
+-                        href={makeLink(WgerLink.MEASUREMENT_OVERVIEW, i18n.language)}
++                        href={makeHref(WgerLink.MEASUREMENT_OVERVIEW, i18n.language)}
+                     >
+                         {t("seeDetails")}
+                     </Button>
+diff --git a/src/components/Dashboard/NutritionCard.tsx b/src/components/Dashboard/NutritionCard.tsx
+index 7adcfe72..d0adac89 100644
+--- a/src/components/Dashboard/NutritionCard.tsx
++++ b/src/components/Dashboard/NutritionCard.tsx
+@@ -14,7 +14,7 @@ import {
+ import { SNACKBAR_AUTO_HIDE_DURATION } from "@/core/lib/consts";
+ import { dateTimeToLocaleHHMM } from "@/core/lib/date";
+ import { numberGramLocale } from "@/core/lib/numbers";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+ import HistoryEduIcon from "@mui/icons-material/HistoryEdu";
+@@ -69,7 +69,7 @@ function NutritionCardContent(props: { plan: NutritionalPlan }) {
+                     <>
+                         <Button
+                             size="small"
+-                            href={makeLink(WgerLink.NUTRITION_DETAIL, i18n.language, { id: props.plan.id! })}
++                            href={makeHref(WgerLink.NUTRITION_DETAIL, i18n.language, { id: props.plan.id! })}
+                         >
+                             {t("seeDetails")}
+                         </Button>
+diff --git a/src/components/Dashboard/RoutineCard.tsx b/src/components/Dashboard/RoutineCard.tsx
+index 2307af19..895cf711 100644
+--- a/src/components/Dashboard/RoutineCard.tsx
++++ b/src/components/Dashboard/RoutineCard.tsx
+@@ -8,7 +8,7 @@ import {
+     useActiveRoutineQuery
+ } from "@/components/Routines";
+ import { isSameDay } from "@/core/lib/date";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+ import TodayIcon from "@mui/icons-material/Today";
+@@ -40,7 +40,7 @@ const RoutineCardContent = (props: { routine: Routine }) => {
+             title={t("routines.routine")}
+             subheader={props.routine.name ?? "."}
+             actions={
+-                <Button size="small" href={makeLink(WgerLink.ROUTINE_DETAIL, i18n.language, { id: props.routine.id! })}>
++                <Button size="small" href={makeHref(WgerLink.ROUTINE_DETAIL, i18n.language, { id: props.routine.id! })}>
+                     {t("seeDetails")}
+                 </Button>
+             }
+diff --git a/src/components/Dashboard/TrophiesCard.tsx b/src/components/Dashboard/TrophiesCard.tsx
+index 0aa87edc..3d5de647 100644
+--- a/src/components/Dashboard/TrophiesCard.tsx
++++ b/src/components/Dashboard/TrophiesCard.tsx
+@@ -1,6 +1,6 @@
+ import { LoadingPlaceholder } from "@/core/ui/LoadingWidget/LoadingWidget";
+ import { UserTrophy, useUserTrophiesQuery } from "@/components/Trophies";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ import { Button, Card, CardContent, CardHeader, CardMedia, Tooltip, Typography, } from "@mui/material";
+ import Box from "@mui/system/Box";
+ import Stack from "@mui/system/Stack";
+@@ -37,7 +37,7 @@ function TrophiesCardContent(props: { trophies: UserTrophy[] }) {
+             <>
+                 <Button
+                     size="small"
+-                    href={makeLink(WgerLink.TROPHIES, i18n.language)}
++                    href={makeHref(WgerLink.TROPHIES, i18n.language)}
+                 >
+                     {t("seeDetails")}
+                 </Button>
+diff --git a/src/components/Dashboard/WeightCard.tsx b/src/components/Dashboard/WeightCard.tsx
+index 00f81ce1..e14051ca 100644
+--- a/src/components/Dashboard/WeightCard.tsx
++++ b/src/components/Dashboard/WeightCard.tsx
+@@ -2,7 +2,7 @@ import { LoadingPlaceholder } from "@/core/ui/LoadingWidget/LoadingWidget";
+ import { WgerModal } from "@/core/ui/Modals/WgerModal";
+ import { EmptyCard } from "@/components/Dashboard/EmptyCard";
+ import { useBodyWeightQuery, WeightChart, WeightEntry, WeightForm, WeightTableDashboard } from "@/components/Weight";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ import AddIcon from "@mui/icons-material/Add";
+ import { Box, Button, IconButton } from "@mui/material";
+ import Tooltip from "@mui/material/Tooltip";
+@@ -37,7 +37,7 @@ export const WeightCardContent = (props: { entries: WeightEntry[] }) => {
+                 subheader={"."}
+                 actions={
+                     <>
+-                        <Button size="small" href={makeLink(WgerLink.WEIGHT_OVERVIEW, i18n.language)}>
++                        <Button size="small" href={makeHref(WgerLink.WEIGHT_OVERVIEW, i18n.language)}>
+                             {t("seeDetails")}
+                         </Button>
+                         <Tooltip title={t("addEntry")}>
+diff --git a/src/components/Exercises/screens/Detail/OverviewCard.tsx b/src/components/Exercises/screens/Detail/OverviewCard.tsx
+index 9ef0ea3d..2145d2f9 100644
+--- a/src/components/Exercises/screens/Detail/OverviewCard.tsx
++++ b/src/components/Exercises/screens/Detail/OverviewCard.tsx
+@@ -6,7 +6,7 @@ import { Language } from "@/components/Exercises/models/language";
+ import React from "react";
+ import { useTranslation } from "react-i18next";
+ import { ENGLISH_LANGUAGE_ID } from "@/core/lib/consts";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ 
+ type OverviewCardProps = {
+     exercise: Exercise;
+@@ -23,7 +23,7 @@ export const OverviewCard = ({ exercise, language }: OverviewCardProps) => {
+ 
+     return (
+         <Card key={exercise.id} sx={{ width: '100%' }}>
+-            <CardActionArea href={makeLink(WgerLink.EXERCISE_DETAIL, i18n.language, {
++            <CardActionArea href={makeHref(WgerLink.EXERCISE_DETAIL, i18n.language, {
+                 id: exercise.id!,
+                 slug: translation.nameSlug
+             })}
+diff --git a/src/components/Measurements/widgets/MeasurementChart.tsx b/src/components/Measurements/widgets/MeasurementChart.tsx
+index 1c6bea81..c909dce1 100644
+--- a/src/components/Measurements/widgets/MeasurementChart.tsx
++++ b/src/components/Measurements/widgets/MeasurementChart.tsx
+@@ -55,7 +55,7 @@ export const MeasurementChart = (props: { category: MeasurementCategory }) => {
+                     //onClick: handleClick
+                 }} />
+             <CartesianGrid
+-                stroke="#ccc"
++                stroke={theme.palette.divider}
+                 strokeDasharray="5 5" />
+             <XAxis
+                 dataKey="date"
+diff --git a/src/components/Nutrition/helpers/nutritionalValues.ts b/src/components/Nutrition/helpers/nutritionalValues.ts
+index 37d3f89a..07ed9ed6 100644
+--- a/src/components/Nutrition/helpers/nutritionalValues.ts
++++ b/src/components/Nutrition/helpers/nutritionalValues.ts
+@@ -9,8 +9,56 @@ type NutritionalValuesConstructor = {
+     fat?: number;
+     fatSaturated?: number;
+     fiber?: number;
++    fiberSoluble?: number;
++    fiberInsoluble?: number;
+     sodium?: number;
+     bodyWeight?: number;
++    // Fat subtypes
++    fatTrans?: number;
++    fatMonounsaturated?: number;
++    fatPolyunsaturated?: number;
++    // Other macros
++    cholesterol?: number;
++    alcohol?: number;
++    // Minerals
++    potassium?: number;
++    calcium?: number;
++    iron?: number;
++    magnesium?: number;
++    phosphorus?: number;
++    zinc?: number;
++    copper?: number;
++    manganese?: number;
++    selenium?: number;
++    iodine?: number;
++    chloride?: number;
++    // Fat-soluble vitamins
++    vitaminA?: number;
++    vitaminD?: number;
++    vitaminE?: number;
++    vitaminK?: number;
++    // Water-soluble vitamins
++    vitaminC?: number;
++    vitaminB1?: number;
++    vitaminB2?: number;
++    vitaminB3?: number;
++    vitaminB5?: number;
++    vitaminB6?: number;
++    vitaminB9?: number;
++    vitaminB12?: number;
++    // Caffeine
++    caffeine?: number;
++    // Antioxidants
++    totalPolyphenols?: number;
++    totalFlavonoids?: number;
++    quercetin?: number;
++    catechins?: number;
++    anthocyanins?: number;
++    resveratrol?: number;
++    kaempferol?: number;
++    hesperidin?: number;
++    epicatechin?: number;
++    chlorogenicAcid?: number;
+ }
+ 
+ // in kcal per g
+@@ -30,7 +78,55 @@ export class NutritionalValues {
+     fat: number = 0;
+     fatSaturated: number = 0;
+     fiber: number = 0;
++    fiberSoluble: number = 0;
++    fiberInsoluble: number = 0;
+     sodium: number = 0;
++    // Fat subtypes
++    fatTrans: number = 0;
++    fatMonounsaturated: number = 0;
++    fatPolyunsaturated: number = 0;
++    // Other macros
++    cholesterol: number = 0;
++    alcohol: number = 0;
++    // Minerals
++    potassium: number = 0;
++    calcium: number = 0;
++    iron: number = 0;
++    magnesium: number = 0;
++    phosphorus: number = 0;
++    zinc: number = 0;
++    copper: number = 0;
++    manganese: number = 0;
++    selenium: number = 0;
++    iodine: number = 0;
++    chloride: number = 0;
++    // Fat-soluble vitamins
++    vitaminA: number = 0;
++    vitaminD: number = 0;
++    vitaminE: number = 0;
++    vitaminK: number = 0;
++    // Water-soluble vitamins
++    vitaminC: number = 0;
++    vitaminB1: number = 0;
++    vitaminB2: number = 0;
++    vitaminB3: number = 0;
++    vitaminB5: number = 0;
++    vitaminB6: number = 0;
++    vitaminB9: number = 0;
++    vitaminB12: number = 0;
++    // Caffeine
++    caffeine: number = 0;
++    // Antioxidants
++    totalPolyphenols: number = 0;
++    totalFlavonoids: number = 0;
++    quercetin: number = 0;
++    catechins: number = 0;
++    anthocyanins: number = 0;
++    resveratrol: number = 0;
++    kaempferol: number = 0;
++    hesperidin: number = 0;
++    epicatechin: number = 0;
++    chlorogenicAcid: number = 0;
+ 
+     get energyKj(): number {
+         return this.energy * 4.184;
+@@ -65,8 +161,56 @@ export class NutritionalValues {
+         this.fat = values?.fat ?? 0;
+         this.fatSaturated = values?.fatSaturated ?? 0;
+         this.fiber = values?.fiber ?? 0;
++        this.fiberSoluble = values?.fiberSoluble ?? 0;
++        this.fiberInsoluble = values?.fiberInsoluble ?? 0;
+         this.sodium = values?.sodium ?? 0;
+         this.bodyWeight = values?.bodyWeight ?? 0;
++        // Fat subtypes
++        this.fatTrans = values?.fatTrans ?? 0;
++        this.fatMonounsaturated = values?.fatMonounsaturated ?? 0;
++        this.fatPolyunsaturated = values?.fatPolyunsaturated ?? 0;
++        // Other macros
++        this.cholesterol = values?.cholesterol ?? 0;
++        this.alcohol = values?.alcohol ?? 0;
++        // Minerals
++        this.potassium = values?.potassium ?? 0;
++        this.calcium = values?.calcium ?? 0;
++        this.iron = values?.iron ?? 0;
++        this.magnesium = values?.magnesium ?? 0;
++        this.phosphorus = values?.phosphorus ?? 0;
++        this.zinc = values?.zinc ?? 0;
++        this.copper = values?.copper ?? 0;
++        this.manganese = values?.manganese ?? 0;
++        this.selenium = values?.selenium ?? 0;
++        this.iodine = values?.iodine ?? 0;
++        this.chloride = values?.chloride ?? 0;
++        // Fat-soluble vitamins
++        this.vitaminA = values?.vitaminA ?? 0;
++        this.vitaminD = values?.vitaminD ?? 0;
++        this.vitaminE = values?.vitaminE ?? 0;
++        this.vitaminK = values?.vitaminK ?? 0;
++        // Water-soluble vitamins
++        this.vitaminC = values?.vitaminC ?? 0;
++        this.vitaminB1 = values?.vitaminB1 ?? 0;
++        this.vitaminB2 = values?.vitaminB2 ?? 0;
++        this.vitaminB3 = values?.vitaminB3 ?? 0;
++        this.vitaminB5 = values?.vitaminB5 ?? 0;
++        this.vitaminB6 = values?.vitaminB6 ?? 0;
++        this.vitaminB9 = values?.vitaminB9 ?? 0;
++        this.vitaminB12 = values?.vitaminB12 ?? 0;
++        // Caffeine
++        this.caffeine = values?.caffeine ?? 0;
++        // Antioxidants
++        this.totalPolyphenols = values?.totalPolyphenols ?? 0;
++        this.totalFlavonoids = values?.totalFlavonoids ?? 0;
++        this.quercetin = values?.quercetin ?? 0;
++        this.catechins = values?.catechins ?? 0;
++        this.anthocyanins = values?.anthocyanins ?? 0;
++        this.resveratrol = values?.resveratrol ?? 0;
++        this.kaempferol = values?.kaempferol ?? 0;
++        this.hesperidin = values?.hesperidin ?? 0;
++        this.epicatechin = values?.epicatechin ?? 0;
++        this.chlorogenicAcid = values?.chlorogenicAcid ?? 0;
+     }
+ 
+     static fromIngredient(ingredient: Ingredient, amount: number, weightUnit: NutritionWeightUnit | null) {
+@@ -84,7 +228,55 @@ export class NutritionalValues {
+         out.fat = ingredient.fat * weight / 100;
+         out.fatSaturated = ingredient.fatSaturated ? ingredient.fatSaturated * weight / 100 : 0;
+         out.fiber = ingredient.fiber ? ingredient.fiber * weight / 100 : 0;
++        out.fiberSoluble = ingredient.fiberSoluble ? ingredient.fiberSoluble * weight / 100 : 0;
++        out.fiberInsoluble = ingredient.fiberInsoluble ? ingredient.fiberInsoluble * weight / 100 : 0;
+         out.sodium = ingredient.sodium ? ingredient.sodium * weight / 100 : 0;
++        // Fat subtypes
++        out.fatTrans = ingredient.fatTrans ? ingredient.fatTrans * weight / 100 : 0;
++        out.fatMonounsaturated = ingredient.fatMonounsaturated ? ingredient.fatMonounsaturated * weight / 100 : 0;
++        out.fatPolyunsaturated = ingredient.fatPolyunsaturated ? ingredient.fatPolyunsaturated * weight / 100 : 0;
++        // Other macros
++        out.cholesterol = ingredient.cholesterol ? ingredient.cholesterol * weight / 100 : 0;
++        out.alcohol = ingredient.alcohol ? ingredient.alcohol * weight / 100 : 0;
++        // Minerals
++        out.potassium = ingredient.potassium ? ingredient.potassium * weight / 100 : 0;
++        out.calcium = ingredient.calcium ? ingredient.calcium * weight / 100 : 0;
++        out.iron = ingredient.iron ? ingredient.iron * weight / 100 : 0;
++        out.magnesium = ingredient.magnesium ? ingredient.magnesium * weight / 100 : 0;
++        out.phosphorus = ingredient.phosphorus ? ingredient.phosphorus * weight / 100 : 0;
++        out.zinc = ingredient.zinc ? ingredient.zinc * weight / 100 : 0;
++        out.copper = ingredient.copper ? ingredient.copper * weight / 100 : 0;
++        out.manganese = ingredient.manganese ? ingredient.manganese * weight / 100 : 0;
++        out.selenium = ingredient.selenium ? ingredient.selenium * weight / 100 : 0;
++        out.iodine = ingredient.iodine ? ingredient.iodine * weight / 100 : 0;
++        out.chloride = ingredient.chloride ? ingredient.chloride * weight / 100 : 0;
++        // Fat-soluble vitamins
++        out.vitaminA = ingredient.vitaminA ? ingredient.vitaminA * weight / 100 : 0;
++        out.vitaminD = ingredient.vitaminD ? ingredient.vitaminD * weight / 100 : 0;
++        out.vitaminE = ingredient.vitaminE ? ingredient.vitaminE * weight / 100 : 0;
++        out.vitaminK = ingredient.vitaminK ? ingredient.vitaminK * weight / 100 : 0;
++        // Water-soluble vitamins
++        out.vitaminC = ingredient.vitaminC ? ingredient.vitaminC * weight / 100 : 0;
++        out.vitaminB1 = ingredient.vitaminB1 ? ingredient.vitaminB1 * weight / 100 : 0;
++        out.vitaminB2 = ingredient.vitaminB2 ? ingredient.vitaminB2 * weight / 100 : 0;
++        out.vitaminB3 = ingredient.vitaminB3 ? ingredient.vitaminB3 * weight / 100 : 0;
++        out.vitaminB5 = ingredient.vitaminB5 ? ingredient.vitaminB5 * weight / 100 : 0;
++        out.vitaminB6 = ingredient.vitaminB6 ? ingredient.vitaminB6 * weight / 100 : 0;
++        out.vitaminB9 = ingredient.vitaminB9 ? ingredient.vitaminB9 * weight / 100 : 0;
++        out.vitaminB12 = ingredient.vitaminB12 ? ingredient.vitaminB12 * weight / 100 : 0;
++        // Caffeine
++        out.caffeine = ingredient.caffeine ? ingredient.caffeine * weight / 100 : 0;
++        // Antioxidants
++        out.totalPolyphenols = ingredient.totalPolyphenols ? ingredient.totalPolyphenols * weight / 100 : 0;
++        out.totalFlavonoids = ingredient.totalFlavonoids ? ingredient.totalFlavonoids * weight / 100 : 0;
++        out.quercetin = ingredient.quercetin ? ingredient.quercetin * weight / 100 : 0;
++        out.catechins = ingredient.catechins ? ingredient.catechins * weight / 100 : 0;
++        out.anthocyanins = ingredient.anthocyanins ? ingredient.anthocyanins * weight / 100 : 0;
++        out.resveratrol = ingredient.resveratrol ? ingredient.resveratrol * weight / 100 : 0;
++        out.kaempferol = ingredient.kaempferol ? ingredient.kaempferol * weight / 100 : 0;
++        out.hesperidin = ingredient.hesperidin ? ingredient.hesperidin * weight / 100 : 0;
++        out.epicatechin = ingredient.epicatechin ? ingredient.epicatechin * weight / 100 : 0;
++        out.chlorogenicAcid = ingredient.chlorogenicAcid ? ingredient.chlorogenicAcid * weight / 100 : 0;
+ 
+         return out;
+     }
+@@ -98,7 +290,55 @@ export class NutritionalValues {
+         this.fat += other.fat;
+         this.fatSaturated += other.fatSaturated;
+         this.fiber += other.fiber;
++        this.fiberSoluble += other.fiberSoluble;
++        this.fiberInsoluble += other.fiberInsoluble;
+         this.sodium += other.sodium;
++        // Fat subtypes
++        this.fatTrans += other.fatTrans;
++        this.fatMonounsaturated += other.fatMonounsaturated;
++        this.fatPolyunsaturated += other.fatPolyunsaturated;
++        // Other macros
++        this.cholesterol += other.cholesterol;
++        this.alcohol += other.alcohol;
++        // Minerals
++        this.potassium += other.potassium;
++        this.calcium += other.calcium;
++        this.iron += other.iron;
++        this.magnesium += other.magnesium;
++        this.phosphorus += other.phosphorus;
++        this.zinc += other.zinc;
++        this.copper += other.copper;
++        this.manganese += other.manganese;
++        this.selenium += other.selenium;
++        this.iodine += other.iodine;
++        this.chloride += other.chloride;
++        // Fat-soluble vitamins
++        this.vitaminA += other.vitaminA;
++        this.vitaminD += other.vitaminD;
++        this.vitaminE += other.vitaminE;
++        this.vitaminK += other.vitaminK;
++        // Water-soluble vitamins
++        this.vitaminC += other.vitaminC;
++        this.vitaminB1 += other.vitaminB1;
++        this.vitaminB2 += other.vitaminB2;
++        this.vitaminB3 += other.vitaminB3;
++        this.vitaminB5 += other.vitaminB5;
++        this.vitaminB6 += other.vitaminB6;
++        this.vitaminB9 += other.vitaminB9;
++        this.vitaminB12 += other.vitaminB12;
++        // Caffeine
++        this.caffeine += other.caffeine;
++        // Antioxidants
++        this.totalPolyphenols += other.totalPolyphenols;
++        this.totalFlavonoids += other.totalFlavonoids;
++        this.quercetin += other.quercetin;
++        this.catechins += other.catechins;
++        this.anthocyanins += other.anthocyanins;
++        this.resveratrol += other.resveratrol;
++        this.kaempferol += other.kaempferol;
++        this.hesperidin += other.hesperidin;
++        this.epicatechin += other.epicatechin;
++        this.chlorogenicAcid += other.chlorogenicAcid;
+ 
+         return this;
+     }
+@@ -116,7 +356,55 @@ export class NutritionalValues {
+             this.fat === other.fat &&
+             this.fatSaturated === other.fatSaturated &&
+             this.fiber === other.fiber &&
+-            this.sodium === other.sodium
++            this.fiberSoluble === other.fiberSoluble &&
++            this.fiberInsoluble === other.fiberInsoluble &&
++            this.sodium === other.sodium &&
++            // Fat subtypes
++            this.fatTrans === other.fatTrans &&
++            this.fatMonounsaturated === other.fatMonounsaturated &&
++            this.fatPolyunsaturated === other.fatPolyunsaturated &&
++            // Other macros
++            this.cholesterol === other.cholesterol &&
++            this.alcohol === other.alcohol &&
++            // Minerals
++            this.potassium === other.potassium &&
++            this.calcium === other.calcium &&
++            this.iron === other.iron &&
++            this.magnesium === other.magnesium &&
++            this.phosphorus === other.phosphorus &&
++            this.zinc === other.zinc &&
++            this.copper === other.copper &&
++            this.manganese === other.manganese &&
++            this.selenium === other.selenium &&
++            this.iodine === other.iodine &&
++            this.chloride === other.chloride &&
++            // Fat-soluble vitamins
++            this.vitaminA === other.vitaminA &&
++            this.vitaminD === other.vitaminD &&
++            this.vitaminE === other.vitaminE &&
++            this.vitaminK === other.vitaminK &&
++            // Water-soluble vitamins
++            this.vitaminC === other.vitaminC &&
++            this.vitaminB1 === other.vitaminB1 &&
++            this.vitaminB2 === other.vitaminB2 &&
++            this.vitaminB3 === other.vitaminB3 &&
++            this.vitaminB5 === other.vitaminB5 &&
++            this.vitaminB6 === other.vitaminB6 &&
++            this.vitaminB9 === other.vitaminB9 &&
++            this.vitaminB12 === other.vitaminB12 &&
++            // Caffeine
++            this.caffeine === other.caffeine &&
++            // Antioxidants
++            this.totalPolyphenols === other.totalPolyphenols &&
++            this.totalFlavonoids === other.totalFlavonoids &&
++            this.quercetin === other.quercetin &&
++            this.catechins === other.catechins &&
++            this.anthocyanins === other.anthocyanins &&
++            this.resveratrol === other.resveratrol &&
++            this.kaempferol === other.kaempferol &&
++            this.hesperidin === other.hesperidin &&
++            this.epicatechin === other.epicatechin &&
++            this.chlorogenicAcid === other.chlorogenicAcid
+         );
+     }
+ }
+diff --git a/src/components/Nutrition/models/Ingredient.ts b/src/components/Nutrition/models/Ingredient.ts
+index 3478a112..da3d7999 100644
+--- a/src/components/Nutrition/models/Ingredient.ts
++++ b/src/components/Nutrition/models/Ingredient.ts
+@@ -16,10 +16,60 @@ export type IngredientConstructorParams = {
+     fat: number;
+     fatSaturated: number | null;
+     fiber: number | null;
++    fiberSoluble?: number | null;
++    fiberInsoluble?: number | null;
+     sodium: number | null;
+     isVegan?: boolean | null;
+     isVegetarian?: boolean | null;
+     nutriscore?: NutriScoreValue | null;
++    // Fat subtypes
++    fatTrans?: number | null;
++    fatMonounsaturated?: number | null;
++    fatPolyunsaturated?: number | null;
++    // Other macros
++    cholesterol?: number | null;
++    alcohol?: number | null;
++    // Minerals
++    potassium?: number | null;
++    calcium?: number | null;
++    iron?: number | null;
++    magnesium?: number | null;
++    phosphorus?: number | null;
++    zinc?: number | null;
++    copper?: number | null;
++    manganese?: number | null;
++    selenium?: number | null;
++    iodine?: number | null;
++    chloride?: number | null;
++    // Fat-soluble vitamins
++    vitaminA?: number | null;
++    vitaminD?: number | null;
++    vitaminE?: number | null;
++    vitaminK?: number | null;
++    // Water-soluble vitamins
++    vitaminC?: number | null;
++    vitaminB1?: number | null;
++    vitaminB2?: number | null;
++    vitaminB3?: number | null;
++    vitaminB5?: number | null;
++    vitaminB6?: number | null;
++    vitaminB9?: number | null;
++    vitaminB12?: number | null;
++    // Gut health
++    isFermented?: boolean;
++    // Caffeine
++    caffeine?: number | null;
++    // Antioxidants
++    totalPolyphenols?: number | null;
++    totalFlavonoids?: number | null;
++    quercetin?: number | null;
++    catechins?: number | null;
++    anthocyanins?: number | null;
++    resveratrol?: number | null;
++    kaempferol?: number | null;
++    hesperidin?: number | null;
++    epicatechin?: number | null;
++    chlorogenicAcid?: number | null;
+     image?: IngredientImage | null;
+     thumbnails?: IngredientImageThumbnails | null;
+     weightUnits?: NutritionWeightUnit[];
+@@ -38,10 +88,60 @@ export class Ingredient {
+     public fat: number;
+     public fatSaturated: number | null;
+     public fiber: number | null;
++    public fiberSoluble: number | null;
++    public fiberInsoluble: number | null;
+     public sodium: number | null;
+     public isVegan: boolean | null;
+     public isVegetarian: boolean | null;
+     public nutriscore: NutriScoreValue | null;
++    // Fat subtypes
++    public fatTrans: number | null;
++    public fatMonounsaturated: number | null;
++    public fatPolyunsaturated: number | null;
++    // Other macros
++    public cholesterol: number | null;
++    public alcohol: number | null;
++    // Minerals
++    public potassium: number | null;
++    public calcium: number | null;
++    public iron: number | null;
++    public magnesium: number | null;
++    public phosphorus: number | null;
++    public zinc: number | null;
++    public copper: number | null;
++    public manganese: number | null;
++    public selenium: number | null;
++    public iodine: number | null;
++    public chloride: number | null;
++    // Fat-soluble vitamins
++    public vitaminA: number | null;
++    public vitaminD: number | null;
++    public vitaminE: number | null;
++    public vitaminK: number | null;
++    // Water-soluble vitamins
++    public vitaminC: number | null;
++    public vitaminB1: number | null;
++    public vitaminB2: number | null;
++    public vitaminB3: number | null;
++    public vitaminB5: number | null;
++    public vitaminB6: number | null;
++    public vitaminB9: number | null;
++    public vitaminB12: number | null;
++    // Gut health
++    public isFermented: boolean;
++    // Caffeine
++    public caffeine: number | null;
++    // Antioxidants
++    public totalPolyphenols: number | null;
++    public totalFlavonoids: number | null;
++    public quercetin: number | null;
++    public catechins: number | null;
++    public anthocyanins: number | null;
++    public resveratrol: number | null;
++    public kaempferol: number | null;
++    public hesperidin: number | null;
++    public epicatechin: number | null;
++    public chlorogenicAcid: number | null;
+     public image: IngredientImage | null;
+     public thumbnails: IngredientImageThumbnails | null;
+     public weightUnits: NutritionWeightUnit[];
+@@ -58,10 +158,60 @@ export class Ingredient {
+         this.fat = params.fat;
+         this.fatSaturated = params.fatSaturated;
+         this.fiber = params.fiber;
++        this.fiberSoluble = params.fiberSoluble ?? null;
++        this.fiberInsoluble = params.fiberInsoluble ?? null;
+         this.sodium = params.sodium;
+         this.isVegan = params.isVegan ?? null;
+         this.isVegetarian = params.isVegetarian ?? null;
+         this.nutriscore = params.nutriscore ?? null;
++        // Fat subtypes
++        this.fatTrans = params.fatTrans ?? null;
++        this.fatMonounsaturated = params.fatMonounsaturated ?? null;
++        this.fatPolyunsaturated = params.fatPolyunsaturated ?? null;
++        // Other macros
++        this.cholesterol = params.cholesterol ?? null;
++        this.alcohol = params.alcohol ?? null;
++        // Minerals
++        this.potassium = params.potassium ?? null;
++        this.calcium = params.calcium ?? null;
++        this.iron = params.iron ?? null;
++        this.magnesium = params.magnesium ?? null;
++        this.phosphorus = params.phosphorus ?? null;
++        this.zinc = params.zinc ?? null;
++        this.copper = params.copper ?? null;
++        this.manganese = params.manganese ?? null;
++        this.selenium = params.selenium ?? null;
++        this.iodine = params.iodine ?? null;
++        this.chloride = params.chloride ?? null;
++        // Fat-soluble vitamins
++        this.vitaminA = params.vitaminA ?? null;
++        this.vitaminD = params.vitaminD ?? null;
++        this.vitaminE = params.vitaminE ?? null;
++        this.vitaminK = params.vitaminK ?? null;
++        // Water-soluble vitamins
++        this.vitaminC = params.vitaminC ?? null;
++        this.vitaminB1 = params.vitaminB1 ?? null;
++        this.vitaminB2 = params.vitaminB2 ?? null;
++        this.vitaminB3 = params.vitaminB3 ?? null;
++        this.vitaminB5 = params.vitaminB5 ?? null;
++        this.vitaminB6 = params.vitaminB6 ?? null;
++        this.vitaminB9 = params.vitaminB9 ?? null;
++        this.vitaminB12 = params.vitaminB12 ?? null;
++        // Gut health
++        this.isFermented = params.isFermented ?? false;
++        // Caffeine
++        this.caffeine = params.caffeine ?? null;
++        // Antioxidants
++        this.totalPolyphenols = params.totalPolyphenols ?? null;
++        this.totalFlavonoids = params.totalFlavonoids ?? null;
++        this.quercetin = params.quercetin ?? null;
++        this.catechins = params.catechins ?? null;
++        this.anthocyanins = params.anthocyanins ?? null;
++        this.resveratrol = params.resveratrol ?? null;
++        this.kaempferol = params.kaempferol ?? null;
++        this.hesperidin = params.hesperidin ?? null;
++        this.epicatechin = params.epicatechin ?? null;
++        this.chlorogenicAcid = params.chlorogenicAcid ?? null;
+         this.image = params.image ?? null;
+         this.thumbnails = params.thumbnails ?? null;
+         this.weightUnits = params.weightUnits ?? [];
+@@ -88,10 +238,60 @@ class IngredientAdapter implements Adapter<Ingredient> {
+             fat: parseFloat(item.fat),
+             fatSaturated: item.fat_saturated === null ? null : parseFloat(item.fat_saturated),
+             fiber: item.fiber === null ? null : parseFloat(item.fiber),
++            fiberSoluble: item.fiber_soluble === null ? null : parseFloat(item.fiber_soluble),
++            fiberInsoluble: item.fiber_insoluble === null ? null : parseFloat(item.fiber_insoluble),
+             sodium: item.sodium === null ? null : parseFloat(item.sodium),
+             isVegan: item.is_vegan,
+             isVegetarian: item.is_vegetarian,
+             nutriscore: item.nutriscore,
++            // Fat subtypes
++            fatTrans: item.fat_trans === null ? null : parseFloat(item.fat_trans),
++            fatMonounsaturated: item.fat_monounsaturated === null ? null : parseFloat(item.fat_monounsaturated),
++            fatPolyunsaturated: item.fat_polyunsaturated === null ? null : parseFloat(item.fat_polyunsaturated),
++            // Other macros
++            cholesterol: item.cholesterol === null ? null : parseFloat(item.cholesterol),
++            alcohol: item.alcohol === null ? null : parseFloat(item.alcohol),
++            // Minerals
++            potassium: item.potassium === null ? null : parseFloat(item.potassium),
++            calcium: item.calcium === null ? null : parseFloat(item.calcium),
++            iron: item.iron === null ? null : parseFloat(item.iron),
++            magnesium: item.magnesium === null ? null : parseFloat(item.magnesium),
++            phosphorus: item.phosphorus === null ? null : parseFloat(item.phosphorus),
++            zinc: item.zinc === null ? null : parseFloat(item.zinc),
++            copper: item.copper === null ? null : parseFloat(item.copper),
++            manganese: item.manganese === null ? null : parseFloat(item.manganese),
++            selenium: item.selenium === null ? null : parseFloat(item.selenium),
++            iodine: item.iodine === null ? null : parseFloat(item.iodine),
++            chloride: item.chloride === null ? null : parseFloat(item.chloride),
++            // Fat-soluble vitamins
++            vitaminA: item.vitamin_a === null ? null : parseFloat(item.vitamin_a),
++            vitaminD: item.vitamin_d === null ? null : parseFloat(item.vitamin_d),
++            vitaminE: item.vitamin_e === null ? null : parseFloat(item.vitamin_e),
++            vitaminK: item.vitamin_k === null ? null : parseFloat(item.vitamin_k),
++            // Water-soluble vitamins
++            vitaminC: item.vitamin_c === null ? null : parseFloat(item.vitamin_c),
++            vitaminB1: item.vitamin_b1 === null ? null : parseFloat(item.vitamin_b1),
++            vitaminB2: item.vitamin_b2 === null ? null : parseFloat(item.vitamin_b2),
++            vitaminB3: item.vitamin_b3 === null ? null : parseFloat(item.vitamin_b3),
++            vitaminB5: item.vitamin_b5 === null ? null : parseFloat(item.vitamin_b5),
++            vitaminB6: item.vitamin_b6 === null ? null : parseFloat(item.vitamin_b6),
++            vitaminB9: item.vitamin_b9 === null ? null : parseFloat(item.vitamin_b9),
++            vitaminB12: item.vitamin_b12 === null ? null : parseFloat(item.vitamin_b12),
++            // Gut health
++            isFermented: item.is_fermented ?? false,
++            // Caffeine
++            caffeine: item.caffeine === null ? null : parseFloat(item.caffeine),
++            // Antioxidants
++            totalPolyphenols: item.total_polyphenols === null ? null : parseFloat(item.total_polyphenols),
++            totalFlavonoids: item.total_flavonoids === null ? null : parseFloat(item.total_flavonoids),
++            quercetin: item.quercetin === null ? null : parseFloat(item.quercetin),
++            catechins: item.catechins === null ? null : parseFloat(item.catechins),
++            anthocyanins: item.anthocyanins === null ? null : parseFloat(item.anthocyanins),
++            resveratrol: item.resveratrol === null ? null : parseFloat(item.resveratrol),
++            kaempferol: item.kaempferol === null ? null : parseFloat(item.kaempferol),
++            hesperidin: item.hesperidin === null ? null : parseFloat(item.hesperidin),
++            epicatechin: item.epicatechin === null ? null : parseFloat(item.epicatechin),
++            chlorogenicAcid: item.chlorogenic_acid === null ? null : parseFloat(item.chlorogenic_acid),
+             image: item.image === null ? null : IngredientImage.fromJson(item.image),
+             thumbnails: item.thumbnails === null ? null : IngredientImageThumbnails.fromJson(item.thumbnails),
+             weightUnits: (item.weight_units ?? []).map((u) => weightUnitAdapter.fromJson(u)),
+diff --git a/src/components/Nutrition/models/diaryEntry.ts b/src/components/Nutrition/models/diaryEntry.ts
+index a78e1b9d..57b4e76c 100644
+--- a/src/components/Nutrition/models/diaryEntry.ts
++++ b/src/components/Nutrition/models/diaryEntry.ts
+@@ -12,7 +12,8 @@ export interface ApiNutritionDiaryType {
+     ingredient: number,
+     weight_unit: number,
+     datetime: Date,
+-    amount: string
++    amount: string,
++    comment: string
+ }
+ 
+ export type DiaryEntryConstructorParams = {
+@@ -23,6 +24,7 @@ export type DiaryEntryConstructorParams = {
+     weightUnitId?: number | null;
+     amount: number;
+     datetime: Date;
++    comment?: string;
+     ingredient?: Ingredient | null;
+     weightUnit?: NutritionWeightUnit | null;
+ };
+@@ -34,6 +36,7 @@ export class DiaryEntry {
+     public mealId: string | null;
+     public amount: number;
+     public datetime: Date;
++    public comment: string;
+ 
+     public ingredientId: number;
+     public ingredient: Ingredient | null = null;
+@@ -47,6 +50,7 @@ export class DiaryEntry {
+         this.mealId = params.mealId ?? null;
+         this.amount = params.amount;
+         this.datetime = params.datetime;
++        this.comment = params.comment ?? '';
+ 
+         this.ingredientId = params.ingredientId;
+         if (params.ingredient) {
+@@ -85,6 +89,7 @@ export class DiaryEntry {
+             mealId: overrides?.mealId ?? other.mealId,
+             amount: overrides?.amount ?? other.amount,
+             datetime: overrides?.datetime ?? other.datetime,
++            comment: overrides?.comment ?? other.comment,
+             ingredientId: ingredient ? ingredient.id : (overrides?.ingredientId ?? other.ingredientId),
+             ingredient,
+             weightUnitId: weightUnit ? weightUnit.id : (overrides?.weightUnitId ?? other.weightUnitId),
+@@ -112,6 +117,7 @@ class DiaryEntryAdapter implements Adapter<DiaryEntry> {
+             weightUnitId: item.weight_unit,
+             amount: parseFloat(item.amount),
+             datetime: new Date(item.datetime),
++            comment: item.comment ?? '',
+         });
+     }
+ 
+@@ -125,6 +131,7 @@ class DiaryEntryAdapter implements Adapter<DiaryEntry> {
+             weight_unit: item.weightUnitId,
+             amount: item.amount.toString(),
+             datetime: item.datetime.toISOString(),
++            comment: item.comment,
+         };
+     }
+ }
+diff --git a/src/components/Nutrition/models/meal.ts b/src/components/Nutrition/models/meal.ts
+index 32540161..2f897dd5 100644
+--- a/src/components/Nutrition/models/meal.ts
++++ b/src/components/Nutrition/models/meal.ts
+@@ -10,7 +10,8 @@ export interface ApiMealType {
+     plan: string,
+     order: number,
+     time: string | null,
+-    name: string
++    name: string,
++    comment: string
+ }
+ 
+ 
+@@ -20,6 +21,7 @@ export type MealConstructorParams = {
+     order?: number;
+     time?: Date | null;
+     name: string;
++    comment?: string;
+     items?: MealItem[];
+     diaryEntries?: DiaryEntry[];
+ };
+@@ -31,6 +33,7 @@ export class Meal {
+     public order: number;
+     public time: Date | null = null;
+     public name: string;
++    public comment: string;
+     public items: MealItem[];
+     public diaryEntries: DiaryEntry[];
+ 
+@@ -40,6 +43,7 @@ export class Meal {
+         this.order = params.order || 1;
+         this.time = params.time || null;
+         this.name = params.name;
++        this.comment = params.comment || '';
+         this.items = params.items || [];
+         this.diaryEntries = params.diaryEntries || [];
+     }
+@@ -86,6 +90,7 @@ export class Meal {
+             order: overrides?.order ?? other.order,
+             time: overrides?.time ?? other.time,
+             name: overrides?.name ?? other.name,
++            comment: overrides?.comment ?? other.comment,
+             items: overrides?.items ?? other.items,
+             diaryEntries: overrides?.diaryEntries ?? other.diaryEntries,
+         });
+@@ -111,6 +116,7 @@ class MealAdapter implements Adapter<Meal> {
+             order: item.order,
+             time: HHMMToDateTime(item.time),
+             name: item.name,
++            comment: item.comment || '',
+         });
+     }
+ 
+@@ -119,6 +125,7 @@ class MealAdapter implements Adapter<Meal> {
+             ...(item.id != null ? { id: item.id } : {}),
+             plan: item.planId,
+             name: item.name,
++            comment: item.comment,
+             order: item.order,
+             time: dateTimeToHHMM(item.time)
+         };
+diff --git a/src/components/Nutrition/screens/NutritionDiaryOverview.tsx b/src/components/Nutrition/screens/NutritionDiaryOverview.tsx
+index 819431cc..8e6b73b1 100644
+--- a/src/components/Nutrition/screens/NutritionDiaryOverview.tsx
++++ b/src/components/Nutrition/screens/NutritionDiaryOverview.tsx
+@@ -1,16 +1,169 @@
+ import { LoadingPlaceholder } from "@/core/ui/LoadingWidget/LoadingWidget";
+ import { WgerContainerRightSidebar } from "@/core/ui/Widgets/Container";
+-import { useFetchNutritionalPlanDateQuery } from "@/components/Nutrition/queries";
++import { NutritionalValues } from "@/components/Nutrition/helpers/nutritionalValues";
++import { DiaryEntry } from "@/components/Nutrition/models/diaryEntry";
++import { Meal } from "@/components/Nutrition/models/meal";
++import { useFetchNutritionalPlanDateQuery, useEditDiaryEntryQuery, useEditMealQuery } from "@/components/Nutrition/queries";
+ import { IngredientDetailTable } from "@/components/Nutrition/widgets/IngredientDetailTable";
+-import {
+-    LoggedPlannedNutritionalValuesTable
+-} from "@/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable";
++import { LoggedPlannedNutritionalValuesTable } from "@/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable";
+ import { dateToLocale, yyyymmddToDate } from "@/core/lib/date";
+-import { Stack, Typography } from "@mui/material";
+-import React from "react";
++import EditNoteIcon from "@mui/icons-material/EditNote";
++import { Box, Button, Card, CardContent, CardHeader, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, TextField, Tooltip, Typography, useTheme } from "@mui/material";
++import React, { useState } from "react";
+ import { useTranslation } from "react-i18next";
+ import { useParams } from "react-router-dom";
+ 
++// Dialog for editing a meal's note
++const EditMealNoteDialog = ({ meal, planId, open, onClose }: { meal: Meal, planId: string, open: boolean, onClose: () => void }) => {
++    const [t] = useTranslation();
++    const [note, setNote] = useState(meal.comment);
++    const editQuery = useEditMealQuery(planId);
++
++    const handleSave = () => {
++        const updatedMeal = Meal.clone(meal, { comment: note });
++        editQuery.mutate(updatedMeal);
++        onClose();
++    };
++
++    return (
++        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
++            <DialogTitle>{t('nutrition.editMealNote')}: {meal.name}</DialogTitle>
++            <DialogContent>
++                <TextField
++                    autoFocus
++                    margin="dense"
++                    label={t('nutrition.mealNotes')}
++                    placeholder={t('nutrition.mealNotesPlaceholder')}
++                    fullWidth
++                    multiline
++                    minRows={3}
++                    maxRows={6}
++                    value={note}
++                    onChange={(e) => setNote(e.target.value)}
++                />
++            </DialogContent>
++            <DialogActions>
++                <Button onClick={onClose}>{t('close')}</Button>
++                <Button onClick={handleSave} variant="contained">{t('submit')}</Button>
++            </DialogActions>
++        </Dialog>
++    );
++};
++
++// Dialog for editing a diary entry's note
++const EditNoteDialog = ({ entry, planId, open, onClose }: { entry: DiaryEntry, planId: string, open: boolean, onClose: () => void }) => {
++    const [t] = useTranslation();
++    const [note, setNote] = useState(entry.comment);
++    const editQuery = useEditDiaryEntryQuery(planId);
++
++    const handleSave = () => {
++        const updatedEntry = DiaryEntry.clone(entry, { comment: note });
++        editQuery.mutate(updatedEntry);
++        onClose();
++    };
++
++    return (
++        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
++            <DialogTitle>{t('nutrition.editNote')}: {entry.ingredient?.name}</DialogTitle>
++            <DialogContent>
++                <TextField
++                    autoFocus
++                    margin="dense"
++                    label={t('nutrition.notes')}
++                    placeholder={t('nutrition.notesPlaceholder')}
++                    fullWidth
++                    multiline
++                    minRows={3}
++                    maxRows={6}
++                    value={note}
++                    onChange={(e) => setNote(e.target.value)}
++                />
++            </DialogContent>
++            <DialogActions>
++                <Button onClick={onClose}>{t('close')}</Button>
++                <Button onClick={handleSave} variant="contained">{t('submit')}</Button>
++            </DialogActions>
++        </Dialog>
++    );
++};
++
++// Component for a single meal's diary entries
++const MealDiaryCard = (props: { meal: Meal | null, entries: DiaryEntry[], mealName: string, mealTime?: string | null, planId: string }) => {
++    const [t] = useTranslation();
++    const theme = useTheme();
++    const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
++    const [editingMealNote, setEditingMealNote] = useState(false);
++
++    if (props.entries.length === 0) {
++        return null;
++    }
++
++    // Calculate nutritional values for this meal's entries
++    const mealNutrition = props.entries.reduce(
++        (acc, entry) => acc.add(entry.nutritionalValues),
++        new NutritionalValues()
++    );
++
++    const hasMealNote = props.meal?.comment && props.meal.comment.trim();
++
++    return (
++        <Card>
++            <CardHeader
++                sx={{ bgcolor: theme.palette.grey["200"], py: 1 }}
++                title={
++                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
++                        {props.mealName}
++                        {props.meal && (
++                            <Tooltip title={hasMealNote ? t('nutrition.editMealNote') : t('nutrition.addMealNote')}>
++                                <IconButton size="small" onClick={() => setEditingMealNote(true)}>
++                                    <EditNoteIcon fontSize="small" />
++                                </IconButton>
++                            </Tooltip>
++                        )}
++                    </Box>
++                }
++                subheader={
++                    <Box>
++                        {props.mealTime && <span>{props.mealTime}</span>}
++                        {hasMealNote && (
++                            <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
++                                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
++                                    {props.meal!.comment}
++                                </Typography>
++                            </Box>
++                        )}
++                    </Box>
++                }
++            />
++            <CardContent sx={{ p: 1 }}>
++                <IngredientDetailTable
++                    items={props.entries}
++                    values={mealNutrition}
++                    showSum={true}
++                />
++            </CardContent>
++
++            {editingEntry && (
++                <EditNoteDialog
++                    entry={editingEntry}
++                    planId={props.planId}
++                    open={true}
++                    onClose={() => setEditingEntry(null)}
++                />
++            )}
++
++            {editingMealNote && props.meal && (
++                <EditMealNoteDialog
++                    meal={props.meal}
++                    planId={props.planId}
++                    open={true}
++                    onClose={() => setEditingMealNote(false)}
++                />
++            )}
++        </Card>
++    );
++};
++
+ 
+ export const NutritionDiaryOverview = () => {
+     const [t] = useTranslation();
+@@ -25,25 +178,85 @@ export const NutritionDiaryOverview = () => {
+     // eslint-disable-next-line react-hooks/rules-of-hooks
+     const planQuery = useFetchNutritionalPlanDateQuery(planId, params.date!);
+ 
+-    return planQuery.isLoading
+-        ? <LoadingPlaceholder />
+-        : <WgerContainerRightSidebar
++    if (planQuery.isLoading) {
++        return <LoadingPlaceholder />;
++    }
++
++    const plan = planQuery.data!;
++    const entriesForDate = plan.loggedEntriesDate(date);
++
++    // Group entries by meal
++    const entriesByMeal = new Map<string | null, DiaryEntry[]>();
++    for (const entry of entriesForDate) {
++        const mealId = entry.mealId;
++        if (!entriesByMeal.has(mealId)) {
++            entriesByMeal.set(mealId, []);
++        }
++        entriesByMeal.get(mealId)!.push(entry);
++    }
++
++    // Count fermented foods
++    const fermentedCount = entriesForDate.filter(e => e.ingredient?.isFermented).length;
++
++    // Get meals sorted by time
++    const sortedMeals = [...plan.meals].sort((a, b) => {
++        if (!a.time && !b.time) return 0;
++        if (!a.time) return 1;
++        if (!b.time) return -1;
++        return a.time.getTime() - b.time.getTime();
++    });
++
++    return (
++        <WgerContainerRightSidebar
+             title={t('nutrition.nutritionalDiary')}
+-            mainContent={<>
++            mainContent={
+                 <Stack spacing={2}>
+                     <Typography gutterBottom variant="h4">
+                         {dateToLocale(date)}
+                     </Typography>
++
++                    {/* Fermented foods count */}
++                    {fermentedCount > 0 && (
++                        <Chip
++                            label={`${fermentedCount} fermented food${fermentedCount > 1 ? 's' : ''} today`}
++                            color="success"
++                            variant="outlined"
++                            sx={{ alignSelf: 'flex-start' }}
++                        />
++                    )}
++
++                    {/* Nutrition summary table */}
+                     <LoggedPlannedNutritionalValuesTable
+-                        logged={planQuery.data!.loggedNutritionalValuesDate(date)}
+-                        planned={planQuery.data!.plannedNutritionalValues}
++                        logged={plan.loggedNutritionalValuesDate(date)}
++                        planned={plan.plannedNutritionalValues}
+                     />
+-                    <IngredientDetailTable
+-                        values={planQuery.data!.loggedNutritionalValuesDate(date)}
+-                        items={planQuery.data!.loggedEntriesDate(date)}
+-                        showSum={true} />
+ 
++                    {/* Entries grouped by meal */}
++                    {sortedMeals.map(meal => {
++                        const mealEntries = entriesByMeal.get(meal.id!) || [];
++                        return (
++                            <MealDiaryCard
++                                key={meal.id}
++                                meal={meal}
++                                entries={mealEntries}
++                                mealName={meal.name}
++                                mealTime={meal.timeHHMMLocale}
++                                planId={planId}
++                            />
++                        );
++                    })}
++
++                    {/* Entries without a meal ("Other") */}
++                    {entriesByMeal.has(null) && (
++                        <MealDiaryCard
++                            meal={null}
++                            entries={entriesByMeal.get(null)!}
++                            mealName="Other"
++                            planId={planId}
++                        />
++                    )}
+                 </Stack>
+-            </>}
+-        />;
++            }
++        />
++    );
+ };
+\ No newline at end of file
+diff --git a/src/components/Nutrition/screens/PlansOverview.tsx b/src/components/Nutrition/screens/PlansOverview.tsx
+index c623191e..b3db20fc 100644
+--- a/src/components/Nutrition/screens/PlansOverview.tsx
++++ b/src/components/Nutrition/screens/PlansOverview.tsx
+@@ -9,7 +9,7 @@ import { AddNutritionalPlanFab } from "@/components/Nutrition/widgets/Fab";
+ import React from "react";
+ import { useTranslation } from "react-i18next";
+ import { dateToLocale } from "@/core/lib/date";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, WgerLink } from "@/core/lib/url";
+ 
+ export const PlansOverview = () => {
+     const plansQuery = useFetchNutritionalPlansQuery();
+@@ -32,7 +32,7 @@ export const PlansOverview = () => {
+ 
+ const PlanListItem = (props: { plan: NutritionalPlan }) => {
+     const [t, i18n] = useTranslation();
+-    const detailUrl = makeLink(WgerLink.NUTRITION_DETAIL, i18n.language, { id: props.plan.id! });
++    const detailUrl = makeHref(WgerLink.NUTRITION_DETAIL, i18n.language, { id: props.plan.id! });
+ 
+     return <>
+         <ListItem sx={{ p: 0 }}>
+diff --git a/src/components/Nutrition/widgets/IngredientDetailTable.tsx b/src/components/Nutrition/widgets/IngredientDetailTable.tsx
+index c7771c11..68589324 100644
+--- a/src/components/Nutrition/widgets/IngredientDetailTable.tsx
++++ b/src/components/Nutrition/widgets/IngredientDetailTable.tsx
+@@ -1,44 +1,189 @@
++import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+ import PhotoIcon from "@mui/icons-material/Photo";
+-import { Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
++import { Avatar, Box, Chip, Collapse, Grid, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
+ import { NutritionalValues } from "@/components/Nutrition/helpers/nutritionalValues";
+ import { DiaryEntry } from "@/components/Nutrition/models/diaryEntry";
+ import { MealItem } from "@/components/Nutrition/models/mealItem";
++import React, { useState } from "react";
+ import { useTranslation } from "react-i18next";
+ import { numberGramLocale, numberLocale } from "@/core/lib/numbers";
+ 
++const NutrientItem = ({ label, value, unit, language }: { label: string; value: number; unit: string; language: string }) => {
++    if (value === 0) return null;
++    return (
++        <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.25 }}>
++            <Typography variant="body2" color="text.secondary">{label}</Typography>
++            <Typography variant="body2">
++                {unit === 'g' ? numberGramLocale(value, language) : `${numberLocale(value, language)} ${unit}`}
++            </Typography>
++        </Box>
++    );
++};
++
++const NutrientSection = ({ title, children }: { title: string; children: React.ReactNode }) => {
++    const hasContent = React.Children.toArray(children).some(child => child !== null);
++    if (!hasContent) return null;
++    return (
++        <Box sx={{ mb: 1.5 }}>
++            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, borderBottom: 1, borderColor: 'divider' }}>
++                {title}
++            </Typography>
++            {children}
++        </Box>
++    );
++};
++
++const ExpandedNutrientDetails = ({ values, language, comment }: { values: NutritionalValues; language: string; comment?: string }) => {
++    const { t } = useTranslation();
++    const unsaturatedFat = values.fatMonounsaturated + values.fatPolyunsaturated;
++
++    return (
++        <Box sx={{ p: 2, bgcolor: 'background.default' }}>
++            {comment && comment.trim() && (
++                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
++                    {t('nutrition.notes')}: {comment}
++                </Typography>
++            )}
++            <Grid container spacing={2}>
++                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
++                    <NutrientSection title={t('nutrition.fat')}>
++                        <NutrientItem label={t('nutrition.saturatedFat')} value={values.fatSaturated} unit="g" language={language} />
++                        <NutrientItem label={t('nutrition.unsaturatedFat')} value={unsaturatedFat} unit="g" language={language} />
++                        <NutrientItem label={t('nutrition.transFat')} value={values.fatTrans} unit="g" language={language} />
++                        <NutrientItem label={t('nutrition.cholesterol')} value={values.cholesterol} unit="mg" language={language} />
++                    </NutrientSection>
++                    <NutrientSection title={t('nutrition.fiber')}>
++                        <NutrientItem label={t('nutrition.fiberSoluble')} value={values.fiberSoluble} unit="g" language={language} />
++                        <NutrientItem label={t('nutrition.fiberInsoluble')} value={values.fiberInsoluble} unit="g" language={language} />
++                    </NutrientSection>
++                    <NutrientSection title={t('nutrition.caffeine')}>
++                        <NutrientItem label={t('nutrition.caffeine')} value={values.caffeine} unit="mg" language={language} />
++                    </NutrientSection>
++                </Grid>
++                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
++                    <NutrientSection title={t('nutrition.minerals')}>
++                        <NutrientItem label={t('nutrition.potassium')} value={values.potassium} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.calcium')} value={values.calcium} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.iron')} value={values.iron} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.magnesium')} value={values.magnesium} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.phosphorus')} value={values.phosphorus} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.zinc')} value={values.zinc} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.copper')} value={values.copper} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.manganese')} value={values.manganese} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.selenium')} value={values.selenium} unit="mcg" language={language} />
++                        <NutrientItem label={t('nutrition.iodine')} value={values.iodine} unit="mcg" language={language} />
++                    </NutrientSection>
++                </Grid>
++                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
++                    <NutrientSection title={t('nutrition.vitamins')}>
++                        <NutrientItem label={t('nutrition.vitaminA')} value={values.vitaminA} unit="mcg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminD')} value={values.vitaminD} unit="mcg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminE')} value={values.vitaminE} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminK')} value={values.vitaminK} unit="mcg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminC')} value={values.vitaminC} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB1')} value={values.vitaminB1} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB2')} value={values.vitaminB2} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB3')} value={values.vitaminB3} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB5')} value={values.vitaminB5} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB6')} value={values.vitaminB6} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB9')} value={values.vitaminB9} unit="mcg" language={language} />
++                        <NutrientItem label={t('nutrition.vitaminB12')} value={values.vitaminB12} unit="mcg" language={language} />
++                    </NutrientSection>
++                </Grid>
++                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
++                    <NutrientSection title={t('nutrition.antioxidants')}>
++                        <NutrientItem label={t('nutrition.totalPolyphenols')} value={values.totalPolyphenols} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.totalFlavonoids')} value={values.totalFlavonoids} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.quercetin')} value={values.quercetin} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.catechins')} value={values.catechins} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.anthocyanins')} value={values.anthocyanins} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.resveratrol')} value={values.resveratrol} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.kaempferol')} value={values.kaempferol} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.hesperidin')} value={values.hesperidin} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.epicatechin')} value={values.epicatechin} unit="mg" language={language} />
++                        <NutrientItem label={t('nutrition.chlorogenicAcid')} value={values.chlorogenicAcid} unit="mg" language={language} />
++                    </NutrientSection>
++                </Grid>
++            </Grid>
++        </Box>
++    );
++};
++
+ const IngredientTableRow = (props: { item: MealItem | DiaryEntry }) => {
+     const [t, i18n] = useTranslation();
++    const [expanded, setExpanded] = useState(false);
++    const isFermented = props.item.ingredient?.isFermented ?? false;
++    // DiaryEntry has comment, MealItem doesn't
++    const comment = 'comment' in props.item ? props.item.comment : '';
+ 
+-    return <TableRow key={props.item.id}>
+-        <TableCell sx={{ paddingX: 1 }}>
+-            <Avatar
+-                alt={props.item.ingredient?.name}
+-                src={props.item.ingredient?.image?.url}
+-                sx={{ width: 45, height: 45 }}
++    return (
++        <React.Fragment>
++            <TableRow
++                key={props.item.id}
++                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
++                onClick={() => setExpanded(!expanded)}
+             >
+-                <PhotoIcon />
+-            </Avatar>
+-
+-        </TableCell>
+-        <TableCell sx={{ paddingX: 1 }}>
+-            {props.item.amountString} {props.item.ingredient?.name}
+-        </TableCell>
+-        <TableCell align={'right'} sx={{ paddingX: 1 }}>
+-            {t('nutrition.valueEnergyKcalKj', {
+-                kcal: numberLocale(props.item.nutritionalValues.energy, i18n.language),
+-                kj: numberLocale(props.item.nutritionalValues.energyKj, i18n.language)
+-            })}
+-        </TableCell>
+-        <TableCell align="right" sx={{ paddingX: 1 }}>
+-            {numberGramLocale(props.item.nutritionalValues.protein, i18n.language)}
+-        </TableCell>
+-        <TableCell align="right" sx={{ paddingX: 1 }}>
+-            {numberGramLocale(props.item.nutritionalValues.carbohydrates, i18n.language)}
+-        </TableCell>
+-        <TableCell align="right" sx={{ paddingX: 1 }}>
+-            {numberGramLocale(props.item.nutritionalValues.fat, i18n.language)}
+-        </TableCell>
+-    </TableRow>;
++                <TableCell sx={{ paddingX: 1 }}>
++                    <IconButton
++                        size="small"
++                        sx={{
++                            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
++                            transition: 'transform 0.2s'
++                        }}
++                    >
++                        <ExpandMoreIcon />
++                    </IconButton>
++                </TableCell>
++                <TableCell sx={{ paddingX: 1 }}>
++                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
++                        <Avatar
++                            alt={props.item.ingredient?.name}
++                            src={props.item.ingredient?.image?.url}
++                            sx={{ width: 45, height: 45 }}
++                        >
++                            <PhotoIcon />
++                        </Avatar>
++                        <Box>
++                            {props.item.amountString} {props.item.ingredient?.name}
++                            {isFermented && (
++                                <Tooltip title="Fermented food - good for gut health">
++                                    <Chip
++                                        label="Fermented"
++                                        size="small"
++                                        color="success"
++                                        variant="outlined"
++                                        sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
++                                    />
++                                </Tooltip>
++                            )}
++                        </Box>
++                    </Box>
++                </TableCell>
++                <TableCell align={'right'} sx={{ paddingX: 1 }}>
++                    {t('nutrition.valueEnergyKcalKj', {
++                        kcal: numberLocale(props.item.nutritionalValues.energy, i18n.language),
++                        kj: numberLocale(props.item.nutritionalValues.energyKj, i18n.language)
++                    })}
++                </TableCell>
++                <TableCell align="right" sx={{ paddingX: 1 }}>
++                    {numberGramLocale(props.item.nutritionalValues.protein, i18n.language)}
++                </TableCell>
++                <TableCell align="right" sx={{ paddingX: 1 }}>
++                    {numberGramLocale(props.item.nutritionalValues.carbohydrates, i18n.language)}
++                </TableCell>
++                <TableCell align="right" sx={{ paddingX: 1 }}>
++                    {numberGramLocale(props.item.nutritionalValues.fat, i18n.language)}
++                </TableCell>
++            </TableRow>
++            <TableRow>
++                <TableCell colSpan={6} sx={{ py: 0, border: expanded ? undefined : 0 }}>
++                    <Collapse in={expanded} timeout="auto" unmountOnExit>
++                        <ExpandedNutrientDetails values={props.item.nutritionalValues} language={i18n.language} comment={comment} />
++                    </Collapse>
++                </TableCell>
++            </TableRow>
++        </React.Fragment>
++    );
+ };
+ 
+ export const IngredientDetailTable = (props: {
+diff --git a/src/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable.tsx b/src/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable.tsx
+index 797526e6..2fa03aed 100644
+--- a/src/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable.tsx
++++ b/src/components/Nutrition/widgets/LoggedPlannedNutritionalValuesTable.tsx
+@@ -1,13 +1,29 @@
+-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
++import ExpandLess from "@mui/icons-material/ExpandLess";
++import ExpandMore from "@mui/icons-material/ExpandMore";
++import { Collapse, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+ import { NutritionalValues } from "@/components/Nutrition/helpers/nutritionalValues";
++import React, { useState } from "react";
+ import { useTranslation } from "react-i18next";
+ import { numberGramLocale, numberLocale } from "@/core/lib/numbers";
+ 
++// Helper to format milligrams
++const numberMgLocale = (value: number, locale: string) => {
++    return `${numberLocale(value, locale)} mg`;
++};
++
++// Helper to format micrograms
++const numberMcgLocale = (value: number, locale: string) => {
++    return `${numberLocale(value, locale)} mcg`;
++};
++
+ export const LoggedPlannedNutritionalValuesTable = (props: {
+     planned: NutritionalValues,
+     logged: NutritionalValues
+ }) => {
+     const [t, i18n] = useTranslation();
++    const [showMinerals, setShowMinerals] = useState(false);
++    const [showVitamins, setShowVitamins] = useState(false);
++    const [showAntioxidants, setShowAntioxidants] = useState(false);
+ 
+     return <TableContainer>
+         <Table size="small">
+@@ -101,6 +117,54 @@ export const LoggedPlannedNutritionalValuesTable = (props: {
+                         {numberGramLocale(props.logged.fatSaturated - props.planned.fatSaturated, i18n.language)}
+                     </TableCell>
+                 </TableRow>
++                <TableRow>
++                    <TableCell sx={{ paddingLeft: 5 }}>Trans Fat</TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.planned.fatTrans, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatTrans, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatTrans - props.planned.fatTrans, i18n.language)}
++                    </TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell sx={{ paddingLeft: 5 }}>Monounsaturated</TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.planned.fatMonounsaturated, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatMonounsaturated, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatMonounsaturated - props.planned.fatMonounsaturated, i18n.language)}
++                    </TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell sx={{ paddingLeft: 5 }}>Polyunsaturated</TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.planned.fatPolyunsaturated, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatPolyunsaturated, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberGramLocale(props.logged.fatPolyunsaturated - props.planned.fatPolyunsaturated, i18n.language)}
++                    </TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell>Cholesterol</TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.planned.cholesterol, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.logged.cholesterol, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.logged.cholesterol - props.planned.cholesterol, i18n.language)}
++                    </TableCell>
++                </TableRow>
+ 
+                 <TableRow>
+                     <TableCell>{t('nutrition.others')}</TableCell>
+@@ -109,7 +173,7 @@ export const LoggedPlannedNutritionalValuesTable = (props: {
+                     <TableCell />
+                 </TableRow>
+                 <TableRow>
+-                    <TableCell>{t('nutrition.fibres')}</TableCell>
++                    <TableCell>{t('nutrition.fiber')}</TableCell>
+                     <TableCell align="right">
+                         {numberGramLocale(props.planned.fiber, i18n.language)}
+                     </TableCell>
+@@ -120,6 +184,32 @@ export const LoggedPlannedNutritionalValuesTable = (props: {
+                         {numberGramLocale(props.logged.fiber - props.planned.fiber, i18n.language)}
+                     </TableCell>
+                 </TableRow>
++                <>
++                    <TableRow>
++                        <TableCell sx={{ pl: 5 }}>{t('nutrition.fiberSoluble')}</TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.planned.fiberSoluble, i18n.language)}
++                            </TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.logged.fiberSoluble, i18n.language)}
++                            </TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.logged.fiberSoluble - props.planned.fiberSoluble, i18n.language)}
++                            </TableCell>
++                        </TableRow>
++                        <TableRow>
++                            <TableCell sx={{ pl: 5 }}>{t('nutrition.fiberInsoluble')}</TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.planned.fiberInsoluble, i18n.language)}
++                            </TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.logged.fiberInsoluble, i18n.language)}
++                            </TableCell>
++                            <TableCell align="right">
++                                {numberGramLocale(props.logged.fiberInsoluble - props.planned.fiberInsoluble, i18n.language)}
++                            </TableCell>
++                        </TableRow>
++                </>
+                 <TableRow>
+                     <TableCell>{t('nutrition.sodium')}</TableCell>
+                     <TableCell align="right">
+@@ -132,6 +222,279 @@ export const LoggedPlannedNutritionalValuesTable = (props: {
+                         {numberGramLocale(props.logged.sodium - props.planned.sodium, i18n.language)}
+                     </TableCell>
+                 </TableRow>
++                <TableRow>
++                    <TableCell>{t('nutrition.caffeine')}</TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.planned.caffeine, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.logged.caffeine, i18n.language)}
++                    </TableCell>
++                    <TableCell align="right">
++                        {numberMgLocale(props.logged.caffeine - props.planned.caffeine, i18n.language)}
++                    </TableCell>
++                </TableRow>
++
++                {/* Minerals Section */}
++                <TableRow sx={{ cursor: 'pointer' }} onClick={() => setShowMinerals(!showMinerals)}>
++                    <TableCell>
++                        <IconButton size="small">
++                            {showMinerals ? <ExpandLess /> : <ExpandMore />}
++                        </IconButton>
++                        Minerals
++                    </TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell colSpan={4} sx={{ p: 0, borderBottom: showMinerals ? undefined : 'none' }}>
++                        <Collapse in={showMinerals} timeout="auto" unmountOnExit>
++                            <Table size="small">
++                                <TableBody>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Potassium</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.potassium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.potassium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.potassium - props.planned.potassium, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Calcium</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.calcium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.calcium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.calcium - props.planned.calcium, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Iron</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.iron, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.iron, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.iron - props.planned.iron, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Magnesium</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.magnesium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.magnesium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.magnesium - props.planned.magnesium, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Phosphorus</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.phosphorus, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.phosphorus, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.phosphorus - props.planned.phosphorus, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Zinc</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.zinc, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.zinc, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.zinc - props.planned.zinc, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Copper</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.copper, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.copper, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.copper - props.planned.copper, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Manganese</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.manganese, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.manganese, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.manganese - props.planned.manganese, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Selenium</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.selenium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.selenium, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.selenium - props.planned.selenium, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Iodine</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.iodine, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.iodine, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.iodine - props.planned.iodine, i18n.language)}</TableCell>
++                                    </TableRow>
++                                </TableBody>
++                            </Table>
++                        </Collapse>
++                    </TableCell>
++                </TableRow>
++
++                {/* Vitamins Section */}
++                <TableRow sx={{ cursor: 'pointer' }} onClick={() => setShowVitamins(!showVitamins)}>
++                    <TableCell>
++                        <IconButton size="small">
++                            {showVitamins ? <ExpandLess /> : <ExpandMore />}
++                        </IconButton>
++                        Vitamins
++                    </TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell colSpan={4} sx={{ p: 0, borderBottom: showVitamins ? undefined : 'none' }}>
++                        <Collapse in={showVitamins} timeout="auto" unmountOnExit>
++                            <Table size="small">
++                                <TableBody>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin A</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.vitaminA, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminA, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminA - props.planned.vitaminA, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin D</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.vitaminD, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminD, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminD - props.planned.vitaminD, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin E</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminE, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminE, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminE - props.planned.vitaminE, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin K</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.vitaminK, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminK, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminK - props.planned.vitaminK, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin C</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminC, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminC, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminC - props.planned.vitaminC, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B1 (Thiamin)</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminB1, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB1, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB1 - props.planned.vitaminB1, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B2 (Riboflavin)</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminB2, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB2, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB2 - props.planned.vitaminB2, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B3 (Niacin)</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminB3, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB3, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB3 - props.planned.vitaminB3, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B5 (Pantothenic)</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminB5, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB5, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB5 - props.planned.vitaminB5, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B6</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.vitaminB6, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB6, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.vitaminB6 - props.planned.vitaminB6, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B9 (Folate)</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.vitaminB9, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminB9, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminB9 - props.planned.vitaminB9, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>Vitamin B12</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.planned.vitaminB12, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminB12, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMcgLocale(props.logged.vitaminB12 - props.planned.vitaminB12, i18n.language)}</TableCell>
++                                    </TableRow>
++                                </TableBody>
++                            </Table>
++                        </Collapse>
++                    </TableCell>
++                </TableRow>
++
++                {/* Antioxidants Section */}
++                <TableRow sx={{ cursor: 'pointer' }} onClick={() => setShowAntioxidants(!showAntioxidants)}>
++                    <TableCell>
++                        <IconButton size="small">
++                            {showAntioxidants ? <ExpandLess /> : <ExpandMore />}
++                        </IconButton>
++                        {t('nutrition.antioxidants')}
++                    </TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                    <TableCell></TableCell>
++                </TableRow>
++                <TableRow>
++                    <TableCell colSpan={4} sx={{ p: 0, borderBottom: showAntioxidants ? undefined : 'none' }}>
++                        <Collapse in={showAntioxidants} timeout="auto" unmountOnExit>
++                            <Table size="small">
++                                <TableBody>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.totalPolyphenols')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.totalPolyphenols, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.totalPolyphenols, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.totalPolyphenols - props.planned.totalPolyphenols, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.totalFlavonoids')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.totalFlavonoids, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.totalFlavonoids, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.totalFlavonoids - props.planned.totalFlavonoids, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.quercetin')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.quercetin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.quercetin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.quercetin - props.planned.quercetin, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.catechins')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.catechins, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.catechins, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.catechins - props.planned.catechins, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.anthocyanins')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.anthocyanins, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.anthocyanins, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.anthocyanins - props.planned.anthocyanins, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.resveratrol')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.resveratrol, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.resveratrol, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.resveratrol - props.planned.resveratrol, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.kaempferol')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.kaempferol, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.kaempferol, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.kaempferol - props.planned.kaempferol, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.hesperidin')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.hesperidin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.hesperidin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.hesperidin - props.planned.hesperidin, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.epicatechin')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.epicatechin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.epicatechin, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.epicatechin - props.planned.epicatechin, i18n.language)}</TableCell>
++                                    </TableRow>
++                                    <TableRow>
++                                        <TableCell sx={{ pl: 5 }}>{t('nutrition.chlorogenicAcid')}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.planned.chlorogenicAcid, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.chlorogenicAcid, i18n.language)}</TableCell>
++                                        <TableCell align="right">{numberMgLocale(props.logged.chlorogenicAcid - props.planned.chlorogenicAcid, i18n.language)}</TableCell>
++                                    </TableRow>
++                                </TableBody>
++                            </Table>
++                        </Collapse>
++                    </TableCell>
++                </TableRow>
+             </TableBody>
+         </Table>
+     </TableContainer>;
+diff --git a/src/components/Nutrition/widgets/NutritionalValuesTable.tsx b/src/components/Nutrition/widgets/NutritionalValuesTable.tsx
+index 7a4af277..29d2f148 100644
+--- a/src/components/Nutrition/widgets/NutritionalValuesTable.tsx
++++ b/src/components/Nutrition/widgets/NutritionalValuesTable.tsx
+@@ -82,13 +82,29 @@ export const NutritionalValuesTable = (props: { values: NutritionalValues }) =>
+                     {/*<TableCell align="right"></TableCell>*/}
+                 </TableRow>
+                 <TableRow>
+-                    <TableCell>{t('nutrition.fibres')}</TableCell>
++                    <TableCell>{t('nutrition.fiber')}</TableCell>
+                     <TableCell align="right">
+                         {numberGramLocale(props.values.fiber, i18n.language)}
+                     </TableCell>
+                     <TableCell align="right" />
+                     {/*<TableCell align="right"></TableCell>*/}
+                 </TableRow>
++                <>
++                    <TableRow>
++                        <TableCell sx={{ pl: 5 }}>{t('nutrition.fiberSoluble')}</TableCell>
++                        <TableCell align="right">
++                            {numberGramLocale(props.values.fiberSoluble, i18n.language)}
++                        </TableCell>
++                        <TableCell align="right"></TableCell>
++                    </TableRow>
++                    <TableRow>
++                        <TableCell sx={{ pl: 5 }}>{t('nutrition.fiberInsoluble')}</TableCell>
++                        <TableCell align="right">
++                            {numberGramLocale(props.values.fiberInsoluble, i18n.language)}
++                        </TableCell>
++                        <TableCell align="right"></TableCell>
++                    </TableRow>
++                </>
+                 <TableRow>
+                     <TableCell>{t('nutrition.sodium')}</TableCell>
+                     <TableCell align="right">
+diff --git a/src/components/Nutrition/widgets/charts/NutritionalValuesDashboardChart.tsx b/src/components/Nutrition/widgets/charts/NutritionalValuesDashboardChart.tsx
+index c84a4aa7..f84c9f05 100644
+--- a/src/components/Nutrition/widgets/charts/NutritionalValuesDashboardChart.tsx
++++ b/src/components/Nutrition/widgets/charts/NutritionalValuesDashboardChart.tsx
+@@ -28,7 +28,7 @@ export const NutritionalValuesDashboardChart = (props: {
+             value: energyPercentage < 100 ? 100 - energyPercentage : 0,
+         },
+     ];
+-    const COLORS = [theme.palette.primary.main, '#C5C5C5'];
++    const COLORS = [theme.palette.primary.main, theme.palette.grey[500]];
+ 
+ 
+     return <Stack direction={'row'}>
+diff --git a/src/components/Nutrition/widgets/forms/NutritionDiaryEntryForm.tsx b/src/components/Nutrition/widgets/forms/NutritionDiaryEntryForm.tsx
+index f2421d26..a6f7ba97 100644
+--- a/src/components/Nutrition/widgets/forms/NutritionDiaryEntryForm.tsx
++++ b/src/components/Nutrition/widgets/forms/NutritionDiaryEntryForm.tsx
+@@ -67,8 +67,9 @@ export const NutritionDiaryEntryForm = ({ planId, entry, mealId, meals, closeFn
+         (<Formik
+             initialValues={{
+                 datetime: new Date(),
+-                amount: 0,
+-                ingredient: null,
++                amount: entry?.amount ?? 0,
++                ingredient: entry?.ingredientId ?? null,
++                comment: entry?.comment ?? '',
+             }}
+             validationSchema={validationSchema}
+             onSubmit={async (values) => {
+@@ -86,6 +87,7 @@ export const NutritionDiaryEntryForm = ({ planId, entry, mealId, meals, closeFn
+                         ingredientId: values.ingredient!,
+                         weightUnitId: selectedUnit?.id ?? null,
+                         weightUnit: selectedUnit,
++                        comment: values.comment,
+                     });
+                     editDiaryQuery.mutate(newDiaryEntry);
+                 } else {
+@@ -98,6 +100,7 @@ export const NutritionDiaryEntryForm = ({ planId, entry, mealId, meals, closeFn
+                         mealId: selectedMeal,
+                         weightUnitId: selectedUnit?.id ?? null,
+                         weightUnit: selectedUnit,
++                        comment: values.comment,
+                     }));
+                 }
+ 
+@@ -197,6 +200,16 @@ export const NutritionDiaryEntryForm = ({ planId, entry, mealId, meals, closeFn
+                                 }}
+                             />
+                         </LocalizationProvider>
++                        <TextField
++                            fullWidth
++                            id="comment"
++                            label={t('nutrition.notes')}
++                            placeholder={t('nutrition.notesPlaceholder')}
++                            multiline
++                            minRows={2}
++                            maxRows={4}
++                            {...formik.getFieldProps('comment')}
++                        />
+                         <Stack direction="row" spacing={2} sx={{ justifyContent: "end" }}>
+                             {closeFn !== undefined
+                                 && <Button color="primary" variant="outlined" onClick={() => closeFn()}>
+diff --git a/src/components/Routines/screens/Detail/RoutineDetail.tsx b/src/components/Routines/screens/Detail/RoutineDetail.tsx
+index 9f97e004..545f7565 100644
+--- a/src/components/Routines/screens/Detail/RoutineDetail.tsx
++++ b/src/components/Routines/screens/Detail/RoutineDetail.tsx
+@@ -11,7 +11,7 @@ import React from "react";
+ import { useTranslation } from "react-i18next";
+ import { useParams } from "react-router-dom";
+ import { dateToLocale } from "@/core/lib/date";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ 
+ export const RoutineDetail = () => {
+     const { t } = useTranslation();
+@@ -48,7 +48,7 @@ export const RoutineDetail = () => {
+ 
+                         {routine!.isTemplate && <Button
+                             component="a"
+-                            href={makeLink(WgerLink.ROUTINE_COPY, i18n.language, { id: routineId })}
++                            href={makeHref(WgerLink.ROUTINE_COPY, i18n.language, { id: routineId })}
+                             variant={"contained"}
+                         >{t('routines.copyAndUseTemplate')}</Button>}
+                         {routine!.dayDataCurrentIterationFiltered.map((dayData) =>
+diff --git a/src/components/Routines/screens/Detail/TemplateDetail.tsx b/src/components/Routines/screens/Detail/TemplateDetail.tsx
+index 43dfee93..493622f1 100644
+--- a/src/components/Routines/screens/Detail/TemplateDetail.tsx
++++ b/src/components/Routines/screens/Detail/TemplateDetail.tsx
+@@ -9,7 +9,7 @@ import React from "react";
+ import { useTranslation } from "react-i18next";
+ import { useParams } from "react-router-dom";
+ import { dateToLocale } from "@/core/lib/date";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ 
+ export const TemplateDetail = () => {
+     const { t, i18n } = useTranslation();
+@@ -44,7 +44,7 @@ export const TemplateDetail = () => {
+ 
+                         <Button
+                             component="a"
+-                            href={makeLink(WgerLink.ROUTINE_COPY, i18n.language, { id: routineId })}
++                            href={makeHref(WgerLink.ROUTINE_COPY, i18n.language, { id: routineId })}
+                             variant={"contained"}
+                         >{t('routines.copyAndUseTemplate')}</Button>
+ 
+diff --git a/src/components/Routines/screens/Detail/WorkoutLogs.tsx b/src/components/Routines/screens/Detail/WorkoutLogs.tsx
+index 24af2e1f..f9b37c9e 100644
+--- a/src/components/Routines/screens/Detail/WorkoutLogs.tsx
++++ b/src/components/Routines/screens/Detail/WorkoutLogs.tsx
+@@ -8,7 +8,7 @@ import { ExerciseLog } from "@/components/Routines/widgets/LogWidgets";
+ import React from "react";
+ import { useTranslation } from "react-i18next";
+ import { Link, useParams } from "react-router-dom";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ 
+ 
+ export const WorkoutLogs = () => {
+@@ -44,7 +44,7 @@ export const WorkoutLogs = () => {
+                 <MuiTooltip title={t('routines.statsOverview')}>
+                     <IconButton
+                         component="a"
+-                        href={makeLink(WgerLink.ROUTINE_STATS_OVERVIEW, i18n.language, { id: routineId })}>
++                        href={makeHref(WgerLink.ROUTINE_STATS_OVERVIEW, i18n.language, { id: routineId })}>
+                         <BarChartIcon />
+                     </IconButton>
+                 </MuiTooltip>
+diff --git a/src/components/Routines/screens/Detail/WorkoutStats.tsx b/src/components/Routines/screens/Detail/WorkoutStats.tsx
+index 99130626..ab4bf9cb 100644
+--- a/src/components/Routines/screens/Detail/WorkoutStats.tsx
++++ b/src/components/Routines/screens/Detail/WorkoutStats.tsx
+@@ -32,7 +32,7 @@ import { useTranslation } from "react-i18next";
+ import { useParams } from "react-router-dom";
+ import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
+ import { generateChartColors } from "@/core/lib/colors";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ 
+ 
+ export const WorkoutStats = () => {
+@@ -174,7 +174,7 @@ export const WorkoutStats = () => {
+             optionsMenu={
+                 <MuiTooltip title={t('routines.logsOverview')}>
+                     <IconButton component="a"
+-                                href={makeLink(WgerLink.ROUTINE_LOGS_OVERVIEW, i18n.language, { id: routineId })}>
++                                href={makeHref(WgerLink.ROUTINE_LOGS_OVERVIEW, i18n.language, { id: routineId })}>
+                         <BarChartIcon />
+                     </IconButton>
+                 </MuiTooltip>
+diff --git a/src/components/Routines/widgets/RoutineDetailDropdown.tsx b/src/components/Routines/widgets/RoutineDetailDropdown.tsx
+index 6b2647f1..59756210 100644
+--- a/src/components/Routines/widgets/RoutineDetailDropdown.tsx
++++ b/src/components/Routines/widgets/RoutineDetailDropdown.tsx
+@@ -16,7 +16,7 @@ import { RoutineTemplateForm } from "@/components/Routines/widgets/forms/Routine
+ import React, { useState } from "react";
+ import { useTranslation } from "react-i18next";
+ import { Link, useNavigate } from "react-router-dom";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ 
+ 
+ export enum DialogToOpen {
+@@ -71,7 +71,7 @@ export const RoutineDetailDropdown = (props: { routine: Routine }) => {
+      *
+      *        See also: https://github.com/wger-project/wger/issues/1943
+      */
+-    const navigateEdit = () => window.location.href = makeLink(
++    const navigateEdit = () => window.location.href = makeHref(
+         WgerLink.ROUTINE_EDIT,
+         i18n.language,
+         { id: props.routine.id! }
+@@ -110,7 +110,7 @@ export const RoutineDetailDropdown = (props: { routine: Routine }) => {
+                 </MenuItem>}
+                 <MenuItem
+                     component="a"
+-                    href={makeLink(WgerLink.ROUTINE_COPY, i18n.language, { id: props.routine.id! })}
++                    href={makeHref(WgerLink.ROUTINE_COPY, i18n.language, { id: props.routine.id! })}
+                 >
+                     {t("routines.duplicate")}
+                 </MenuItem>
+@@ -119,19 +119,19 @@ export const RoutineDetailDropdown = (props: { routine: Routine }) => {
+                 </MenuItem>
+                 <MenuItem
+                     component="a"
+-                    href={makeLink(WgerLink.ROUTINE_PDF_TABLE, i18n.language, { id: props.routine.id! })}
++                    href={makeHref(WgerLink.ROUTINE_PDF_TABLE, i18n.language, { id: props.routine.id! })}
+                     download={`Routine-${props.routine.id}-table.pdf`}>
+                     {t("routines.downloadPdfTable")}
+                 </MenuItem>
+                 <MenuItem
+                     component="a"
+-                    href={makeLink(WgerLink.ROUTINE_PDF_LOGS, i18n.language, { id: props.routine.id! })}
++                    href={makeHref(WgerLink.ROUTINE_PDF_LOGS, i18n.language, { id: props.routine.id! })}
+                     download={`Routine-${props.routine.id}-logs.pdf`}>
+                     {t("routines.downloadPdfLogs")}
+                 </MenuItem>
+                 <MenuItem
+                     component="a"
+-                    href={makeLink(WgerLink.ROUTINE_ICAL, i18n.language, { id: props.routine.id! })}
++                    href={makeHref(WgerLink.ROUTINE_ICAL, i18n.language, { id: props.routine.id! })}
+                     download={`Routine-${props.routine.id}-calendar.ics`}>
+                     {t("routines.downloadIcal")}
+                 </MenuItem>
+diff --git a/src/components/Routines/widgets/RoutineDetailsCard.tsx b/src/components/Routines/widgets/RoutineDetailsCard.tsx
+index 8d115cda..59b61415 100644
+--- a/src/components/Routines/widgets/RoutineDetailsCard.tsx
++++ b/src/components/Routines/widgets/RoutineDetailsCard.tsx
+@@ -6,7 +6,7 @@ import { SetConfigData } from "@/components/Routines/models/SetConfigData";
+ import { SlotData } from "@/components/Routines/models/SlotData";
+ import { useRoutineDetailQuery } from "@/components/Routines/queries";
+ import { isSameDay } from "@/core/lib/date";
+-import { makeLink, WgerLink } from "@/core/lib/url";
++import { makeHref, makeLink, WgerLink } from "@/core/lib/url";
+ import { Addchart } from "@mui/icons-material";
+ import TodayIcon from '@mui/icons-material/Today';
+ import {
+@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
+ import { useParams } from "react-router-dom";
+ 
+ 
++
+ export const RoutineDetailsCard = () => {
+ 
+     const params = useParams<{ routineId: string }>();
+@@ -171,7 +172,7 @@ export const DayDetailsCard = (props: { dayData: RoutineDayData, routineId: numb
+                     ? null
+                     : <Tooltip title={t('routines.addWeightLog')}>
+                         <IconButton
+-                            href={makeLink(WgerLink.ROUTINE_ADD_LOG, i18n.language, {
++                            href={makeHref(WgerLink.ROUTINE_ADD_LOG, i18n.language, {
+                                 id: props.routineId,
+                                 id2: props.dayData.day!.id!
+                             })}>
+diff --git a/src/config.ts b/src/config.ts
+index 428eb23e..707da1c2 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -2,9 +2,17 @@
+  *  Collect all constants that access import.meta.env so it's easier to mock them
+  */
+ 
++// Extend Window interface for Django configuration
++declare global {
++    interface Window {
++        WGER_BASE_PATH?: string;
++    }
++}
++
+ export const IS_PROD = import.meta.env.PROD;
+ export const PUBLIC_URL = IS_PROD ? "/static/node/@wger-project/react-components/build" : import.meta.env.VITE_PUBLIC_URL;
+-export const SERVER_URL = IS_PROD ? "" : import.meta.env.VITE_API_SERVER;
++// In production, use the Django mount point (for example /wger).
++export const SERVER_URL = IS_PROD ? (window.WGER_BASE_PATH || "") : import.meta.env.VITE_API_SERVER;
+ export const MIN_ACCOUNT_AGE_TO_TRUST = import.meta.env.VITE_MIN_ACCOUNT_AGE_TO_TRUST;
+ 
+ export const VITE_API_SERVER = import.meta.env.VITE_API_SERVER;
+diff --git a/src/core/lib/consts.ts b/src/core/lib/consts.ts
+index f427982a..d058eba7 100644
+--- a/src/core/lib/consts.ts
++++ b/src/core/lib/consts.ts
+@@ -121,34 +121,32 @@ export const API_MAX_PAGE_SIZE = '999';
+ export const API_RESULTS_PAGE_SIZE = '100';
+ 
+ /*
+- * List of colors to use in charts
++ * List of colors to use in charts (Gruvbox palette)
+  *
+  * Use e.g. like LIST_OF_COLORS[key % LIST_OF_COLORS.length] so that there
+  * are no errors when there are more categories than colors
+- *
+- * https://www.learnui.design/tools/data-color-picker.html#palette
+  */
+ export const LIST_OF_COLORS8 = [
+-    "#2a4c7d",
+-    "#5b5291",
+-    "#8e5298",
+-    "#bf5092",
+-    "#e7537e",
+-    "#ff6461",
+-    "#ff813d",
+-    "#ffa600",
++    "#83a598",  // blue
++    "#b8bb26",  // green
++    "#fabd2f",  // yellow
++    "#fe8019",  // orange
++    "#fb4934",  // red
++    "#d3869b",  // purple
++    "#8ec07c",  // aqua
++    "#ebdbb2",  // fg
+ ];
+ export const LIST_OF_COLORS5 = [
+-    "#2a4c7d",
+-    "#825298",
+-    "#d45089",
+-    "#ff6a59",
+-    "#ffa600",
++    "#83a598",  // blue
++    "#b8bb26",  // green
++    "#fabd2f",  // yellow
++    "#fe8019",  // orange
++    "#fb4934",  // red
+ ];
+ export const LIST_OF_COLORS3 = [
+-    "#2a4c7d",
+-    "#d45089",
+-    "#ffa600",
++    "#83a598",  // blue
++    "#fe8019",  // orange
++    "#b8bb26",  // green
+ ];
+ 
+ 
+diff --git a/src/core/lib/url.ts b/src/core/lib/url.ts
+index 0c6551a8..99ca5f13 100644
+--- a/src/core/lib/url.ts
++++ b/src/core/lib/url.ts
+@@ -1,5 +1,5 @@
+ import { AxiosRequestConfig } from "axios";
+-import { IS_PROD, VITE_API_KEY, VITE_API_SERVER } from "@/config";
++import { IS_PROD, SERVER_URL, VITE_API_KEY } from "@/config";
+ import i18n from "@/i18n";
+ import slug from "slug";
+ 
+@@ -19,7 +19,7 @@ export function makeUrl(path: string, params?: makeUrlInterface) {
+     params = params || {};
+ 
+     // Base data
+-    const serverUrl = params.server || VITE_API_SERVER;
++    const serverUrl = params.server || SERVER_URL;
+     const paths = [serverUrl, 'api', 'v2', path];
+ 
+     // Detail view
+@@ -102,14 +102,25 @@ export enum WgerLink {
+ 
+ type UrlParams = { id: number | string, id2?: number | string, slug?: string, date?: string };
+ 
++// Extend Window interface for Django configuration
++declare global {
++    interface Window {
++        WGER_BASE_PATH?: string;
++    }
++}
++
++// Get base path from Django (e.g., '/wger' when served under a subpath)
++export function getBasePath(): string {
++    return (typeof window !== 'undefined' && window.WGER_BASE_PATH) || '';
++}
+ 
+ /*
+- * Util function that generates a clickable url
++ * Util function that generates a clickable url for use with React Router's <Link to={...}>
++ * Does NOT include basePath since React Router handles that via basename
+  *
+  * These URLs need to be kept in sync with the ones used in django
+  */
+ export function makeLink(link: WgerLink, language?: string, params?: UrlParams): string {
+-
+     language = language?.toLowerCase() || 'en';
+ 
+     switch (link) {
+@@ -201,6 +212,14 @@ export function makeLink(link: WgerLink, language?: string, params?: UrlParams):
+     }
+ }
+ 
++/*
++ * Util function that generates a full href URL including basePath
++ * Use this for regular <a href={...}> elements that bypass React Router
++ */
++export function makeHref(link: WgerLink, language?: string, params?: UrlParams): string {
++    return getBasePath() + makeLink(link, language, params);
++}
++
+ /*
+  * Read cookie from browser
+  *
+diff --git a/src/i18n.ts b/src/i18n.ts
+index b9a23166..7ea946f7 100644
+--- a/src/i18n.ts
++++ b/src/i18n.ts
+@@ -5,6 +5,13 @@ import Backend from 'i18next-http-backend';
+ import common from "@/locales/en/translation.json";
+ import { initReactI18next } from "react-i18next";
+ 
++// Extend Window interface for Django's static URL configuration
++declare global {
++    interface Window {
++        WGER_STATIC_URL?: string;
++    }
++}
++
+ export const resources = {
+     en: {
+         common,
+@@ -25,8 +32,10 @@ i18n
+         // https://github.com/i18next/i18next-browser-languageDetector
+         detection: {
+             // order and from where user language should be detected
+-            order: ['path', 'navigator', 'htmlTag'],
+-
++            // Note: 'path' detector is problematic when served under a subpath (e.g., /wger/)
++            // as it picks up the subpath name instead of the language code.
++            // Using htmlTag first since Django sets <html lang="..."> correctly.
++            order: ['htmlTag', 'navigator'],
+         },
+ 
+         fallbackLng: 'en',
+@@ -46,21 +55,24 @@ i18n
+         // injects a `window.WGER_I18N_PATHS` mapping built from the staticfiles
+         // manifest so we can request the cache-busted URL directly.
+         //
+-        // To match the file name convention from weblate, we replace '-' with '_'.
++        // To match the file name convention from weblate, replace '-' with '_'.
+         backend: {
+             loadPath: (lng: string[], ns: string[]) => {
+-                const lang = lng[0].replace('-', '_');
++                const regionLocales = ['pt_BR', 'pt_PT', 'nb_NO', 'zh_Hans', 'zh_Hant'];
++                let lang = lng[0].replace('-', '_');
++                if (lang.includes('_') && !regionLocales.includes(lang)) {
++                    lang = lang.split('_')[0];
++                }
+ 
+-                // Prod
+                 if (IS_PROD) {
+                     const injected = (window as unknown as {
+                         WGER_I18N_PATHS?: Record<string, string>
+                     }).WGER_I18N_PATHS;
++                    const staticUrl = window.WGER_STATIC_URL || '/static/';
+                     return injected?.[lang]
+-                        ?? `/static/node/@wger-project/react-components/build/locales/${lang}/${ns}.json`;
++                        ?? `${staticUrl}node/@wger-project/react-components/build/locales/${lang}/${ns}.json`;
+                 }
+ 
+-                // Dev
+                 return `/locales/${lang}/${ns}.json`;
+             }
+         },
+diff --git a/src/index.tsx b/src/index.tsx
+index bb8ee7c4..51efa97f 100644
+--- a/src/index.tsx
++++ b/src/index.tsx
+@@ -4,6 +4,7 @@ import { WgerRoutes } from "@/routes";
+ import { makeTheme, theme } from '@/theme';
+ import createCache from '@emotion/cache';
+ import { CacheProvider } from "@emotion/react";
++import CssBaseline from '@mui/material/CssBaseline';
+ import { ThemeProvider } from '@mui/material/styles';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+@@ -12,6 +13,16 @@ import React, { Suspense } from 'react';
+ import { createRoot } from "react-dom/client";
+ import { BrowserRouter as Router } from 'react-router-dom';
+ 
++// Extend Window interface for Django configuration
++declare global {
++    interface Window {
++        WGER_BASE_PATH?: string;
++    }
++}
++
++// Get base path from Django (e.g., '/wger' when served under a subpath)
++const basePath = window.WGER_BASE_PATH || '';
++
+ import App from './App';
+ import './i18n';
+ import './index.css';
+@@ -74,8 +85,9 @@ const renderComponentShadowDom = (divId: string) => {
+     root.render(
+         <CacheProvider value={cache}>
+             <Suspense fallback={<LoadingWidget />}>
+-                <Router>
++                <Router basename={basePath}>
+                     <ThemeProvider theme={makeTheme(shadowRoot)}>
++                        <CssBaseline />
+                         <QueryClientProvider client={queryClient}>
+                             <WgerRoutes />
+                         </QueryClientProvider>
+@@ -92,8 +104,9 @@ if (rootElement) {
+     root.render(
+         <React.StrictMode>
+             <Suspense fallback={<LoadingWidget />}>
+-                <Router>
++                <Router basename={basePath}>
+                     <ThemeProvider theme={theme}>
++                        <CssBaseline />
+                         <QueryClientProvider client={queryClient}>
+                             <App />
+                             <ReactQueryDevtools />
+@@ -111,8 +124,9 @@ if (rootNoShadowDom) {
+     const root = createRoot(rootNoShadowDom);
+     root.render(
+         <Suspense fallback={<LoadingWidget />}>
+-            <Router>
++            <Router basename={basePath}>
+                 <ThemeProvider theme={theme}>
++                    <CssBaseline />
+                     <QueryClientProvider client={queryClient}>
+                         <WgerRoutes />
+                     </QueryClientProvider>
+@@ -133,6 +147,7 @@ if (ingredientSearchBox) {
+     root.render(
+         <Suspense fallback={<LoadingWidget />}>
+             <ThemeProvider theme={theme}>
++                <CssBaseline />
+                 <QueryClientProvider client={queryClient}>
+                     <IngredientSearch />
+                 </QueryClientProvider>
+diff --git a/src/theme.ts b/src/theme.ts
+index 5585c34b..482c29b6 100644
+--- a/src/theme.ts
++++ b/src/theme.ts
+@@ -10,6 +10,38 @@ const fontFamilyLight = [
+     'sans-serif'
+ ].join(',');
+ 
++// Gruvbox Dark color palette
++const gruvbox = {
++    // Backgrounds
++    bg0_h: '#1d2021',  // hard contrast
++    bg: '#282828',      // main background
++    bg1: '#3c3836',
++    bg2: '#504945',
++    bg3: '#665c54',
++    bg4: '#7c6f64',
++    // Foregrounds
++    fg: '#ebdbb2',      // main foreground
++    fg0: '#fbf1c7',     // bright
++    fg2: '#d5c4a1',
++    fg4: '#a89984',     // muted
++    // Accent colors (bright variants for dark mode)
++    red: '#fb4934',
++    redDark: '#cc241d',
++    green: '#b8bb26',
++    greenDark: '#98971a',
++    yellow: '#fabd2f',
++    yellowDark: '#d79921',
++    blue: '#83a598',
++    blueDark: '#458588',
++    purple: '#d3869b',
++    purpleDark: '#b16286',
++    aqua: '#8ec07c',
++    aquaDark: '#689d6a',
++    orange: '#fe8019',
++    orangeDark: '#d65d0e',
++    gray: '#928374',
++};
++
+ const themeOptions: ThemeOptions = {
+ 
+     spacing: 8,
+@@ -29,22 +61,67 @@ const themeOptions: ThemeOptions = {
+         fontFamily: fontFamilyLight,
+     },
+     palette: {
++        mode: 'dark',
+         primary: {
+-            main: '#2A4C7D',
++            main: gruvbox.blue,
++            dark: gruvbox.blueDark,
++            light: gruvbox.fg2,
+         },
+         secondary: {
+-            main: '#e63946',
++            main: gruvbox.orange,
++            dark: gruvbox.orangeDark,
++            light: gruvbox.yellow,
++        },
++        error: {
++            main: gruvbox.red,
++            dark: gruvbox.redDark,
+         },
+         warning: {
+-            main: '#cba328',
++            main: gruvbox.yellow,
++            dark: gruvbox.yellowDark,
+         },
+         info: {
+-            main: '#457b9d',
++            main: gruvbox.aqua,
++            dark: gruvbox.aquaDark,
+         },
+         success: {
+-            main: '#307916',
++            main: gruvbox.green,
++            dark: gruvbox.greenDark,
+         },
+-    }
++        background: {
++            default: gruvbox.bg,
++            paper: gruvbox.bg1,
++        },
++        text: {
++            primary: gruvbox.fg,
++            secondary: gruvbox.fg4,
++            disabled: gruvbox.bg4,
++        },
++        divider: gruvbox.bg2,
++        grey: {
++            50: gruvbox.fg0,
++            100: gruvbox.bg0_h,
++            200: gruvbox.bg,
++            300: gruvbox.bg1,
++            400: gruvbox.bg2,
++            500: gruvbox.bg3,
++            600: gruvbox.bg4,
++            700: gruvbox.fg4,
++            800: gruvbox.fg2,
++            900: gruvbox.fg,
++            A100: gruvbox.bg1,
++            A200: gruvbox.bg2,
++            A400: gruvbox.bg3,
++            A700: gruvbox.bg4,
++        },
++        action: {
++            active: gruvbox.fg,
++            hover: gruvbox.bg2,
++            selected: gruvbox.bg3,
++            disabled: gruvbox.bg4,
++            disabledBackground: gruvbox.bg1,
++        },
++    },
+ };
+ 
+ export const theme = createTheme(themeOptions);
+diff --git a/src/types.ts b/src/types.ts
+index a78dad30..d4331c16 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -68,7 +68,57 @@ export interface ApiIngredientType {
+     fat: string,
+     fat_saturated: string | null,
+     fiber: string | null,
++    fiber_soluble: string | null,
++    fiber_insoluble: string | null,
+     sodium: string | null,
++    // Fat subtypes
++    fat_trans: string | null,
++    fat_monounsaturated: string | null,
++    fat_polyunsaturated: string | null,
++    // Other macros
++    cholesterol: string | null,
++    alcohol: string | null,
++    // Minerals (mg unless noted)
++    potassium: string | null,
++    calcium: string | null,
++    iron: string | null,
++    magnesium: string | null,
++    phosphorus: string | null,
++    zinc: string | null,
++    copper: string | null,
++    manganese: string | null,
++    selenium: string | null,  // mcg
++    iodine: string | null,    // mcg
++    chloride: string | null,
++    // Fat-soluble vitamins
++    vitamin_a: string | null,  // mcg RAE
++    vitamin_d: string | null,  // mcg
++    vitamin_e: string | null,  // mg
++    vitamin_k: string | null,  // mcg
++    // Water-soluble vitamins
++    vitamin_c: string | null,
++    vitamin_b1: string | null,
++    vitamin_b2: string | null,
++    vitamin_b3: string | null,
++    vitamin_b5: string | null,
++    vitamin_b6: string | null,
++    vitamin_b9: string | null,  // mcg DFE
++    vitamin_b12: string | null, // mcg
++    // Gut health
++    is_fermented: boolean,
++    // Caffeine
++    caffeine: string | null,  // mg
++    // Antioxidants
++    total_polyphenols: string | null,  // mg
++    total_flavonoids: string | null,   // mg
++    quercetin: string | null,          // mg
++    catechins: string | null,          // mg
++    anthocyanins: string | null,       // mg
++    resveratrol: string | null,        // mg
++    kaempferol: string | null,         // mg
++    hesperidin: string | null,         // mg
++    epicatechin: string | null,        // mg
++    chlorogenic_acid: string | null,   // mg
+     license: {
+         id: number,
+         full_name: string,

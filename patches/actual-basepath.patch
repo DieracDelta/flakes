@@ -1,0 +1,367 @@
+diff --git a/packages/desktop-client/src/components/App.tsx b/packages/desktop-client/src/components/App.tsx
+index 837284c38..cedd10afd 100644
+--- a/packages/desktop-client/src/components/App.tsx
++++ b/packages/desktop-client/src/components/App.tsx
+@@ -194,7 +194,7 @@ export function App() {
+   const [theme] = useTheme();
+ 
+   return (
+-    <BrowserRouter>
++    <BrowserRouter basename={import.meta.env.BASE_URL}>
+       <ExposeNavigate />
+       <HotkeysProvider initiallyActiveScopes={['app']}>
+         <SpreadsheetProvider>
+diff --git a/packages/desktop-client/src/components/manager/subscribe/common.tsx b/packages/desktop-client/src/components/manager/subscribe/common.tsx
+index 548662191..b8ef20a98 100644
+--- a/packages/desktop-client/src/components/manager/subscribe/common.tsx
++++ b/packages/desktop-client/src/components/manager/subscribe/common.tsx
+@@ -55,7 +55,9 @@ export function useBootstrapped(redirect = true) {
+       }
+       if (url == null && !bootstrapped) {
+         // A server hasn't been specified yet
+-        const serverURL = window.location.origin;
++        // Include base path for subpath deployments (e.g., /actual)
++        const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
++        const serverURL = window.location.origin + basePath;
+         const result: Awaited<
+           ReturnType<Handlers['subscribe-needs-bootstrap']>
+         > = await send('subscribe-needs-bootstrap', {
+diff --git a/packages/desktop-client/vite.config.mts b/packages/desktop-client/vite.config.mts
+index f7b20092b..f1db67e65 100644
+--- a/packages/desktop-client/vite.config.mts
++++ b/packages/desktop-client/vite.config.mts
+@@ -278,8 +278,12 @@ export default defineConfig(async ({ mode, command }) => {
+ 
+   const browserOpen = env.BROWSER_OPEN ? `//${env.BROWSER_OPEN}` : true;
+ 
++  // Support configurable base path for reverse proxy subpath deployment
++  const basePath = env.ACTUAL_BASE_PATH || '/';
++  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
++
+   return {
+-    base: '/',
++    base: normalizedBase,
+     envPrefix: 'REACT_APP_',
+     build: {
+       minify: 'oxc',
+@@ -368,17 +372,17 @@ export default defineConfig(async ({ mode, command }) => {
+                 '**/*.{js,css,html,txt,wasm,sql,sqlite,ico,png,woff2,webmanifest}',
+               ],
+               ignoreURLParametersMatching: [/^v$/],
+-              navigateFallback: '/index.html',
++              navigateFallback: `${normalizedBase}index.html`,
+               maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
+               navigateFallbackDenylist: [
+-                /^\/account\/.*$/,
+-                /^\/admin\/.*$/,
+-                /^\/secret\/.*$/,
+-                /^\/openid\/.*$/,
+-                /^\/plugins\/.*$/,
+-                /^\/kcab\/.*$/,
+-                /^\/plugin-data\/.*$/,
+-                /^\/enablebanking\/.*$/,
++                new RegExp(`^${normalizedBase}account/.*$`),
++                new RegExp(`^${normalizedBase}admin/.*$`),
++                new RegExp(`^${normalizedBase}secret/.*$`),
++                new RegExp(`^${normalizedBase}openid/.*$`),
++                new RegExp(`^${normalizedBase}plugins/.*$`),
++                new RegExp(`^${normalizedBase}kcab/.*$`),
++                new RegExp(`^${normalizedBase}plugin-data/.*$`),
++                new RegExp(`^${normalizedBase}enablebanking/.*$`),
+               ],
+             },
+           }),
+diff --git a/packages/loot-core/src/platform/server/fs/index.ts b/packages/loot-core/src/platform/server/fs/index.ts
+index ecda69d7a..f5e26fc66 100644
+--- a/packages/loot-core/src/platform/server/fs/index.ts
++++ b/packages/loot-core/src/platform/server/fs/index.ts
+@@ -217,9 +217,23 @@ async function _copySqlFile(
+   const { store } = idb.getStore(await idb.getDatabase(), 'files');
+   await idb.set(store, { filepath: topath, contents: '' });
+   const fromitem = await idb.get(store, frompath);
+-  const fromDbPath = pathToId(fromitem.filepath);
+   const toDbPath = pathToId(topath);
+ 
++  // Handle in-memory-only files (for example /default-db.sqlite) that do not
++  // have a corresponding IndexedDB metadata row.
++  if (!fromitem) {
++    const contents = FS.readFile(resolveLink(frompath));
++    const tofile = BFS.backend.createFile(toDbPath);
++    try {
++      tofile.open();
++      tofile.write(contents, 0, contents.length, 0);
++    } finally {
++      tofile.close();
++    }
++    return true;
++  }
++
++  const fromDbPath = pathToId(fromitem.filepath);
+   const fromfile = BFS.backend.createFile(fromDbPath);
+   const tofile = BFS.backend.createFile(toDbPath);
+ 
+@@ -276,16 +290,42 @@ async function _removeFile(filepath: string) {
+   FS.unlink(filepath);
+ }
+ 
++// Compute the public base URL from the worker location for subpath deployments.
++function getBaseURL(): string {
++  if (
++    typeof self !== 'undefined' &&
++    'location' in self &&
++    self.location?.href
++  ) {
++    const url = new URL(self.location.href);
++    return url.pathname
++      .replace(/\/kcab\/[^/]*$/, '/')
++      .replace(/\/static\/js\/[^/]*$/, '/');
++  }
++  return process.env.PUBLIC_URL || '/';
++}
++
+ // Load files from the server that should exist by default
+ async function populateDefaultFilesystem() {
+-  const index = await (
+-    await fetch(process.env.PUBLIC_URL + 'data-file-index.txt')
+-  ).text();
++  const baseURL = getBaseURL();
++  const indexResponse = await fetch(baseURL + 'data-file-index.txt');
++  if (!indexResponse.ok) {
++    throw new Error(
++      `Failed to fetch data-file-index.txt: ${indexResponse.status}`,
++    );
++  }
++  const index = await indexResponse.text();
+   const files = index
+     .split('\n')
+     .map(name => name.trim())
+     .filter(name => name !== '');
+-  const fetchFile = url => fetch(url).then(res => res.arrayBuffer());
++  const fetchFile = async (url: string) => {
++    const response = await fetch(url);
++    if (!response.ok) {
++      throw new Error(`Failed to fetch ${url}: ${response.status}`);
++    }
++    return response.arrayBuffer();
++  };
+ 
+   // This is hardcoded. We know we must create the migrations
+   // directory, it's not worth complicating the index to support
+@@ -295,7 +335,7 @@ async function populateDefaultFilesystem() {
+ 
+   await Promise.all(
+     files.map(async file => {
+-      const contents = await fetchFile(process.env.PUBLIC_URL + 'data/' + file);
++      const contents = await fetchFile(baseURL + 'data/' + file);
+       // `.data` lets shipped JS files escape bundler import-analysis.
+       await _writeFile('/' + file.replace(/\.data$/, ''), contents);
+     }),
+diff --git a/packages/loot-core/src/platform/server/sqlite/index.ts b/packages/loot-core/src/platform/server/sqlite/index.ts
+index 950f3ddf5..bafd40d82 100644
+--- a/packages/loot-core/src/platform/server/sqlite/index.ts
++++ b/packages/loot-core/src/platform/server/sqlite/index.ts
+@@ -45,7 +45,17 @@ export function setWasmBinary(binary: ArrayBuffer | Uint8Array) {
+ }
+ 
+ export async function init({
+-  baseURL = process.env.PUBLIC_URL,
++  baseURL = (() => {
++    if (
++      typeof self !== 'undefined' &&
++      'location' in self &&
++      self.location?.href
++    ) {
++      const url = new URL(self.location.href);
++      return url.pathname.replace(/\/kcab\/[^/]*$/, '/');
++    }
++    return process.env.PUBLIC_URL || '/';
++  })(),
+   wasmBinary = wasmBinaryOverride,
+ }: { baseURL?: string; wasmBinary?: ArrayBuffer | Uint8Array } = {}) {
+   // `initSqlJS` doesn't actually return a real promise, so make sure
+diff --git a/packages/sync-server/src/app.ts b/packages/sync-server/src/app.ts
+index 276059e59..2c81d3f47 100644
+--- a/packages/sync-server/src/app.ts
++++ b/packages/sync-server/src/app.ts
+@@ -22,23 +22,39 @@ import { config } from './load-config';
+ 
+ const app = express();
+ 
++// Normalize base path: ensure it starts with / and doesn't end with / (unless it's just /)
++function normalizeBasePath(basePath: string): string {
++  let normalized = basePath.trim();
++  if (!normalized.startsWith('/')) {
++    normalized = '/' + normalized;
++  }
++  if (normalized.length > 1 && normalized.endsWith('/')) {
++    normalized = normalized.slice(0, -1);
++  }
++  return normalized;
++}
++
++const basePath = normalizeBasePath(config.get('basePath') as string);
++
+ process.on('unhandledRejection', reason => {
+   console.log('Rejection:', reason);
+ });
+ 
+ app.disable('x-powered-by');
++app.set('strict routing', true);
+ app.use(cors());
+ app.set('trust proxy', config.get('trustedProxies'));
+-if (process.env.NODE_ENV !== 'development') {
+-  app.use(
+-    rateLimit({
+-      windowMs: 60 * 1000,
+-      max: 500,
+-      legacyHeaders: false,
+-      standardHeaders: true,
+-    }),
+-  );
+-}
++// Rate limiting disabled - handled by Caddy reverse proxy
++// if (process.env.NODE_ENV !== 'development') {
++//   app.use(
++//     rateLimit({
++//       windowMs: 60 * 1000,
++//       max: 500,
++//       legacyHeaders: false,
++//       standardHeaders: true,
++//     }),
++//   );
++// }
+ 
+ app.use(express.json({ limit: `${config.get('upload.fileSizeLimitMB')}mb` }));
+ 
+@@ -56,27 +72,27 @@ app.use(
+   }),
+ );
+ 
+-app.use('/sync', syncApp.handlers);
+-app.use('/account', accountApp.handlers);
+-app.use('/gocardless', goCardlessApp.handlers);
+-app.use('/simplefin', simpleFinApp.handlers);
+-app.use('/pluggyai', pluggai.handlers);
+-app.use('/akahu', akahuApp.handlers);
+-app.use('/enablebanking', enableBankingApp.handlers);
+-app.use('/secret', secretApp.handlers);
++app.use(`${basePath}/sync`, syncApp.handlers);
++app.use(`${basePath}/account`, accountApp.handlers);
++app.use(`${basePath}/gocardless`, goCardlessApp.handlers);
++app.use(`${basePath}/simplefin`, simpleFinApp.handlers);
++app.use(`${basePath}/pluggyai`, pluggai.handlers);
++app.use(`${basePath}/akahu`, akahuApp.handlers);
++app.use(`${basePath}/enablebanking`, enableBankingApp.handlers);
++app.use(`${basePath}/secret`, secretApp.handlers);
+ 
+ if (config.get('corsProxy.enabled')) {
+-  app.use('/cors-proxy', corsApp.handlers);
++  app.use(`${basePath}/cors-proxy`, corsApp.handlers);
+ }
+ 
+-app.use('/admin', adminApp.handlers);
+-app.use('/openid', openidApp.handlers);
++app.use(`${basePath}/admin`, adminApp.handlers);
++app.use(`${basePath}/openid`, openidApp.handlers);
+ 
+-app.get('/mode', (req, res) => {
++app.get(`${basePath}/mode`, (req, res) => {
+   res.send(config.get('mode'));
+ });
+ 
+-app.get('/info', (_req, res) => {
++app.get(`${basePath}/info`, (_req, res) => {
+   function findPackageJson(startDir: string) {
+     // find the nearest package.json file while traversing up the directory tree
+     let currentPath = startDir;
+@@ -117,11 +133,11 @@ app.get('/info', (_req, res) => {
+   });
+ });
+ 
+-app.get('/health', (_req, res) => {
++app.get(`${basePath}/health`, (_req, res) => {
+   res.status(200).json({ status: 'UP' });
+ });
+ 
+-app.get('/metrics', (_req, res) => {
++app.get(`${basePath}/metrics`, (_req, res) => {
+   res.status(200).json({
+     mem: process.memoryUsage(),
+     uptime: process.uptime(),
+@@ -151,6 +167,8 @@ app.use((req, res, next) => {
+   res.set('Cross-Origin-Opener-Policy', 'same-origin');
+   res.set('Cross-Origin-Embedder-Policy', 'require-corp');
+   res.set('Content-Security-Policy', csp);
++  // Required for COEP - allows same-origin requests to fetch these resources
++  res.set('Cross-Origin-Resource-Policy', 'same-origin');
+   next();
+ });
+ if (isDev) {
+@@ -170,11 +188,40 @@ if (isDev) {
+   );
+ } else {
+   console.log('Running in production mode - Serving static React app');
++  console.log(`Base path: ${basePath}`);
+ 
+-  app.use(express.static(config.get('webRoot'), { index: false }));
+-  app.get('/{*splat}', (req, res) =>
++  // Redirect base path without trailing slash to with trailing slash
++  if (basePath !== '/') {
++    app.get(basePath, (req, res) => res.redirect(301, `${basePath}/`));
++  }
++
++  // Serve index.html for root path (must be before static middleware)
++  app.get(`${basePath}/`, (req, res) =>
+     res.sendFile('index.html', { root: config.get('webRoot') }),
+   );
++
++  // Serve sql-wasm.wasm from any subdirectory (web workers request it relative to their location)
++  app.get(`${basePath}/:subdir/sql-wasm.wasm`, (req, res) =>
++    res.sendFile('sql-wasm.wasm', { root: config.get('webRoot') }),
++  );
++
++  // Catch-all for sql-wasm.wasm - handles malformed URLs from sql.js library
++  // (e.g., /actual/static/js/browser-server.Bww9SuVi.jssql-wasm.wasm)
++  app.get(/.*sql-wasm\.wasm$/, (req, res) =>
++    res.sendFile('sql-wasm.wasm', { root: config.get('webRoot') }),
++  );
++
++  // Serve static files (JS, CSS, etc)
++  app.use(basePath, express.static(config.get('webRoot')));
++
++  // SPA fallback - serve index.html for all other routes (except static file extensions)
++  app.get(`${basePath}/{*splat}`, (req, res, next) => {
++    // Don't serve index.html for requests that look like static files
++    if (req.path.match(/\.(js|css|wasm|map|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
++      return next();
++    }
++    res.sendFile('index.html', { root: config.get('webRoot') });
++  });
+ }
+ 
+ function parseHTTPSConfig(value: string) {
+diff --git a/packages/sync-server/src/load-config.js b/packages/sync-server/src/load-config.js
+index 5ddf78437..73c75e29d 100644
+--- a/packages/sync-server/src/load-config.js
++++ b/packages/sync-server/src/load-config.js
+@@ -118,6 +118,12 @@ const configSchema = convict({
+     default: actualAppWebBuildPath,
+     env: 'ACTUAL_WEB_ROOT',
+   },
++  basePath: {
++    doc: 'Base path for serving the app (e.g., /actual for reverse proxy subpath).',
++    format: String,
++    default: '/',
++    env: 'ACTUAL_BASE_PATH',
++  },
+   loginMethod: {
+     doc: 'Authentication method.',
+     format: ['password', 'header', 'openid'],
+@@ -330,6 +336,7 @@ debug(`Data directory: ${configSchema.get('dataDir')}`);
+ debug(`Server files: ${configSchema.get('serverFiles')}`);
+ debug(`User files: ${configSchema.get('userFiles')}`);
+ debug(`Web root: ${configSchema.get('webRoot')}`);
++debug(`Base path: ${configSchema.get('basePath')}`);
+ debug(`Login method: ${configSchema.get('loginMethod')}`);
+ debug(`Allowed methods: ${configSchema.get('allowedLoginMethods').join(', ')}`);
+ const corsProxyEnabled = configSchema.get('corsProxy.enabled');

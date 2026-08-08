@@ -1,7 +1,8 @@
 diff --git a/internal/ui/home.go b/internal/ui/home.go
+index 00e2eee6..9c6a5e30 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -2679,6 +2679,8 @@ func remotePreviewCacheKey(remoteName, sessionID string) string {
+@@ -3554,6 +3554,8 @@ func remotePreviewCacheKey(remoteName, sessionID string) string {
  const (
  	remotePreviewMaxLines = 200
  	remotePreviewMaxBytes = 16 * 1024
@@ -10,7 +11,7 @@ diff --git a/internal/ui/home.go b/internal/ui/home.go
  )
  
  func truncateRemotePreviewContent(content string) string {
-@@ -2715,6 +2717,9 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
+@@ -3590,6 +3592,9 @@ func (h *Home) fetchPreview(inst *session.Instance, key string, windowIndex int)
  		return nil
  	}
  	return func() tea.Msg {
@@ -20,7 +21,7 @@ diff --git a/internal/ui/home.go b/internal/ui/home.go
  		var content string
  		var err error
  		if windowIndex >= 0 {
-@@ -2767,6 +2772,9 @@ func (h *Home) fetchRemotePreviewDebounced(remoteName, sessionID string) tea.Cmd
+@@ -3642,6 +3647,9 @@ func (h *Home) fetchRemotePreviewDebounced(remoteName, sessionID string) tea.Cmd
  
  func (h *Home) fetchRemotePreview(remoteName, sessionID, key string) tea.Cmd {
  	return func() tea.Msg {

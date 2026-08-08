@@ -64,6 +64,13 @@ let
         url = "https://files.pythonhosted.org/packages/6a/4d/23e390234d2acd351f5563b1079c515d7c1fe13ddb7392cee543be74dda3/tree_sitter_cpp-0.23.4-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
       };
 
+      tree-sitter-dart = grammarWheel {
+        pname = "tree_sitter_dart";
+        version = "0.1.0";
+        hash = "sha256-toC83gLRuguXkdCSgEczpRf7O/6bMuACoGIs4ihuYwQ=";
+        url = "https://files.pythonhosted.org/packages/10/c9/3dce1e4dc071e8ed536ab30694798fd5d4c7e3a1c875dff60517195bb5bd/tree_sitter_dart-0.1.0-cp38-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl";
+      };
+
       tree-sitter-go = grammarWheel {
         pname = "tree_sitter_go";
         version = "0.25.0";
@@ -113,6 +120,13 @@ let
         url = "https://files.pythonhosted.org/packages/3f/22/21a75e5cf376e21209b83f8adb993a72668e14f9596d14d13980de837255/tree_sitter_scala-0.24.0-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
       };
 
+      tree-sitter-svelte = grammarWheel {
+        pname = "tree_sitter_svelte";
+        version = "1.0.2";
+        hash = "sha256-AJcug++aT2wFUyzwYUSIsrQO4Be3fli/jmVA4a3k1S0=";
+        url = "https://files.pythonhosted.org/packages/93/48/2fca4934927e1c272e57ca74a599ba773cd4bc52f327c58752a6b01da8d3/tree_sitter_svelte-1.0.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
+      };
+
       tree-sitter-swift = grammarWheel {
         pname = "tree_sitter_swift";
         version = "0.0.1";
@@ -126,6 +140,20 @@ let
         hash = "sha256-6W02uFvKzeuP9cJhjXVZPvEuuvG06s40d+K9squxdSw=";
         url = "https://files.pythonhosted.org/packages/49/d1/a71c36da6e2b8a4ed5e2970819b86ef13ba77ac40d9e333cb17df6a2c5db/tree_sitter_typescript-0.23.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl";
       };
+
+      sqlglot = pyFinal.buildPythonPackage rec {
+        pname = "sqlglot";
+        version = "27.29.0";
+        format = "wheel";
+
+        src = final.fetchurl {
+          url = "https://files.pythonhosted.org/packages/9b/70/20c1912bc0bfebf516d59d618209443b136c58a7cff141afa7cf30969988/sqlglot-27.29.0-py3-none-any.whl";
+          hash = "sha256-ml6orGGCandj3hDK1Fo18Kqb/Pe5budK+yMU3pCJ4cs=";
+        };
+
+        doCheck = false;
+        pythonImportsCheck = [ "sqlglot" ];
+      };
     };
 in
 {
@@ -137,7 +165,7 @@ in
 
     python312.pkgs.buildPythonApplication rec {
       pname = "repowise";
-      version = "0.24.0";
+      version = "0.39.0";
       pyproject = true;
 
       src = repowise-src;
@@ -162,51 +190,54 @@ in
 
       build-system = with python312.pkgs; [ setuptools ];
 
-      dependencies =
-        with python312.pkgs;
-        [
-          httpx
-          tree-sitter
-          tree-sitter-python
-          tree-sitter-typescript
-          tree-sitter-javascript
-          tree-sitter-go
-          tree-sitter-rust
-          tree-sitter-java
-          tree-sitter-cpp
-          tree-sitter-kotlin
-          tree-sitter-ruby
-          tree-sitter-c-sharp
-          tree-sitter-swift
-          tree-sitter-scala
-          tree-sitter-php
-          tree-sitter-luau
-          networkx
-          scipy
-          jinja2
-          pathspec
-          structlog
-          sqlalchemy
-          aiosqlite
-          alembic
-          pydantic
-          tenacity
-          gitpython
-          pyyaml
-          lancedb
-          click
-          rich
-          watchdog
-          fastapi
-          uvicorn
-          mcp
-          apscheduler
-          cryptography
-          anthropic
-          openai
-          google-genai
-          litellm
-        ];
+      dependencies = with python312.pkgs; [
+        httpx
+        tree-sitter
+        tree-sitter-python
+        tree-sitter-typescript
+        tree-sitter-javascript
+        tree-sitter-go
+        tree-sitter-rust
+        tree-sitter-java
+        tree-sitter-cpp
+        tree-sitter-dart
+        tree-sitter-kotlin
+        tree-sitter-ruby
+        tree-sitter-c-sharp
+        tree-sitter-swift
+        tree-sitter-scala
+        tree-sitter-php
+        tree-sitter-luau
+        tree-sitter-bash
+        tree-sitter-svelte
+        tree-sitter-html
+        sqlglot
+        networkx
+        scipy
+        jinja2
+        pathspec
+        structlog
+        sqlalchemy
+        aiosqlite
+        alembic
+        pydantic
+        tenacity
+        gitpython
+        pyyaml
+        lancedb
+        click
+        rich
+        watchdog
+        fastapi
+        uvicorn
+        mcp
+        apscheduler
+        cryptography
+        anthropic
+        openai
+        google-genai
+        litellm
+      ];
 
       pythonRelaxDeps = true;
 

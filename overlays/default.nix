@@ -44,14 +44,6 @@ let
     rotki-src = inputs.rotki;
   };
 
-  # Tirith terminal security (command analysis before execution)
-  tirith = import ./tirith.nix {
-    tirith-src = inputs.tirith;
-  };
-
-  # Amp CLI (Sourcegraph coding agent) — pinned to latest npm release
-  amp-cli = import ./amp-cli.nix;
-
   # RAPIDS GPU computing stack for cuML (GPU clustering)
   rapids = import ./rapids.nix { };
 
@@ -75,8 +67,6 @@ let
 
   # Jitsi Skynet AI services
   skynet = import ./skynet.nix;
-
-  codex-rmux = import ./codex-rmux.nix;
 in
 [
   # Order matters: stdenv should be first since other overlays depend on it
@@ -96,23 +86,13 @@ in
   tdf
   tmux-resurrect-continuum
   wger
-  inputs.comfyui-nix.overlays.default
   inputs.caldav-calendar-web.overlays.default
   rotki
-  tirith
   rapids
-  amp-cli
   plane
   repowise
   octo-fiesta
   jitsi
   skynet
   # inputs.nix-btm.overlays.default
-  inputs.entire-cli.overlays.default
-  inputs.claude-code-nix.overlays.default
-  # Local path overlay wins so desktop can track /home/jrestivo/dev/claude-code-nix directly.
-  inputs.claude-code-nix-local.overlays.default
-  inputs.codex-nix.overlays.default
-  (import ./codex-sqlite-log-filter.nix)
-  codex-rmux
 ]

@@ -72,17 +72,21 @@ final: prev: {
 
   pi-mcp-adapter = final.buildNpmPackage rec {
     pname = "pi-mcp-adapter";
-    version = "2.11.0";
+    version = "2.20.1";
 
     src = final.fetchurl {
       url = "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-${version}.tgz";
-      hash = "sha512-4Y/eLbhbxnRih519dJUxMyQ5QASvPcdWyBlS8+dDXteAzaMuLnd4nMTWgoZw3JRIW+0r93KAQcz1Rbli4xCwEQ==";
+      hash = "sha512-bBna74NHM/YXHE2wYgA4atXD9XTPqHhTVS4f6TLYstWNgXUZyuegaTuM07oeAIYjZE3xPvBn0Wl71bSdUSTQVg==";
     };
 
-    npmDepsHash = "sha256-x7cUolcRiU+FaKIrJ5p9ePXmDej/4VBzWIWfZccchW4=";
+    npmDepsHash = "sha256-+zbY3TX5dfJxSuU+TBGt7Xncebi6f8bMN3zG1ocVvmE=";
 
     postPatch = ''
-      node -e 'const fs = require("fs"); const p = "package.json"; const j = JSON.parse(fs.readFileSync(p, "utf8")); delete j.devDependencies; fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");'
+      # Node is not available while buildNpmPackage constructs the fixed-output
+      # dependency cache, so remove development dependencies with shell tools.
+      sed -i '/^  "devDependencies": {$/,$d' package.json
+      sed -i '$s/,$//' package.json
+      printf '}\n' >> package.json
       cp ${./pi-mcp-adapter-package-lock.json} package-lock.json
     '';
 
@@ -107,14 +111,14 @@ final: prev: {
 
   pi-subagents = final.buildNpmPackage rec {
     pname = "pi-subagents";
-    version = "0.13.0";
+    version = "0.14.3";
 
     src = final.fetchurl {
       url = "https://registry.npmjs.org/@tintinweb/pi-subagents/-/pi-subagents-${version}.tgz";
-      hash = "sha512-QIRKEGK8KzIi/eVUPpP1KmlHWnKOHTghKCwwUfiBdC/js+zuFFkcZumU2FdB79iATZgPt1L8ZYaZEpKjrc3/Rw==";
+      hash = "sha512-iDqeadh6114AZvw8HYe1PEq8M0MZ9czJKTAIsklCPUbV9vUMS+g/LAV0vW3O9PiBXKNJh8hkrY8L6iIr8XNEqA==";
     };
 
-    npmDepsHash = "sha256-7RIFEoGfia19AVLuPePxF4MVRlPLeBeTiqtb/vM92G4=";
+    npmDepsHash = "sha256-8J0iPuc4h6mBqfRopmU180+3b/I5JT1ucJVXFvyBapk=";
 
     npmFlags = [
       "--legacy-peer-deps"
@@ -184,14 +188,14 @@ final: prev: {
 
   pi-codex-goal = final.buildNpmPackage rec {
     pname = "pi-codex-goal";
-    version = "0.1.35";
+    version = "0.1.39";
 
     src = final.fetchurl {
       url = "https://registry.npmjs.org/pi-codex-goal/-/pi-codex-goal-${version}.tgz";
-      hash = "sha256-Dh7w8IpPlw2m4lZz62NBJUPozFmmO6vtt/8rU8GtbXo=";
+      hash = "sha512-OHV5hPmpP3MB5MsbpujUkCN3KjjncXl82RX9aL87EZaPYefxs9oHqCbA9+BdYX3D508yFjK+CQlvl5LMi2J5fw==";
     };
 
-    npmDepsHash = "sha256-xanGDxfhEfBwwSKkWn9BU2C7VnaDJ5XO5VEDgEmcbY8=";
+    npmDepsHash = "sha256-J6DPNHI3z+0R12ZuXAZo+wuqfeGO4lXL547yQs3eNU8=";
     npmDepsFetcherVersion = 2;
 
     npmFlags = [ "--legacy-peer-deps" ];
@@ -220,14 +224,14 @@ final: prev: {
 
   pi-web-access = final.buildNpmPackage rec {
     pname = "pi-web-access";
-    version = "0.13.0";
+    version = "0.18.0";
 
     src = final.fetchurl {
       url = "https://registry.npmjs.org/pi-web-access/-/pi-web-access-${version}.tgz";
-      hash = "sha512-ny0bHisMWdobmu1hcMp/jqjaRh6pYrH7dctBK2CVyRF4ia7bP47RnOPYdG1yiks9ohtcanWir5Hl9EFap8h0zQ==";
+      hash = "sha512-UVLWaNBHrbbe2jnpYq+uVJdPgoExz8HevkI7r3VSboZ6AT/S7oxsxpJY/a72mUt9jAy41512ndVxfxh/CIuYqg==";
     };
 
-    npmDepsHash = "sha256-8onTvv7nUrTXMGvwkMkPEYc+mtpxolzF6Z9EuuB9pbs=";
+    npmDepsHash = "sha256-oV3Iz6e9jvKvjx9Sp/qplL6wqpQ4EkJBAyDZhq145l4=";
 
     npmFlags = [
       "--legacy-peer-deps"

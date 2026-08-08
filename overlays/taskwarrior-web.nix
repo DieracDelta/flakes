@@ -4,8 +4,8 @@ let
   src = prev.fetchFromGitHub {
     owner = "tmahmood";
     repo = "taskwarrior-web";
-    rev = "50723bef50285d565b534123bea43e2ad8a2b109";
-    hash = "sha256-jPXmvmOiEoJoJ8VvpEFBUkJ3MdTu33aWXIkfNV9++VU=";
+    rev = "2fba9a707f925dbfc99f24432fa400f596ee4e80";
+    hash = "sha256-ub6zjBW+qMZVMQOudBaPpBT8BKvTAGaWLHuj8ih5+iI=";
   };
   version = "2.0.1";
 
@@ -15,7 +15,7 @@ let
     inherit version;
     src = "${src}/frontend";
 
-    npmDepsHash = "sha256-PZeO8RG4yJ1+LdpcLpOmiqZpzG+IyJDYgqycvdJ9hYw=";
+    npmDepsHash = "sha256-KL+ZJIK91NCNug9MiIrTV5MtTme5kDIbpif8izxxdQQ=";
 
     # Upstream doesn't have package-lock.json, copy our generated one
     postPatch = ''
@@ -40,10 +40,8 @@ let
 
       cd $TMPDIR/src
 
-      # Patch templates to use relative URLs for subpath hosting
-      substituteInPlace frontend/templates/base.html \
-        --replace-fail 'href="/dist/style.css"' 'href="dist/style.css"' \
-        --replace-fail 'src="/dist/bundle.js"' 'src="dist/bundle.js"'
+      # Current upstream templates inline the stylesheet and JavaScript bundle,
+      # so no URL rewriting is required for subpath hosting.
 
       npx --prefix frontend rollup -c frontend/rollup.config.js
       cp dist/bundle.js $DIST/

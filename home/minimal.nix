@@ -32,8 +32,10 @@
   # Git - basic config
   programs.git = {
     enable = true;
-    userName = "Justin Restivo";
-    userEmail = "justin@restivo.me";
+    settings.user = {
+      name = "Justin Restivo";
+      email = "justin@restivo.me";
+    };
     lfs.enable = true;
   };
 }

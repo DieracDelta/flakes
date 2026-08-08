@@ -52,8 +52,6 @@ in
     default = true;
   };
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.tirith ];
-
     programs.dircolors = {
       enable = true;
       enableFishIntegration = true;
@@ -94,7 +92,6 @@ in
         list_gens = "nix-env -p /nix/var/nix/profiles/system --list-generations";
         ll = "ls -l";
         ls = "eza -h --git --color=auto --group-directories-first -s extension";
-        ccn = ''nix run "github:sadjow/claude-code-nix"'';
         nd = "nix develop -c fish";
         sl = "ls";
         # yes this is morally wrong
@@ -175,7 +172,6 @@ in
 
         ${builtins.readFile ./config.fish}
       '';
-      # tirith init --shell fish | source
     };
   };
 }

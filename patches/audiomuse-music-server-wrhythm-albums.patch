@@ -1,297 +1,4 @@
-diff --git a/music-server-backend/artist_id_cache.go b/music-server-backend/artist_id_cache.go
-index f94d792..93e057e 100644
---- a/music-server-backend/artist_id_cache.go
-+++ b/music-server-backend/artist_id_cache.go
-@@ -2,95 +2,45 @@ package main
- 
- import (
- 	"database/sql"
--	"sync"
--	"time"
-+	"strings"
- )
- 
--// Artist IDs are MD5 hashes of the (effective) artist name, so the only way to
--// turn an artist ID back into a name is to enumerate the distinct artist names
--// and hash each one. Doing that with a fresh `SELECT DISTINCT ... FROM songs`
--// on every getArtist / getCoverArt / star / unstar request is O(library) and
--// becomes very slow as the collection grows. This cache builds the ID->name map
--// once and reuses it, rebuilding lazily when an unknown ID arrives and the cache
--// has gone stale (so newly-scanned artists still resolve within the TTL).
--var (
--	artistIDCacheMu      sync.RWMutex
--	artistIDCacheMap     map[string]string
--	artistIDCacheBuiltAt time.Time
--)
--
--const artistIDCacheTTL = 30 * time.Second
--
--// resolveArtistIDToName returns the artist name for a generated artist ID.
-+// resolveArtistIDToName resolves artist IDs from the derived library tables.
- // The boolean is false when the ID does not match any known artist.
- func resolveArtistIDToName(db *sql.DB, id string) (string, bool) {
-+	id = strings.TrimSpace(id)
- 	if id == "" {
- 		return "", false
- 	}
- 
--	artistIDCacheMu.RLock()
--	if artistIDCacheMap != nil {
--		if name, ok := artistIDCacheMap[id]; ok {
--			artistIDCacheMu.RUnlock()
--			return name, true
--		}
--	}
--	fresh := artistIDCacheMap != nil && time.Since(artistIDCacheBuiltAt) <= artistIDCacheTTL
--	artistIDCacheMu.RUnlock()
--
--	// Hit nothing and the cache is still fresh: the ID genuinely isn't a known
--	// artist, so avoid a pointless rebuild.
--	if fresh {
--		return "", false
--	}
--
--	return rebuildArtistIDCacheAndLookup(db, id)
--}
--
--func rebuildArtistIDCacheAndLookup(db *sql.DB, id string) (string, bool) {
--	artistIDCacheMu.Lock()
--	defer artistIDCacheMu.Unlock()
--
--	// Another goroutine may have rebuilt while we waited for the lock.
--	if artistIDCacheMap != nil && time.Since(artistIDCacheBuiltAt) <= artistIDCacheTTL {
--		name, ok := artistIDCacheMap[id]
--		return name, ok
--	}
--
--	rows, err := db.Query(`SELECT DISTINCT CASE
--		WHEN album_artist IS NOT NULL AND TRIM(album_artist) != '' AND LOWER(TRIM(album_artist)) NOT IN ('unknown','unknown artist')
--		THEN album_artist ELSE artist END AS artist
--		FROM songs
--		WHERE ((album_artist IS NOT NULL AND TRIM(album_artist) != '' AND LOWER(TRIM(album_artist)) NOT IN ('unknown','unknown artist')) OR artist != '') AND cancelled = 0`)
--	if err != nil {
--		if artistIDCacheMap != nil {
--			name, ok := artistIDCacheMap[id]
--			return name, ok
--		}
--		return "", false
-+	queries := []string{
-+		`SELECT name FROM artists WHERE id = ? LIMIT 1`,
-+		`SELECT name FROM artists WHERE name = ? LIMIT 1`,
-+		`SELECT artist FROM albums WHERE artist_id = ? LIMIT 1`,
-+		`SELECT artist FROM albums WHERE artist = ? LIMIT 1`,
-+		`SELECT artist FROM songs WHERE artist = ? AND cancelled = 0 LIMIT 1`,
-+		`SELECT album_artist FROM songs
-+		 WHERE album_artist = ?
-+		   AND LOWER(TRIM(album_artist)) NOT IN ('unknown','unknown artist')
-+		   AND cancelled = 0
-+		 LIMIT 1`,
- 	}
--	defer rows.Close()
- 
--	m := make(map[string]string)
--	for rows.Next() {
-+	for _, query := range queries {
- 		var name string
--		if err := rows.Scan(&name); err != nil {
-+		if err := db.QueryRow(query, id).Scan(&name); err != nil {
- 			continue
- 		}
--		m[GenerateArtistID(name)] = name
-+		name = strings.TrimSpace(name)
-+		if name != "" {
-+			return name, true
-+		}
- 	}
- 
--	artistIDCacheMap = m
--	artistIDCacheBuiltAt = time.Now()
--
--	name, ok := m[id]
--	return name, ok
-+	return "", false
- }
- 
--// invalidateArtistIDCache forces the next lookup to rebuild from the database.
--// Call after a library scan changes the set of artists.
-+// invalidateArtistIDCache is kept for callers that run after scans. Artist IDs
-+// are resolved from derived tables directly, so there is no process-local cache.
- func invalidateArtistIDCache() {
--	artistIDCacheMu.Lock()
--	artistIDCacheMap = nil
--	artistIDCacheMu.Unlock()
- }
-diff --git a/music-server-backend/main.go b/music-server-backend/main.go
-index 4bfc321..0dfe87a 100644
---- a/music-server-backend/main.go
-+++ b/music-server-backend/main.go
-@@ -198,6 +198,7 @@ func main() {
- 		subsonicCompatibilityHandler(subsonic, "GET", "/star", subsonicStar)
- 		subsonicCompatibilityHandler(subsonic, "GET", "/unstar", subsonicUnstar)
- 		subsonicCompatibilityHandler(subsonic, "GET", "/getStarred", subsonicGetStarred)
-+		subsonicCompatibilityHandler(subsonic, "GET", "/getStarred2", subsonicGetStarred)
- 		subsonicCompatibilityHandler(subsonic, "GET", "/getGenres", subsonicGetGenres)
- 
- 		// API Key Management
-diff --git a/music-server-backend/artist_id_cache_test.go b/music-server-backend/artist_id_cache_test.go
-index 07d0b53..2246407 100644
---- a/music-server-backend/artist_id_cache_test.go
-+++ b/music-server-backend/artist_id_cache_test.go
-@@ -9,14 +9,26 @@ func TestResolveArtistIDToName(t *testing.T) {
- 
- 	_, _ = db.Exec(`INSERT INTO songs (id, title, artist, album_artist) VALUES (?,?,?,?)`, "s1", "t1", "ArtistA", "")
- 	_, _ = db.Exec(`INSERT INTO songs (id, title, artist, album_artist) VALUES (?,?,?,?)`, "s2", "t2", "RealArtist", "unknown")
--	_, _ = db.Exec(`INSERT INTO songs (id, title, artist, album_artist) VALUES (?,?,?,?)`, "s3", "t3", "Track Artist", "Album Artist")
-+	_, _ = db.Exec(`INSERT INTO songs (id, title, artist, album, album_artist) VALUES (?,?,?,?,?)`, "s3", "t3", "Track Artist", "Album A", "Album Artist")
-+	_, _ = db.Exec(`INSERT INTO songs (id, title, artist, album, album_artist) VALUES (?,?,?,?,?)`, "s4", "t4", "@Immorpher", "Compilation", "Compilation Artist")
-+
-+	ensureLibraryDerivedTables(db)
-+	if err := RebuildLibraryIndex(db); err != nil {
-+		t.Fatalf("RebuildLibraryIndex failed: %v", err)
-+	}
- 
- 	cases := map[string]string{
--		"ArtistA":      GenerateArtistID("ArtistA"),
--		"RealArtist":   GenerateArtistID("RealArtist"),
--		"Album Artist": GenerateArtistID("Album Artist"),
-+		"ArtistA":             GenerateArtistID("ArtistA"),
-+		"RealArtist":          GenerateArtistID("RealArtist"),
-+		"Track Artist":        GenerateArtistID("Track Artist"),
-+		"Album Artist":        GenerateArtistID("Album Artist"),
-+		"@Immorpher":          GenerateArtistID("@Immorpher"),
-+		"raw @Immorpher name": "@Immorpher",
- 	}
- 	for wantName, id := range cases {
-+		if wantName == "raw @Immorpher name" {
-+			wantName = "@Immorpher"
-+		}
- 		got, ok := resolveArtistIDToName(db, id)
- 		if !ok || got != wantName {
- 			t.Errorf("resolveArtistIDToName(%q) = %q, %v; want %q, true", id, got, ok, wantName)
-diff --git a/music-server-backend/audiomuse_handlers.go b/music-server-backend/audiomuse_handlers.go
-index 9c65c90..124568b 100644
---- a/music-server-backend/audiomuse_handlers.go
-+++ b/music-server-backend/audiomuse_handlers.go
-@@ -18,19 +18,16 @@ func getSongsByIDs(ids []string) ([]SubsonicSong, error) {
- 		return nil, err
- 	}
- 
--	// Convert to SubsonicSong format
--	var songs []SubsonicSong
-+	byID := make(map[string]SongResult, len(results))
- 	for _, result := range results {
--		songs = append(songs, SubsonicSong{
--			ID:         result.ID,
--			Title:      result.Title,
--			Artist:     result.Artist,
--			Album:      result.Album,
--			Path:       result.Path,
--			Duration:   result.Duration,
--			PlayCount:  result.PlayCount,
--			LastPlayed: result.LastPlayed,
--		})
-+		byID[result.ID] = result
-+	}
-+
-+	var songs []SubsonicSong
-+	for _, id := range ids {
-+		if result, ok := byID[id]; ok {
-+			songs = append(songs, subsonicSongFromResult(result))
-+		}
- 	}
- 
- 	return songs, nil
-@@ -371,10 +368,10 @@ func semanticSearchHandler(c *gin.Context) {
- 		Query   string `json:"query"`
- 		Count   int    `json:"count"`
- 		Results []struct {
--			ItemID            string  `json:"item_id"`
--			Title             string  `json:"title"`
--			Author            string  `json:"author"`
--			SimilarityScore   float64 `json:"similarity_score"`
-+			ItemID          string  `json:"item_id"`
-+			Title           string  `json:"title"`
-+			Author          string  `json:"author"`
-+			SimilarityScore float64 `json:"similarity_score"`
- 		} `json:"results"`
- 	}
- 
-diff --git a/music-server-backend/models.go b/music-server-backend/models.go
-index b8b3995..f6b0d13 100644
---- a/music-server-backend/models.go
-+++ b/music-server-backend/models.go
-@@ -109,7 +109,10 @@ type SubsonicAlbumWithSongs struct {
- 	XMLName   xml.Name       `xml:"album" json:"-"`
- 	ID        string         `xml:"id,attr,omitempty" json:"id,omitempty"`
- 	Name      string         `xml:"name,attr,omitempty" json:"name,omitempty"`
-+	Artist    string         `xml:"artist,attr,omitempty" json:"artist,omitempty"`
-+	ArtistID  string         `xml:"artistId,attr,omitempty" json:"artistId,omitempty"`
- 	CoverArt  string         `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
-+	Genre     string         `xml:"genre,attr,omitempty" json:"genre,omitempty"`
- 	SongCount int            `xml:"songCount,attr" json:"songCount"`
- 	Duration  int            `xml:"duration,attr" json:"duration"`
- 	Created   string         `xml:"created,attr,omitempty" json:"created,omitempty"`
-@@ -128,7 +131,11 @@ type SubsonicSong struct {
- 	AlbumArtist   string   `xml:"albumArtist,attr,omitempty" json:"albumArtist,omitempty"`
- 	AlbumArtistID string   `xml:"albumArtistId,attr,omitempty" json:"albumArtistId,omitempty"`
- 	Path          string   `xml:"path,attr,omitempty" json:"path,omitempty"`
-+	Size          int64    `xml:"size,attr,omitempty" json:"size,omitempty"`
-+	ContentType   string   `xml:"contentType,attr,omitempty" json:"contentType,omitempty"`
-+	Suffix        string   `xml:"suffix,attr,omitempty" json:"suffix,omitempty"`
- 	Duration      int      `xml:"duration,attr,omitempty" json:"duration,omitempty"` // Duration in seconds
-+	BitRate       int      `xml:"bitRate,attr,omitempty" json:"bitRate,omitempty"`
- 	PlayCount     int      `xml:"playCount,attr,omitempty" json:"playCount,omitempty"`
- 	LastPlayed    string   `xml:"lastPlayed,attr,omitempty" json:"lastPlayed,omitempty"`
- 	Starred       bool     `xml:"starred,attr,omitempty" json:"starred,omitempty"`
-@@ -198,23 +205,23 @@ type SubsonicScanStatus struct {
- }
- 
- type SubsonicNowPlaying struct {
--	XMLName xml.Name                   `xml:"nowPlaying" json:"-"`
-+	XMLName xml.Name                  `xml:"nowPlaying" json:"-"`
- 	Entries []SubsonicNowPlayingEntry `xml:"entry" json:"entry"`
- }
- 
- type SubsonicNowPlayingEntry struct {
--	XMLName   xml.Name `xml:"entry" json:"-"`
--	ID        string   `xml:"id,attr" json:"id"`
--	CoverArt  string   `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
--	Title     string   `xml:"title,attr" json:"title"`
--	Artist    string   `xml:"artist,attr" json:"artist"`
--	Album     string   `xml:"album,attr" json:"album"`
--	Duration  int      `xml:"duration,attr,omitempty" json:"duration,omitempty"`
--	PlayCount int      `xml:"playCount,attr,omitempty" json:"playCount,omitempty"`
-+	XMLName    xml.Name `xml:"entry" json:"-"`
-+	ID         string   `xml:"id,attr" json:"id"`
-+	CoverArt   string   `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
-+	Title      string   `xml:"title,attr" json:"title"`
-+	Artist     string   `xml:"artist,attr" json:"artist"`
-+	Album      string   `xml:"album,attr" json:"album"`
-+	Duration   int      `xml:"duration,attr,omitempty" json:"duration,omitempty"`
-+	PlayCount  int      `xml:"playCount,attr,omitempty" json:"playCount,omitempty"`
- 	LastPlayed string   `xml:"lastPlayed,attr,omitempty" json:"lastPlayed,omitempty"`
--	MinutesAgo int     `xml:"minutesAgo,attr" json:"minutesAgo"`
--	PlayerID  string   `xml:"playerId,attr" json:"playerId"`
--	Username  string   `xml:"username,attr" json:"username"`
-+	MinutesAgo int      `xml:"minutesAgo,attr" json:"minutesAgo"`
-+	PlayerID   string   `xml:"playerId,attr" json:"playerId"`
-+	Username   string   `xml:"username,attr" json:"username"`
- }
- 
- type SubsonicUsers struct {
-@@ -299,6 +306,11 @@ type SubsonicStarred2 struct {
- 	Artists []SubsonicArtist `xml:"artist" json:"artist"`
- }
- 
-+type SubsonicRandomSongs struct {
-+	XMLName xml.Name       `xml:"randomSongs" json:"-"`
-+	Songs   []SubsonicSong `xml:"song" json:"song"`
-+}
-+
- type SubsonicSongsByGenre struct {
- 	XMLName xml.Name       `xml:"songsByGenre" json:"-"`
- 	Songs   []SubsonicSong `xml:"song" json:"song"`
-diff --git a/tmp/audiomuse-wrhythm-edit/music-server-backend/stream_transcoding_test.go b/music-server-backend/stream_transcoding_test.go
+diff --git a/music-server-backend/stream_transcoding_test.go b/music-server-backend/stream_transcoding_test.go
 new file mode 100644
 index 0000000..19002cc
 --- /dev/null
@@ -333,56 +40,11 @@ index 0000000..19002cc
 +		t.Fatalf("format=raw should stream original despite saved transcoding setting: %+v", decision)
 +	}
 +}
-diff --git a/music-server-backend/subsonic_media_info_handlers.go b/music-server-backend/subsonic_media_info_handlers.go
-index d0300cb..238336f 100644
---- a/music-server-backend/subsonic_media_info_handlers.go
-+++ b/music-server-backend/subsonic_media_info_handlers.go
-@@ -44,18 +44,7 @@ func subsonicGetTopSongs(c *gin.Context) {
- 
- 	var songs []SubsonicSong
- 	for _, result := range results {
--		song := SubsonicSong{
--			ID:         result.ID,
--			Title:      result.Title,
--			Artist:     result.Artist,
--			ArtistID:   GenerateArtistID(result.Artist),
--			Album:      result.Album,
--			Genre:      result.Genre,
--			CoverArt:   result.ID,
--			PlayCount:  result.PlayCount,
--			LastPlayed: result.LastPlayed,
--		}
--		songs = append(songs, song)
-+		songs = append(songs, subsonicSongFromResult(result))
- 	}
- 
- 	// Ensure songs is never nil for JSON marshaling
-@@ -93,19 +82,7 @@ func subsonicGetSimilarSongs2(c *gin.Context) {
- 
- 	var songs []SubsonicSong
- 	for _, result := range results {
--		song := SubsonicSong{
--			ID:         result.ID,
--			Title:      result.Title,
--			Artist:     result.Artist,
--			ArtistID:   GenerateArtistID(result.Artist),
--			Album:      result.Album,
--			Genre:      result.Genre,
--			CoverArt:   result.ID,
--			PlayCount:  result.PlayCount,
--			Duration:   result.Duration,
--			LastPlayed: result.LastPlayed,
--		}
--		songs = append(songs, song)
-+		songs = append(songs, subsonicSongFromResult(result))
- 	}
- 
- 	// Ensure songs is never nil for JSON marshaling
 diff --git a/music-server-backend/subsonic_music_handlers.go b/music-server-backend/subsonic_music_handlers.go
-index 8760cc5..68efe33 100644
+index bef62ab..0a8c28f 100644
 --- a/music-server-backend/subsonic_music_handlers.go
 +++ b/music-server-backend/subsonic_music_handlers.go
-@@ -35,6 +35,58 @@ type AudioInfo struct {
+@@ -35,6 +35,67 @@ type AudioInfo struct {
  	Duration int // Duration in seconds
  }
  
@@ -413,7 +75,12 @@ index 8760cc5..68efe33 100644
 +			}
 +			bitrate = parsedBitrate
 +		}
-+		return streamTranscodeDecision{UseTranscoding: true, Format: requestFormat, Bitrate: bitrate, ForcedByClient: true}, nil
++		return streamTranscodeDecision{
++			UseTranscoding: true,
++			Format:         requestFormat,
++			Bitrate:        bitrate,
++			ForcedByClient: true,
++		}, nil
 +	}
 +
 +	if savedEnabled {
@@ -432,7 +99,11 @@ index 8760cc5..68efe33 100644
 +			}
 +			bitrate = parsedBitrate
 +		}
-+		return streamTranscodeDecision{UseTranscoding: true, Format: format, Bitrate: bitrate}, nil
++		return streamTranscodeDecision{
++			UseTranscoding: true,
++			Format:         format,
++			Bitrate:        bitrate,
++		}, nil
 +	}
 +
 +	return streamTranscodeDecision{}, nil
@@ -441,28 +112,14 @@ index 8760cc5..68efe33 100644
  type nowPlayingState struct {
  	SongID    string
  	UserID    int
-@@ -384,13 +436,12 @@ func getTranscodingProfile(format string, bitrate int) []string {
- 		return append(baseArgs,
- 			"-acodec", "libmp3lame",
- 			"-b:a", fmt.Sprintf("%dk", bitrate),
- 			"-compression_level", "0", // FASTEST encoding
- 			"-reservoir", "0", // Disable bit reservoir for instant start
- 			"-write_xing", "0", // Skip Xing header for immediate streaming
--			"-q:a", "9", // Lowest quality for maximum speed (still acceptable at 192k)
- 		)
- 	case "ogg":
- 		return append(baseArgs,
- 			"-acodec", "libvorbis",
- 			"-b:a", fmt.Sprintf("%dk", bitrate),
- 		)
-@@ -456,28 +508,34 @@ func subsonicStream(c *gin.Context) {
+@@ -520,28 +581,41 @@ func subsonicStream(c *gin.Context) {
  		c.Header("X-Content-Duration", strconv.Itoa(duration))
  	}
  
 -	// Check if user has transcoding enabled
-+	// Check saved user transcoding settings. Explicit Subsonic request parameters
-+	// override these settings: format=raw means original, format=<codec> forces
-+	// that target format even if the saved setting is disabled.
++	// Saved settings are the default. Explicit Subsonic request parameters
++	// override them: format=raw streams the original, while format=<codec>
++	// forces that target format even when saved transcoding is disabled.
  	var transcodingEnabled int
 -	var format string
 -	var bitrate int
@@ -470,10 +127,17 @@ index 8760cc5..68efe33 100644
 +	var savedBitrate int
  	err = db.QueryRow("SELECT enabled, format, bitrate FROM transcoding_settings WHERE user_id = ?", user.ID).
 -		Scan(&transcodingEnabled, &format, &bitrate)
-+		Scan(&transcodingEnabled, &savedFormat, &savedBitrate)
- 
+-
 -	useTranscoding := err == nil && transcodingEnabled == 1
-+	decision, err := decideStreamTranscoding(c.Query("format"), c.Query("maxBitRate"), err == nil && transcodingEnabled == 1, savedFormat, savedBitrate)
++		Scan(&transcodingEnabled, &savedFormat, &savedBitrate)
++
++	decision, err := decideStreamTranscoding(
++		c.Query("format"),
++		c.Query("maxBitRate"),
++		err == nil && transcodingEnabled == 1,
++		savedFormat,
++		savedBitrate,
++	)
 +	if err != nil {
 +		subsonicRespond(c, newSubsonicErrorResponse(10, err.Error()))
 +		return
@@ -485,8 +149,10 @@ index 8760cc5..68efe33 100644
 +		user.Username, filepath.Base(path), duration, decision.UseTranscoding, decision.Format, decision.Bitrate, decision.ForcedByClient)
  
 -	if useTranscoding {
+-		// Smart codec detection: check if transcoding is actually needed
 +	if decision.UseTranscoding {
- 		// Smart codec detection: check if transcoding is actually needed
++		// Smart codec detection: skip only saved-profile transcodes. An explicit
++		// client format is a protocol request and must be honored.
  		sourceInfo, err := detectAudioFormat(path)
 -		if err == nil && !shouldTranscode(sourceInfo, format, bitrate) {
 +		if !decision.ForcedByClient && err == nil && !shouldTranscode(sourceInfo, decision.Format, decision.Bitrate) {
@@ -500,286 +166,3 @@ index 8760cc5..68efe33 100644
  	} else {
  		log.Printf("📀 Direct stream (no transcoding): %s", filepath.Base(path))
  		streamDirect(c, path)
-@@ -1235,11 +1293,12 @@ func subsonicGetAlbum(c *gin.Context) {
- 			albumCreated = dateAdded
- 		}
- 		s.Starred = starred == 1
--		s.ArtistID = GenerateArtistID(s.Artist)        // Track artist ID
--		s.AlbumID = albumSongId                        // Album ID
-+		s.ArtistID = GenerateArtistID(s.Artist) // Track artist ID
-+		s.AlbumID = albumSongId                 // Album ID
- 		// Use computed displayArtist (may be concatenated list) for album artist
- 		s.AlbumArtist = displayArtist
- 		s.AlbumArtistID = GenerateArtistID(displayArtist) // Album artist ID
-+		enrichSubsonicSong(&s, songPath)
- 		if lastPlayed.Valid {
- 			s.LastPlayed = lastPlayed.String
- 		}
-@@ -1256,7 +1315,10 @@ func subsonicGetAlbum(c *gin.Context) {
- 	responseBody := &SubsonicAlbumWithSongs{
- 		ID:        albumSongId,
- 		Name:      albumName,
-+		Artist:    displayArtist,
-+		ArtistID:  GenerateArtistID(displayArtist),
- 		CoverArt:  albumSongId,
-+		Genre:     albumGenre,
- 		SongCount: len(songs),
- 		Duration:  albumDuration,
- 		Created:   albumCreated,
-@@ -1278,11 +1340,12 @@ func subsonicGetSong(c *gin.Context) {
- 	var s SubsonicSong
- 	var lastPlayed sql.NullString
- 	var duration int
-+	var songPath string
- 
- 	// Get the song details from the database
- 	err := db.QueryRow(`
--		SELECT id, title, artist, album, play_count, last_played, duration
--		FROM songs WHERE id = ?`, songID).Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &s.PlayCount, &lastPlayed, &duration)
-+		SELECT id, title, artist, album, path, play_count, last_played, duration
-+		FROM songs WHERE id = ? AND cancelled = 0`, songID).Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &songPath, &s.PlayCount, &lastPlayed, &duration)
- 
- 	if err != nil {
- 		if err == sql.ErrNoRows {
-@@ -1299,6 +1362,8 @@ func subsonicGetSong(c *gin.Context) {
- 		s.LastPlayed = lastPlayed.String
- 	}
- 	s.CoverArt = s.ID // A song can serve as its own cover art reference
-+	s.ArtistID = GenerateArtistID(s.Artist)
-+	enrichSubsonicSong(&s, songPath)
- 
- 	subsonicRespond(c, newSubsonicResponse(&SubsonicSongWrapper{Song: s}))
- }
-@@ -1322,24 +1387,10 @@ func subsonicGetRandomSongs(c *gin.Context) {
- 
- 	var songs []SubsonicSong
- 	for _, result := range results {
--		s := SubsonicSong{
--			ID:         result.ID,
--			Title:      result.Title,
--			Artist:     result.Artist,
--			Album:      result.Album,
--			PlayCount:  result.PlayCount,
--			Duration:   result.Duration,
--			CoverArt:   result.ID,
--			LastPlayed: result.LastPlayed,
--		}
--		songs = append(songs, s)
-+		songs = append(songs, subsonicSongFromResult(result))
- 	}
- 
--	responseBody := &SubsonicDirectory{
--		Name:      "Random Songs",
--		SongCount: len(songs),
--		Songs:     songs,
--	}
-+	responseBody := &SubsonicRandomSongs{Songs: songs}
- 	subsonicRespond(c, newSubsonicResponse(responseBody))
- }
- 
-@@ -1554,7 +1605,7 @@ func subsonicStar(c *gin.Context) {
- 		// artistID may be an artist name or an artist ID (generated by GenerateArtistID)
- 		artistName := artistID
- 
--// First, check if artistID directly matches an artist name in songs (consider album_artist fallback)
-+		// First, check if artistID directly matches an artist name in songs (consider album_artist fallback)
- 		exists, err := ArtistExists(db, artistName)
- 		if err != nil {
- 			log.Printf("Artist check error for %s: %v", artistID, err)
-@@ -1652,7 +1703,7 @@ func subsonicGetStarred(c *gin.Context) {
- 
- 	// Get starred songs (deduplicated by song_id in case of duplicate starred_songs entries)
- 	query := `
--		SELECT s.id, s.title, s.artist, s.album, s.play_count, s.last_played, COALESCE(s.genre, '') as genre, COALESCE(s.duration, 0) as duration
-+		SELECT s.id, s.title, s.artist, s.album, s.path, s.play_count, s.last_played, COALESCE(s.genre, '') as genre, COALESCE(s.duration, 0) as duration
- 		FROM songs s
- 		INNER JOIN (
- 			SELECT song_id, MAX(starred_at) as starred_at
-@@ -1676,13 +1727,16 @@ func subsonicGetStarred(c *gin.Context) {
- 	for rows.Next() {
- 		var s SubsonicSong
- 		var lastPlayed sql.NullString
--		err := rows.Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &s.PlayCount, &lastPlayed, &s.Genre, &s.Duration)
-+		var songPath string
-+		err := rows.Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &songPath, &s.PlayCount, &lastPlayed, &s.Genre, &s.Duration)
- 		if err != nil {
- 			log.Printf("Error scanning starred song: %v", err)
- 			continue
- 		}
- 		s.Starred = true
- 		s.CoverArt = s.ID
-+		s.ArtistID = GenerateArtistID(s.Artist)
-+		enrichSubsonicSong(&s, songPath)
- 		if lastPlayed.Valid {
- 			s.LastPlayed = lastPlayed.String
- 		}
-@@ -1691,11 +1745,10 @@ func subsonicGetStarred(c *gin.Context) {
- 
- 	// Get starred albums
- 	albumQuery := `
--		SELECT s.album, s.artist, COALESCE(s.genre, ''), sa.album_id
-+		SELECT a.name, a.artist, COALESCE(a.genre, ''), a.id, a.song_count, a.total_duration, COALESCE(a.min_date_added, '')
- 		FROM starred_albums sa
--		INNER JOIN songs s ON sa.album_id = s.id
-+		INNER JOIN albums a ON sa.album_id = a.id
- 		WHERE sa.user_id = ?
--		GROUP BY sa.album_id
- 		ORDER BY sa.starred_at DESC
- 	`
- 
-@@ -1705,8 +1758,9 @@ func subsonicGetStarred(c *gin.Context) {
- 		defer albumRows.Close()
- 		for albumRows.Next() {
- 			var a SubsonicAlbum
--			err := albumRows.Scan(&a.Name, &a.Artist, &a.Genre, &a.ID)
-+			err := albumRows.Scan(&a.Name, &a.Artist, &a.Genre, &a.ID, &a.SongCount, &a.Duration, &a.Created)
- 			if err == nil {
-+				a.ArtistID = GenerateArtistID(a.Artist)
- 				a.CoverArt = a.ID
- 				albums = append(albums, a)
- 			}
-@@ -1917,6 +1971,7 @@ func subsonicGetSongsByGenre(c *gin.Context) {
- 			Duration:  songFromDb.Duration,
- 			Starred:   starred == 1,
- 		}
-+		enrichSubsonicSong(&subsonicSong, songFromDb.Path)
- 
- 		log.Printf("[DEBUG] Found song: ID=%s, Title='%s', Genre='%s'", songFromDb.ID, songFromDb.Title, songFromDb.Genre)
- 
-diff --git a/music-server-backend/subsonic_playlist_handlers.go b/music-server-backend/subsonic_playlist_handlers.go
-index e659be4..c94f7d4 100644
---- a/music-server-backend/subsonic_playlist_handlers.go
-+++ b/music-server-backend/subsonic_playlist_handlers.go
-@@ -79,7 +79,7 @@ func subsonicGetPlaylist(c *gin.Context) {
- 	}
- 
- 	query := `
--		SELECT s.id, s.title, s.artist, s.album, s.play_count, s.last_played, s.duration
-+		SELECT s.id, s.title, s.artist, s.album, s.path, s.play_count, s.last_played, s.duration
- 		FROM songs s
- 		JOIN playlist_songs ps ON s.id = ps.song_id
- 		WHERE ps.playlist_id = ? AND s.cancelled = 0
-@@ -97,12 +97,15 @@ func subsonicGetPlaylist(c *gin.Context) {
- 		var s SubsonicSong
- 		var duration int
- 		var lastPlayed sql.NullString
--		if err := rows.Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &s.PlayCount, &lastPlayed, &duration); err != nil {
-+		var songPath string
-+		if err := rows.Scan(&s.ID, &s.Title, &s.Artist, &s.Album, &songPath, &s.PlayCount, &lastPlayed, &duration); err != nil {
- 			log.Printf("Error scanning playlist song row: %v", err)
- 			continue
- 		}
- 		s.CoverArt = s.ID
- 		s.Duration = duration
-+		s.ArtistID = GenerateArtistID(s.Artist)
-+		enrichSubsonicSong(&s, songPath)
- 		if lastPlayed.Valid {
- 			s.LastPlayed = lastPlayed.String
- 		}
-diff --git a/music-server-backend/subsonic_search_handlers.go b/music-server-backend/subsonic_search_handlers.go
-index 676d017..22e5d36 100644
---- a/music-server-backend/subsonic_search_handlers.go
-+++ b/music-server-backend/subsonic_search_handlers.go
-@@ -560,19 +560,7 @@ func mapAlbumsForSearch(albums []AlbumResult) []SubsonicAlbum {
- func mapSongsForSearch(songs []SongResult) []SubsonicSong {
- 	out := make([]SubsonicSong, 0, len(songs))
- 	for _, song := range songs {
--		out = append(out, SubsonicSong{
--			ID:         song.ID,
--			Title:      song.Title,
--			Artist:     song.Artist,
--			ArtistID:   GenerateArtistID(song.Artist),
--			Album:      song.Album,
--			Genre:      song.Genre,
--			Duration:   song.Duration,
--			PlayCount:  song.PlayCount,
--			CoverArt:   song.ID,
--			Starred:    song.Starred,
--			LastPlayed: song.LastPlayed,
--		})
-+		out = append(out, subsonicSongFromResult(song))
- 	}
- 	return out
- }
-diff --git a/tmp/audiomuse-wrhythm-edit/music-server-backend/subsonic_song_metadata.go b/music-server-backend/subsonic_song_metadata.go
-new file mode 100644
-index 0000000..397b57e
---- /dev/null
-+++ b/music-server-backend/subsonic_song_metadata.go
-@@ -0,0 +1,76 @@
-+package main
-+
-+import (
-+	"os"
-+	"path/filepath"
-+	"strings"
-+)
-+
-+func subsonicSongFromResult(result SongResult) SubsonicSong {
-+	s := SubsonicSong{
-+		ID:         result.ID,
-+		Title:      result.Title,
-+		Artist:     result.Artist,
-+		ArtistID:   GenerateArtistID(result.Artist),
-+		Album:      result.Album,
-+		Genre:      result.Genre,
-+		Duration:   result.Duration,
-+		PlayCount:  result.PlayCount,
-+		CoverArt:   result.ID,
-+		Starred:    result.Starred,
-+		LastPlayed: result.LastPlayed,
-+	}
-+	enrichSubsonicSong(&s, result.Path)
-+	return s
-+}
-+
-+func enrichSubsonicSong(song *SubsonicSong, path string) {
-+	if path == "" {
-+		return
-+	}
-+
-+	song.Path = path
-+
-+	suffix := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-+	if suffix != "" {
-+		song.Suffix = suffix
-+		song.ContentType = contentTypeForSuffix(suffix)
-+	}
-+
-+	if info, err := os.Stat(path); err == nil {
-+		song.Size = info.Size()
-+		if song.Duration > 0 {
-+			song.BitRate = int((info.Size() * 8) / int64(song.Duration) / 1000)
-+		}
-+	}
-+}
-+
-+func contentTypeForSuffix(suffix string) string {
-+	switch suffix {
-+	case "mp3":
-+		return "audio/mpeg"
-+	case "flac":
-+		return "audio/flac"
-+	case "m4a", "mp4":
-+		return "audio/mp4"
-+	case "aac":
-+		return "audio/aac"
-+	case "ogg", "oga":
-+		return "audio/ogg"
-+	case "opus":
-+		return "audio/opus"
-+	case "wav":
-+		return "audio/wav"
-+	case "aiff", "aif":
-+		return "audio/aiff"
-+	case "alac":
-+		return "audio/alac"
-+	case "wma":
-+		return "audio/x-ms-wma"
-+	default:
-+		if suffix != "" {
-+			return "audio/" + suffix
-+		}
-+		return ""
-+	}
-+}

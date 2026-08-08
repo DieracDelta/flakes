@@ -265,16 +265,12 @@ in
       kmon
 
       # AI/LLM tools
-      amp-cli
-      claude-code
-      claude-chill
       opencode
       lmstudio
       gemini-cli
       goose-cli
       bingrep
       qwen-code
-      entire
       sshpass
       #nodejs_latest # for linear
       mcp-remote

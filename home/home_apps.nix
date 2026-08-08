@@ -35,7 +35,6 @@ let
     ];
   devPack = with pkgs; [
     # openssl curl xxd age
-    claude-tmux
     emacs
     brave
     zellij
@@ -119,7 +118,6 @@ let
   # user
   workstationPack = with pkgs; [
     ifuse
-    termite
     pavucontrol
     noip
     remmina

@@ -9,19 +9,31 @@
 #   → libcuml (ML Algorithms)
 #   → cuml (Python bindings)
 #
-# All RAPIDS libs must use synchronized versions (25.06.x)
-_:
-final: prev:
+# All RAPIDS libs must use synchronized versions (26.06.x)
+_: final: prev:
 let
   # RAPIDS version - all components must match
-  rapidsVersion = "25.06.00";
+  rapidsVersion = "26.06.00";
 
-  # Treelite version required by cuML
-  treeliteVersion = "4.4.1";
+  # Treelite version and commit required by cuML 26.06.
+  treeliteVersion = "4.7.0";
 
   # Helper for CUDA builds
-  inherit (final.cudaPackages) backendStdenv cuda_nvcc cuda_cudart cuda_nvrtc cuda_cccl;
-  inherit (final.cudaPackages) libcublas libcusolver libcusparse libcurand libcufft;
+  inherit (final.cudaPackages)
+    backendStdenv
+    cuda_nvcc
+    cuda_cudart
+    cuda_nvrtc
+    cuda_cccl
+    ;
+  inherit (final.cudaPackages)
+    libcublas
+    libcusolver
+    libcusparse
+    libcurand
+    libcufft
+    libnvjitlink
+    ;
 
   # Helper to get all necessary outputs for CUDA libraries
   # CMake's FindCUDAToolkit needs both headers (dev) and libraries (lib)
@@ -35,39 +47,39 @@ let
   rapids-cmake-src = final.fetchFromGitHub {
     owner = "rapidsai";
     repo = "rapids-cmake";
-    rev = "branch-25.06";
-    hash = "sha256-q/K+99wPemBusvdbBKFomcVNckGR/FCHIMi6Jgts08w=";
+    rev = "v26.06.00";
+    hash = "sha256-m0BglaAxJPbwcN0PmaA6+db+ZWK5PSAkhktfh6JpKi8=";
   };
 
   # CPM.cmake - Package manager used by RAPIDS
   # Pre-fetched to avoid network access during build
   cpm-cmake = final.fetchurl {
-    url = "https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.0/CPM.cmake";
-    hash = "sha256-ezVPOll2xGJsh2hQyTlE5SyD7FmhWa5d5b55g/Dheio=";
+    url = "https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.42.0/CPM.cmake";
+    hash = "sha256-ICC0/ELbpEgXmD4GNC5oLs/D0vSEpYHxHMVzH75Nzoo=";
   };
 
   # rapids_logger - Logging infrastructure for RAPIDS
   rapids-logger-src = final.fetchFromGitHub {
     owner = "rapidsai";
     repo = "rapids-logger";
-    rev = "46070bb255482f0782ca840ae45de9354380e298";
-    hash = "sha256-/K5/j/1czaOs5G06Gpd+I+3OTDAa6Z+6tS0VW1+yEcI=";
+    rev = "4c72b598f99c8aa06af49468b3fc82f3931c6bf6";
+    hash = "sha256-yRvO/+SCJThzYvYrt0ZudJojFUfO21OlEIy5G4HjtJ0=";
   };
 
   # CCCL - CUDA C++ Core Libraries (Thrust, CUB, libcudacxx)
   cccl-src = final.fetchFromGitHub {
     owner = "NVIDIA";
     repo = "cccl";
-    rev = "e80fa6c8c53c1d868b46571f3335c3964a63e816";
-    hash = "sha256-MT32GVf+m3gMWsBs0SBnRaq+OHs2VZA+AZpD6rbBJys=";
+    rev = "207502e57019cefacf6f21d3bb6045aeebef2a3e";
+    hash = "sha256-S1GTG7cs6doTDTMfEWjLYDK4JId1xVjLaJ4kBn8AuO0=";
   };
 
   # NVTX - NVIDIA Tools Extension SDK
   nvtx-src = final.fetchFromGitHub {
     owner = "NVIDIA";
     repo = "NVTX";
-    rev = "4808eeda29bb6dcfd38291d1a8ea280b48562c57";
-    hash = "sha256-2LDfCm+kOZsL9QO63QuwesvTGs+DmtOmv36/BKN6PGY=";
+    rev = "69c9949150ac1c310758a304082228a36d5e4758";
+    hash = "sha256-uB1HHLVoOO0rWOcOqfypdiveagnjDcQQZNP7xBHhCwE=";
   };
 
   # spdlog - Fast C++ logging library (required by rapids_logger)
@@ -86,21 +98,44 @@ let
     hash = "sha256-IKNt4xUoVi750zBti5iJJcCk3zivTt7nU12RIf8pM+0=";
   };
 
-  # CUTLASS - CUDA Templates for Linear Algebra Subroutines
-  # Version required by raft
-  cutlass-src = final.fetchFromGitHub {
+  # cuVS 26.06 applies a CUDA 12/13 CCCL layout patch to CUTLASS 4.1.0
+  # through its CPM override. Since the offline build supplies FetchContent an
+  # already populated source, apply that upstream patch explicitly here.
+  cuvs-src = final.fetchFromGitHub {
+    owner = "rapidsai";
+    repo = "cuvs";
+    rev = "v${rapidsVersion}";
+    hash = "sha256-wLlRppsdqr3/Dm65f25l/ZifWLXKMlW3OWUDBSblq1I=";
+  };
+  cutlass-unpatched-src = final.fetchFromGitHub {
     owner = "NVIDIA";
     repo = "cutlass";
-    rev = "v3.5.1";
-    hash = "sha256-sTGYN+bjtEqQ7Ootr/wvx3P9f8MCDSSj3qyCWjfdLEA=";
+    rev = "v4.1.0";
+    hash = "sha256-ZY+6Tg/CC6fqvU764k6QNudYDpY+s8OQklG+1aXQuns=";
+  };
+  cutlass-src = final.applyPatches {
+    name = "cutlass-4.1.0-cuvs-patched";
+    src = cutlass-unpatched-src;
+    patches = [
+      "${cuvs-src}/cpp/cmake/patches/cutlass/Support-both-CUDA-12-and-13-cccl-header-locations.patch"
+    ];
+  };
+
+  # nvForest is enabled by cuML's default CUML_ALGORITHMS=ALL. Supply its
+  # synchronized source explicitly because FetchContent is fully offline.
+  nvforest-src = final.fetchFromGitHub {
+    owner = "rapidsai";
+    repo = "nvforest";
+    rev = "v${rapidsVersion}";
+    hash = "sha256-e9oO8zN70TNPwPXCOhNuTe/mvmpyHKWpWxC4MjuqZIQ=";
   };
 
   # cuCollections - CUDA concurrent data structures
   cuco-src = final.fetchFromGitHub {
     owner = "NVIDIA";
     repo = "cuCollections";
-    rev = "f5e43ce27f33e7e98de16f712be9370a797f8c73";
-    hash = "sha256-jog2ze2hdmK4wYKmGYjj9ID1RICDdUTleiCgQattMPY=";
+    rev = "f517bbb1277753b1852dfd388993383e401eaa38";
+    hash = "sha256-49U0kgEXi2v0MQ7ZnlhNMkNIzRZliTabxCD8Ik6TNqU=";
   };
 
   # dlpack - DLPack tensor exchange library (used by cuvs)
@@ -115,8 +150,8 @@ let
   treelite-src = final.fetchFromGitHub {
     owner = "dmlc";
     repo = "treelite";
-    rev = "4.4.1";
-    hash = "sha256-Jai4nhRczkQjEf8Eib5ffPRAaLNpMFAgXsoXOIHuYSw=";
+    rev = "74b25ecedb964ccac37d034860cc5c1224e73e91";
+    hash = "sha256-6rMAmbxj+2OzNbkG2xmdedSaEdCID8sni0Xtay9r6hI=";
   };
 
   # mdspan - header-only library required by treelite
@@ -131,8 +166,8 @@ let
   gputreeshap-src = final.fetchFromGitHub {
     owner = "rapidsai";
     repo = "GPUTreeShap";
-    rev = "9382a8af94c0863de0944e65199a16fdf5f96a6d";
-    hash = "sha256-K3gG8K8ifk7Bb552ZsIg/lrpFwc9UIZQGcf+E3iUSjM=";
+    rev = "93292317b23ef733f881c881865f5d5728dc2fea";
+    hash = "sha256-uJZ5JidZANpn24Jk/oJyj9MluJAgGNBU9ZlYmJWVSiU=";
   };
 
   # cuda-python source - monorepo containing cuda-pathfinder, cuda-bindings, cuda-python
@@ -151,9 +186,15 @@ let
   # Get include outputs for CUDA packages (headers are in 'include' output, not 'dev')
   cudart_dev = final.lib.getDev cuda_cudart;
   nvrtc_include = cuda_nvrtc.include or (final.lib.getOutput "include" cuda_nvrtc);
-  profiler_api_include = final.cudaPackages.cuda_profiler_api.include or (final.lib.getOutput "include" final.cudaPackages.cuda_profiler_api);
-  nvml_include = final.cudaPackages.cuda_nvml_dev.include or (final.lib.getOutput "include" final.cudaPackages.cuda_nvml_dev);
-  cufile_include = final.cudaPackages.libcufile.include or (final.lib.getOutput "include" final.cudaPackages.libcufile);
+  profiler_api_include =
+    final.cudaPackages.cuda_profiler_api.include
+      or (final.lib.getOutput "include" final.cudaPackages.cuda_profiler_api);
+  nvml_include =
+    final.cudaPackages.cuda_nvml_dev.include
+      or (final.lib.getOutput "include" final.cudaPackages.cuda_nvml_dev);
+  cufile_include =
+    final.cudaPackages.libcufile.include
+      or (final.lib.getOutput "include" final.cudaPackages.libcufile);
 
   # Merged CUDA home with all headers cuda-bindings needs
   # symlinkJoin doesn't properly merge include/ subdirs, so we do it manually
@@ -245,13 +286,15 @@ let
     "-DFETCHCONTENT_SOURCE_DIR_DLPACK=${dlpack-src}"
     "-DFETCHCONTENT_SOURCE_DIR_HNSWLIB=${hnswlib-src}"
     "-DFETCHCONTENT_SOURCE_DIR_GPUTREESHAP=${gputreeshap-src}"
+    "-DFETCHCONTENT_SOURCE_DIR_NVFOREST=${nvforest-src}"
   ];
 
   # Patched RAPIDS lib for downstream Python builds - fixes broken cmake config paths
   # Issues fixed:
   # 1. CCCL header search uses NO_DEFAULT_PATH with broken Nix store path resolution
   # 2. INTERFACE_INCLUDE_DIRECTORIES references non-existent build-tree paths
-  librmm-patched = pkg:
+  librmm-patched =
+    pkg:
     final.runCommand "rapids-cmake-patched-${pkg.name}" { } ''
       cp -r ${pkg} $out
       chmod -R u+w $out
@@ -293,8 +336,8 @@ in
       src = final.fetchFromGitHub {
         owner = "dmlc";
         repo = "treelite";
-        rev = version;
-        hash = "sha256-Jai4nhRczkQjEf8Eib5ffPRAaLNpMFAgXsoXOIHuYSw=";
+        rev = "74b25ecedb964ccac37d034860cc5c1224e73e91";
+        hash = "sha256-6rMAmbxj+2OzNbkG2xmdedSaEdCID8sni0Xtay9r6hI=";
       };
 
       nativeBuildInputs = [
@@ -336,7 +379,7 @@ in
       owner = "rapidsai";
       repo = "rmm";
       rev = "v${version}";
-      hash = "sha256-wxOlM37EkhHSPhdT/vWYlTeWWvO43i169M11VWVYbp0=";
+      hash = "sha256-rP3TXEtbvRjKEenL2DUFuuGN3ID8qNK2iavPZZqNi4s=";
     };
 
     # CMakeLists.txt is in cpp/ subdirectory
@@ -356,10 +399,7 @@ in
       final.fmt
     ];
 
-    cmakeFlags = commonRapidsCmakeFlags ++ [
-      "-DRMM_BUILD_TESTS=OFF"
-      "-DRMM_BUILD_BENCHMARKS=OFF"
-    ];
+    cmakeFlags = commonRapidsCmakeFlags;
 
     # Need to copy VERSION file for rapids_config.cmake
     preConfigure = ''
@@ -386,7 +426,7 @@ in
       owner = "rapidsai";
       repo = "raft";
       rev = "v${version}";
-      hash = "sha256-Ch7UTPI2xvo4j8mhpsPP+0gVSagd6EYj2sbOE0ujZ4Y=";
+      hash = "sha256-c09BzI+eB25M5yy8i2Dr3lf6TmACEQ41xFAfD/ImGYI=";
     };
 
     sourceRoot = "${src.name}/cpp";
@@ -416,8 +456,7 @@ in
     ++ cudaLibAllOutputs libcurand;
 
     cmakeFlags = commonRapidsCmakeFlags ++ [
-      "-DRAFT_BUILD_TESTS=OFF"
-      "-DRAFT_BUILD_BENCHMARKS=OFF"
+      "-DBUILD_PRIMS_BENCH=OFF"
       "-DRAFT_COMPILE_LIBRARY=ON"
     ];
 
@@ -441,12 +480,7 @@ in
     pname = "cuvs";
     version = rapidsVersion;
 
-    src = final.fetchFromGitHub {
-      owner = "rapidsai";
-      repo = "cuvs";
-      rev = "v${version}";
-      hash = "sha256-kuxhXfqeDM/uZs34BHylFvF164zLEHVMH4WeOjtW/3g=";
-    };
+    src = cuvs-src;
 
     sourceRoot = "${src.name}/cpp";
 
@@ -470,11 +504,17 @@ in
     ++ cudaLibAllOutputs libcublas
     ++ cudaLibAllOutputs libcusolver
     ++ cudaLibAllOutputs libcusparse
-    ++ cudaLibAllOutputs libcurand;
+    ++ cudaLibAllOutputs libcurand
+    ++ cudaLibAllOutputs libnvjitlink;
 
     cmakeFlags = commonRapidsCmakeFlags ++ [
-      "-DCUVS_BUILD_TESTS=OFF"
-      "-DCUVS_BUILD_BENCHMARKS=OFF"
+      "-DBUILD_CUVS_BENCH=OFF"
+      # cuCollections downloads RoaringBitmap fixtures by default even though
+      # all consuming tests are disabled.
+      "-DCUCO_DOWNLOAD_ROARING_TESTDATA=OFF"
+      # cuVS' direct CPM packages bypass FetchContent's source-dir cache variables.
+      "-DCPM_hnswlib_SOURCE=${hnswlib-src}"
+      "-DCPM_dlpack_SOURCE=${dlpack-src}"
       # Disable multi-GPU support (NCCL) - not needed for single-GPU clustering
       "-DBUILD_MG_ALGOS=OFF"
     ];
@@ -503,7 +543,7 @@ in
       owner = "rapidsai";
       repo = "cuml";
       rev = "v${version}";
-      hash = "sha256-B4bi/zCNlm2HfD8Xdm8c55GFYiTqwl/qV1nSQoEyOUE=";
+      hash = "sha256-OehfXlzpSuYdsZwhfGTWqRILaycnA8QSbxKbjG/+yY8=";
     };
 
     sourceRoot = "${src.name}/cpp";
@@ -531,14 +571,18 @@ in
     ++ cudaLibAllOutputs libcusolver
     ++ cudaLibAllOutputs libcusparse
     ++ cudaLibAllOutputs libcurand
-    ++ cudaLibAllOutputs libcufft;
+    ++ cudaLibAllOutputs libcufft
+    ++ cudaLibAllOutputs libnvjitlink;
 
     cmakeFlags = commonRapidsCmakeFlags ++ [
-      "-DCUML_BUILD_TESTS=OFF"
-      "-DCUML_BUILD_BENCHMARKS=OFF"
-      # Disable multi-GPU support (avoids cumlprims_mg dependency)
+      # Disable multi-GPU support; cumlprims_mg moved into cuML itself.
       "-DSINGLEGPU=ON"
-      "-DENABLE_CUMLPRIMS_MG=OFF"
+      "-DCUCO_DOWNLOAD_ROARING_TESTDATA=OFF"
+      "-DCPM_hnswlib_SOURCE=${hnswlib-src}"
+      "-DCPM_dlpack_SOURCE=${dlpack-src}"
+      "-DCPM_GPUTreeShap_SOURCE=${gputreeshap-src}"
+      "-DCPM_nvforest_SOURCE=${nvforest-src}"
+      "-DTreelite_ROOT=${final.treelite}"
       # Disable tests and benchmarks (avoids GTest/gbench dependencies)
       "-DBUILD_CUML_TESTS=OFF"
       "-DBUILD_CUML_MG_TESTS=OFF"
@@ -559,21 +603,7 @@ in
     };
   };
 
-  # ==========================================================================
-  # Cython version overrides
-  # ==========================================================================
-  # Cython 3.0 - required for RAPIDS Python bindings (pylibraft, cuvs, cuml)
-  cython30 = final.python312Packages.cython.overrideAttrs (old: rec {
-    version = "3.0.11";
-    src = final.fetchFromGitHub {
-      owner = "cython";
-      repo = "cython";
-      rev = version;
-      hash = "sha256-ZyDNv95eS9YrVHIh5C/Xq8OvfX1cnI3f9GjA+OfaONA=";
-    };
-  });
-
-  # Cython 3.2 - required for cuda-bindings
+  # Cython 3.2 is required by all RAPIDS 26.06 Python bindings.
   cython32 = final.python312Packages.cython.overrideAttrs (old: rec {
     version = "3.2.4";
     src = final.fetchFromGitHub {
@@ -588,8 +618,8 @@ in
   rapids-build-backend-src = final.fetchFromGitHub {
     owner = "rapidsai";
     repo = "rapids-build-backend";
-    rev = "v0.3.3";
-    hash = "sha256-JMK5AzL3ZgwkKuTCeC4YFpayQyVMgKJUMQ2Od7ld4Go=";
+    rev = "v0.4.0";
+    hash = "sha256-dT0jMoDqfKWRpjcTXvshKxnTjoTvQmd+F53ke2UDVGU=";
   };
 
   # ==========================================================================
@@ -599,7 +629,7 @@ in
     # rapids-build-backend - PEP 517 build backend for RAPIDS packages
     rapids-build-backend = final.python312Packages.buildPythonPackage {
       pname = "rapids-build-backend";
-      version = "0.3.3";
+      version = "0.4.0";
       format = "pyproject";
 
       src = final.rapids-build-backend-src;
@@ -649,14 +679,14 @@ in
       dontUnpack = false;
 
       buildPhase = ''
-        # Write version file
-        echo '${treeliteVersion}' > treelite/VERSION
+                # Write version file
+                echo '${treeliteVersion}' > treelite/VERSION
 
-        # Point treelite to the pre-built C library
-        cat > treelite/path_config.py << 'PYEOF'
-def get_custom_libpath():
-    return "${final.treelite}/lib"
-PYEOF
+                # Point treelite to the pre-built C library
+                cat > treelite/path_config.py << 'PYEOF'
+        def get_custom_libpath():
+            return "${final.treelite}/lib"
+        PYEOF
       '';
 
       installPhase = ''
@@ -674,26 +704,72 @@ PYEOF
       };
     };
 
-    # cuda-pathfinder - CUDA component path discovery (pure Python)
-    cuda-pathfinder = final.python312Packages.buildPythonPackage {
-      pname = "cuda-pathfinder";
-      version = "12.9.5";
-      format = "pyproject";
+    # cuda-core 0.3.2 is the Pythonic CUDA API required by numba-cuda 0.22.
+    # Use NVIDIA's CPython 3.12 wheel; this RAPIDS stack is desktop/x86_64-only.
+    cuda-core = final.python312Packages.buildPythonPackage {
+      pname = "cuda-core";
+      version = "0.3.2";
+      format = "wheel";
 
-      src = cuda-python-src;
-      sourceRoot = "${cuda-python-src.name}/cuda_pathfinder";
+      src = final.fetchurl {
+        url = "https://files.pythonhosted.org/packages/b2/75/cb52e7d8c44ef4bf1313251685adc0c6568d51b9790edf7a1ecdf0135394/cuda_core-0.3.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl";
+        hash = "sha256-EzirMk0ps6/N5iPEoSVxzW5052+g1VM9seNt+XiJnk4=";
+      };
 
-      build-system = [ final.python312Packages.setuptools ];
+      nativeBuildInputs = [ final.autoPatchelfHook ];
+      buildInputs = [ final.stdenv.cc.cc.lib ];
+      propagatedBuildInputs = with final.python312Packages; [
+        numpy
+        final.python312Packages.cuda-bindings
+      ];
 
-      pythonImportsCheck = [ "cuda.pathfinder" ];
+      pythonImportsCheck = [ "cuda.core" ];
+      autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
 
       meta = with final.lib; {
-        description = "Pathfinder for CUDA components";
+        description = "Pythonic CUDA core API";
         homepage = "https://github.com/NVIDIA/cuda-python";
         license = licenses.asl20;
         platforms = platforms.linux;
       };
     };
+
+    # numba-cuda restores numba.cuda, which was split out of current Numba.
+    numba-cuda = final.python312Packages.buildPythonPackage {
+      pname = "numba-cuda";
+      version = "0.22.2";
+      format = "wheel";
+
+      src = final.fetchurl {
+        url = "https://files.pythonhosted.org/packages/42/c5/f8771db9e643f1935f4bfe9f9c33c6cf425648103e3bc05659cd7356787c/numba_cuda-0.22.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl";
+        hash = "sha256-jTTZXNWjUsHZVkUDrstJ2UAnTm/7Xa5Et45OTke4qfU=";
+      };
+
+      nativeBuildInputs = [ final.autoPatchelfHook ];
+      buildInputs = [ final.stdenv.cc.cc.lib ];
+      propagatedBuildInputs = with final.python312Packages; [
+        numba
+        packaging
+        final.python312Packages.cuda-bindings
+        final.python312Packages.cuda-core
+        final.python312Packages.cuda-python
+      ];
+
+      pythonRelaxDeps = true;
+      pythonImportsCheck = [ "numba.cuda" ];
+      autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
+
+      meta = with final.lib; {
+        description = "CUDA target for Numba";
+        homepage = "https://github.com/NVIDIA/numba-cuda";
+        license = licenses.bsd2;
+        platforms = platforms.linux;
+      };
+    };
+
+    # cuda-bindings 12.9 accepts cuda-pathfinder >=1.1,<2. Reuse nixpkgs'
+    # current 1.x package so CuPy and the RAPIDS CUDA bindings share one copy.
+    cuda-pathfinder = prev.python312Packages.cuda-pathfinder;
 
     # cuda-bindings - Python bindings for CUDA APIs
     cuda-bindings = final.python312Packages.buildPythonPackage {
@@ -747,7 +823,7 @@ PYEOF
       meta = with final.lib; {
         description = "Python bindings for CUDA";
         homepage = "https://github.com/NVIDIA/cuda-python";
-        license = licenses.unfree;  # NVIDIA proprietary
+        license = licenses.unfree; # NVIDIA proprietary
         platforms = platforms.linux;
       };
     };
@@ -765,6 +841,7 @@ PYEOF
 
       propagatedBuildInputs = [
         final.python312Packages.cuda-bindings
+        final.python312Packages.cuda-core
         final.python312Packages.cuda-pathfinder
       ];
 
@@ -773,7 +850,7 @@ PYEOF
       meta = with final.lib; {
         description = "NVIDIA CUDA Python bindings";
         homepage = "https://github.com/NVIDIA/cuda-python";
-        license = licenses.unfree;  # NVIDIA proprietary
+        license = licenses.unfree; # NVIDIA proprietary
         platforms = platforms.linux;
       };
     };
@@ -788,14 +865,14 @@ PYEOF
         owner = "rapidsai";
         repo = "rmm";
         rev = "v${version}";
-        hash = "sha256-wxOlM37EkhHSPhdT/vWYlTeWWvO43i169M11VWVYbp0=";
+        hash = "sha256-rP3TXEtbvRjKEenL2DUFuuGN3ID8qNK2iavPZZqNi4s=";
       };
 
       sourceRoot = "${src.name}/python/rmm";
 
       build-system = with final.python312Packages; [
         scikit-build-core
-        cython
+        final.cython32
       ];
 
       nativeBuildInputs = [
@@ -819,7 +896,7 @@ PYEOF
 
       # Disable version constraints that don't apply in Nix
       pythonRelaxDeps = true;
-      pythonRemoveDeps = [ "librmm" ];  # C++ lib handled through Nix, not pip
+      pythonRemoveDeps = [ "librmm" ]; # C++ lib handled through Nix, not pip
 
       env = {
         SKBUILD_CMAKE_ARGS = builtins.concatStringsSep ";" [
@@ -827,6 +904,9 @@ PYEOF
           "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
           "-DCPM_DOWNLOAD_LOCATION=${cpm-cmake}"
           "-DCMAKE_CUDA_ARCHITECTURES=75;80;86;89;90"
+          # Python extension targets otherwise see CUDA 12.9's older CCCL
+          # headers before the CCCL 3.4 headers bundled by librmm.
+          "-DCMAKE_CXX_FLAGS=-I${final.librmm}/include/rapids"
           "-Drmm_ROOT=${librmm-patched final.librmm}"
           "-DFIND_RMM_CPP=ON"
         ];
@@ -842,7 +922,7 @@ PYEOF
         # Bypass rapids-build-backend, use scikit-build-core directly
         substituteInPlace pyproject.toml \
           --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
-          --replace-fail '"rapids-build-backend>=0.3.0,<0.4.0.dev0",' ""
+          --replace-fail '"rapids-build-backend>=0.4.0,<0.5.0",' ""
         # Create version file where scikit-build-core expects it
         echo '${version}' > rmm/VERSION
 
@@ -866,14 +946,14 @@ PYEOF
         owner = "rapidsai";
         repo = "raft";
         rev = "v${version}";
-        hash = "sha256-Ch7UTPI2xvo4j8mhpsPP+0gVSagd6EYj2sbOE0ujZ4Y=";
+        hash = "sha256-c09BzI+eB25M5yy8i2Dr3lf6TmACEQ41xFAfD/ImGYI=";
       };
 
       sourceRoot = "${src.name}/python/pylibraft";
 
       build-system = with final.python312Packages; [
         scikit-build-core
-        final.cython30
+        final.cython32
       ];
 
       nativeBuildInputs = [
@@ -902,7 +982,10 @@ PYEOF
 
       dontUseCmakeConfigure = true;
       pythonRelaxDeps = true;
-      pythonRemoveDeps = [ "libraft" "librmm" ];
+      pythonRemoveDeps = [
+        "libraft"
+        "librmm"
+      ];
 
       env = {
         SKBUILD_CMAKE_ARGS = builtins.concatStringsSep ";" [
@@ -910,6 +993,7 @@ PYEOF
           "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
           "-DCPM_DOWNLOAD_LOCATION=${cpm-cmake}"
           "-DCMAKE_CUDA_ARCHITECTURES=75;80;86;89;90"
+          "-DCMAKE_CXX_FLAGS=-I${final.librmm}/include/rapids"
           "-Draft_ROOT=${librmm-patched final.libraft}"
           "-Drmm_ROOT=${librmm-patched final.librmm}"
           "-DFIND_RAFT_CPP=ON"
@@ -924,7 +1008,7 @@ PYEOF
       postPatch = ''
         substituteInPlace pyproject.toml \
           --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
-          --replace-fail '"rapids-build-backend>=0.3.0,<0.4.0.dev0",' ""
+          --replace-fail '"rapids-build-backend>=0.4.0,<0.5.0",' ""
         echo '${version}' > pylibraft/VERSION
       '';
 
@@ -942,18 +1026,13 @@ PYEOF
       version = rapidsVersion;
       format = "pyproject";
 
-      src = final.fetchFromGitHub {
-        owner = "rapidsai";
-        repo = "cuvs";
-        rev = "v${version}";
-        hash = "sha256-kuxhXfqeDM/uZs34BHylFvF164zLEHVMH4WeOjtW/3g=";
-      };
+      src = cuvs-src;
 
       sourceRoot = "${src.name}/python/cuvs";
 
       build-system = with final.python312Packages; [
         scikit-build-core
-        final.cython30
+        final.cython32
       ];
 
       nativeBuildInputs = [
@@ -973,7 +1052,8 @@ PYEOF
       ++ cudaLibAllOutputs libcusolver
       ++ cudaLibAllOutputs libcusparse
       ++ cudaLibAllOutputs libcurand
-      ++ cudaLibAllOutputs libcufft;
+      ++ cudaLibAllOutputs libcufft
+      ++ cudaLibAllOutputs libnvjitlink;
 
       propagatedBuildInputs = with final.python312Packages; [
         numpy
@@ -984,7 +1064,11 @@ PYEOF
 
       dontUseCmakeConfigure = true;
       pythonRelaxDeps = true;
-      pythonRemoveDeps = [ "libcuvs" "libraft" "librmm" ];
+      pythonRemoveDeps = [
+        "libcuvs"
+        "libraft"
+        "librmm"
+      ];
 
       env = {
         SKBUILD_CMAKE_ARGS = builtins.concatStringsSep ";" [
@@ -992,12 +1076,15 @@ PYEOF
           "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
           "-DCPM_DOWNLOAD_LOCATION=${cpm-cmake}"
           "-DCMAKE_CUDA_ARCHITECTURES=75;80;86;89;90"
+          "-DCMAKE_CXX_FLAGS=-I${final.librmm}/include/rapids"
           "-Dcuvs_ROOT=${librmm-patched final.libcuvs}"
           "-Draft_ROOT=${librmm-patched final.libraft}"
           "-Drmm_ROOT=${librmm-patched final.librmm}"
           "-DFIND_CUVS_CPP=ON"
           "-DFETCHCONTENT_SOURCE_DIR_DLPACK=${dlpack-src}"
           "-DFETCHCONTENT_SOURCE_DIR_HNSWLIB=${hnswlib-src}"
+          "-DCPM_dlpack_SOURCE=${dlpack-src}"
+          "-DCPM_hnswlib_SOURCE=${hnswlib-src}"
           "-DFETCHCONTENT_SOURCE_DIR_CCCL=${cccl-src}"
           "-DFETCHCONTENT_SOURCE_DIR_NVTX3=${nvtx-src}"
           "-DFETCHCONTENT_SOURCE_DIR_SPDLOG=${spdlog-src}"
@@ -1005,6 +1092,7 @@ PYEOF
           "-DFETCHCONTENT_SOURCE_DIR_RAPIDS_LOGGER=${rapids-logger-src}"
           "-DFETCHCONTENT_SOURCE_DIR_NVIDIACUTLASS=${cutlass-src}"
           "-DFETCHCONTENT_SOURCE_DIR_CUCO=${cuco-src}"
+          "-DCUCO_DOWNLOAD_ROARING_TESTDATA=OFF"
         ];
       };
 
@@ -1016,7 +1104,7 @@ PYEOF
       postPatch = ''
         substituteInPlace pyproject.toml \
           --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
-          --replace-fail '"rapids-build-backend>=0.3.0,<0.4.0.dev0",' ""
+          --replace-fail '"rapids-build-backend>=0.4.0,<0.5.0",' ""
         echo '${version}' > cuvs/VERSION
       '';
 
@@ -1039,65 +1127,65 @@ PYEOF
       dontUnpack = true;
 
       buildPhase = ''
-        mkdir -p cudf/core cudf/api/types cudf/pandas
-        cat > cudf/__init__.py << 'PYEOF'
-"""cudf stub - provides type stubs for cuml compatibility."""
-from cudf.core.dataframe import DataFrame
-from cudf.core.series import Series
-from cudf.core.index import Index
-from cudf.core.buffer import Buffer
+                mkdir -p cudf/core cudf/api/types cudf/pandas
+                cat > cudf/__init__.py << 'PYEOF'
+        """cudf stub - provides type stubs for cuml compatibility."""
+        from cudf.core.dataframe import DataFrame
+        from cudf.core.series import Series
+        from cudf.core.index import Index
+        from cudf.core.buffer import Buffer
 
-def concat(*args, **kwargs):
-    raise NotImplementedError("cudf stub: concat not available")
+        def concat(*args, **kwargs):
+            raise NotImplementedError("cudf stub: concat not available")
 
-def from_pandas(*args, **kwargs):
-    raise NotImplementedError("cudf stub: from_pandas not available")
-PYEOF
+        def from_pandas(*args, **kwargs):
+            raise NotImplementedError("cudf stub: from_pandas not available")
+        PYEOF
 
-        cat > cudf/core/__init__.py << 'PYEOF'
-from cudf.core.dataframe import DataFrame
-from cudf.core.series import Series
-from cudf.core.index import Index
-from cudf.core.buffer import Buffer
-PYEOF
+                cat > cudf/core/__init__.py << 'PYEOF'
+        from cudf.core.dataframe import DataFrame
+        from cudf.core.series import Series
+        from cudf.core.index import Index
+        from cudf.core.buffer import Buffer
+        PYEOF
 
-        cat > cudf/core/dataframe.py << 'PYEOF'
-class DataFrame:
-    """Stub DataFrame type for cuml isinstance checks."""
-    pass
-PYEOF
+                cat > cudf/core/dataframe.py << 'PYEOF'
+        class DataFrame:
+            """Stub DataFrame type for cuml isinstance checks."""
+            pass
+        PYEOF
 
-        cat > cudf/core/series.py << 'PYEOF'
-class Series:
-    """Stub Series type for cuml isinstance checks."""
-    null_count = 0
-    pass
-PYEOF
+                cat > cudf/core/series.py << 'PYEOF'
+        class Series:
+            """Stub Series type for cuml isinstance checks."""
+            null_count = 0
+            pass
+        PYEOF
 
-        cat > cudf/core/index.py << 'PYEOF'
-class Index:
-    """Stub Index type for cuml isinstance checks."""
-    pass
-PYEOF
+                cat > cudf/core/index.py << 'PYEOF'
+        class Index:
+            """Stub Index type for cuml isinstance checks."""
+            pass
+        PYEOF
 
-        cat > cudf/core/buffer.py << 'PYEOF'
-class Buffer:
-    """Stub Buffer type for cuml isinstance checks."""
-    pass
-PYEOF
+                cat > cudf/core/buffer.py << 'PYEOF'
+        class Buffer:
+            """Stub Buffer type for cuml isinstance checks."""
+            pass
+        PYEOF
 
-        cat > cudf/api/__init__.py << 'PYEOF'
-PYEOF
+                cat > cudf/api/__init__.py << 'PYEOF'
+        PYEOF
 
-        cat > cudf/api/types/__init__.py << 'PYEOF'
-def is_categorical_dtype(*args, **kwargs):
-    return False
-def is_numeric_dtype(*args, **kwargs):
-    return False
-PYEOF
+                cat > cudf/api/types/__init__.py << 'PYEOF'
+        def is_categorical_dtype(*args, **kwargs):
+            return False
+        def is_numeric_dtype(*args, **kwargs):
+            return False
+        PYEOF
 
-        cat > cudf/pandas/__init__.py << 'PYEOF'
-PYEOF
+                cat > cudf/pandas/__init__.py << 'PYEOF'
+        PYEOF
       '';
 
       installPhase = ''
@@ -1122,14 +1210,14 @@ PYEOF
         owner = "rapidsai";
         repo = "cuml";
         rev = "v${version}";
-        hash = "sha256-B4bi/zCNlm2HfD8Xdm8c55GFYiTqwl/qV1nSQoEyOUE=";
+        hash = "sha256-OehfXlzpSuYdsZwhfGTWqRILaycnA8QSbxKbjG/+yY8=";
       };
 
       sourceRoot = "${src.name}/python/cuml";
 
       build-system = with final.python312Packages; [
         scikit-build-core
-        final.cython30
+        final.cython32
       ];
 
       nativeBuildInputs = [
@@ -1151,29 +1239,40 @@ PYEOF
       ++ cudaLibAllOutputs libcusolver
       ++ cudaLibAllOutputs libcusparse
       ++ cudaLibAllOutputs libcurand
-      ++ cudaLibAllOutputs libcufft;
+      ++ cudaLibAllOutputs libcufft
+      ++ cudaLibAllOutputs libnvjitlink;
 
       propagatedBuildInputs = with final.python312Packages; [
         numpy
         scipy
         scikit-learn
         numba
+        final.python312Packages.numba-cuda
+        cupy
         joblib
+        packaging
         pandas
+        rich
+        cuda-python
         final.python312Packages.rmm
         final.python312Packages.pylibraft
         final.python312Packages.cuvs
-        final.python312Packages.cudf      # Stub types for import compatibility
-        final.python312Packages.treelite   # Tree model serialization
+        final.python312Packages.cudf # Stub types for import compatibility
+        final.python312Packages.treelite # Tree model serialization
       ];
 
       dontUseCmakeConfigure = true;
       pythonRelaxDeps = true;
+      # CUDA toolkit libraries, cuDF, nvForest, and Treelite are supplied by
+      # Nix C++/Python inputs rather than CUDA-suffixed PyPI wheels.
       pythonRemoveDeps = [
-        "libcuml" "libcuvs" "libraft" "librmm"
-        "cudf" "cupy-cuda11x" "dask-cuda" "dask-cudf"
-        "nvidia-cublas" "nvidia-cufft" "nvidia-curand" "nvidia-cusolver" "nvidia-cusparse"
-        "raft-dask" "rapids-dask-dependency" "treelite"
+        "cuda-toolkit"
+        "libcuml"
+        "cudf"
+        "cupy-cuda13x"
+        "nvforest"
+        "nvidia-nvjitlink"
+        "treelite"
       ];
 
       env = {
@@ -1182,6 +1281,7 @@ PYEOF
           "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
           "-DCPM_DOWNLOAD_LOCATION=${cpm-cmake}"
           "-DCMAKE_CUDA_ARCHITECTURES=75;80;86;89;90"
+          "-DCMAKE_CXX_FLAGS=-I${final.librmm}/include/rapids"
           "-Dcuml_ROOT=${librmm-patched final.libcuml}"
           "-Dcuvs_ROOT=${librmm-patched final.libcuvs}"
           "-Draft_ROOT=${librmm-patched final.libraft}"
@@ -1198,9 +1298,15 @@ PYEOF
           "-DFETCHCONTENT_SOURCE_DIR_RAPIDS_LOGGER=${rapids-logger-src}"
           "-DFETCHCONTENT_SOURCE_DIR_NVIDIACUTLASS=${cutlass-src}"
           "-DFETCHCONTENT_SOURCE_DIR_CUCO=${cuco-src}"
+          "-DCUCO_DOWNLOAD_ROARING_TESTDATA=OFF"
           "-DFETCHCONTENT_SOURCE_DIR_DLPACK=${dlpack-src}"
           "-DFETCHCONTENT_SOURCE_DIR_HNSWLIB=${hnswlib-src}"
+          "-DCPM_dlpack_SOURCE=${dlpack-src}"
+          "-DCPM_hnswlib_SOURCE=${hnswlib-src}"
           "-DFETCHCONTENT_SOURCE_DIR_GPUTREESHAP=${gputreeshap-src}"
+          "-DFETCHCONTENT_SOURCE_DIR_NVFOREST=${nvforest-src}"
+          "-DCPM_GPUTreeShap_SOURCE=${gputreeshap-src}"
+          "-DCPM_nvforest_SOURCE=${nvforest-src}"
           "-DTreelite_ROOT=${final.treelite}"
         ];
       };
@@ -1211,35 +1317,35 @@ PYEOF
       '';
 
       postPatch = ''
-        substituteInPlace pyproject.toml \
-          --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
-          --replace-fail '"rapids-build-backend>=0.3.0,<0.4.0.dev0",' ""
-        echo '${version}' > cuml/VERSION
+                substituteInPlace pyproject.toml \
+                  --replace-fail 'build-backend = "rapids_build_backend.build"' 'build-backend = "scikit_build_core.build"' \
+                  --replace-fail '"rapids-build-backend>=0.4.0,<0.5.0",' ""
+                echo '${version}' > cuml/VERSION
 
-        # Fix nvtx.py fallback: the @contextmanager-decorated function uses 'return'
-        # instead of 'yield', causing TypeError at runtime when used as a decorator.
-        # Replace with a proper no-op class that works as both decorator and context manager.
-        cat > cuml/internals/nvtx.py << 'NVTXEOF'
-try:
-    from nvtx import annotate
-except ImportError:
-    class annotate:
-        """No-op replacement for nvtx.annotate (decorator + context manager)."""
-        def __init__(self, *args, **kwargs):
-            self._func = args[0] if (
-                len(kwargs) == 0 and len(args) == 1 and callable(args[0])
-            ) else None
-        def __call__(self, *args, **kwargs):
-            if self._func is not None:
-                return self._func(*args, **kwargs)
-            if len(args) == 1 and callable(args[0]):
-                return args[0]
-            return self
-        def __enter__(self):
-            return self
-        def __exit__(self, *exc):
-            pass
-NVTXEOF
+                # Fix nvtx.py fallback: the @contextmanager-decorated function uses 'return'
+                # instead of 'yield', causing TypeError at runtime when used as a decorator.
+                # Replace with a proper no-op class that works as both decorator and context manager.
+                cat > cuml/internals/nvtx.py << 'NVTXEOF'
+        try:
+            from nvtx import annotate
+        except ImportError:
+            class annotate:
+                """No-op replacement for nvtx.annotate (decorator + context manager)."""
+                def __init__(self, *args, **kwargs):
+                    self._func = args[0] if (
+                        len(kwargs) == 0 and len(args) == 1 and callable(args[0])
+                    ) else None
+                def __call__(self, *args, **kwargs):
+                    if self._func is not None:
+                        return self._func(*args, **kwargs)
+                    if len(args) == 1 and callable(args[0]):
+                        return args[0]
+                    return self
+                def __enter__(self):
+                    return self
+                def __exit__(self, *exc):
+                    pass
+        NVTXEOF
       '';
 
       # Skip tests during build

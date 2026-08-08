@@ -1,10 +1,11 @@
 diff --git a/internal/ui/home.go b/internal/ui/home.go
+index 4f2a2348..f828d6d4 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -1275,43 +1275,6 @@
- 		h.flatItems = scoped
+@@ -2423,43 +2423,6 @@ func (h *Home) rebuildFlatItems() {
+ 		}
  	}
-
+ 
 -	// Inject window items after sessions that have 2+ windows
 -	if len(h.flatItems) > 0 {
 -		expanded := make([]session.Item, 0, len(h.flatItems)+8)

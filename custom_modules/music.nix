@@ -58,9 +58,9 @@ in
 
     services.navidrome.settings.BaseUrl = "/navidrome";
     services.navidrome.settings."ListenBrainz.Enabled" = true;
-    services.navidrome.settings."ListenBrainz.BaseURL" = "http://127.0.0.1:${toString config.custom_modules.multi-scrobbler.port}/1/";
+    services.navidrome.settings."ListenBrainz.BaseURL" =
+      "http://127.0.0.1:${toString config.custom_modules.multi-scrobbler.port}/1/";
     services.navidrome.settings.Plugins.Enabled = true;
-    services.navidrome.settings.Plugins.Folder = "${config.services.navidrome.package}/share/plugins";
     systemd.services.navidrome.serviceConfig.BindReadOnlyPaths = [ "/var/lib/musiclibrary" ];
     systemd.services.navidrome.preStart = mkIf config.custom_modules.multi-scrobbler.listenBrainzEndpoint.enable ''
       set -euo pipefail

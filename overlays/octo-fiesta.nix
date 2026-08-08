@@ -2,7 +2,7 @@
 final: prev: {
   octo-fiesta = final.dotnetCorePackages.buildDotnetModule {
     pname = "octo-fiesta";
-    version = "0.0.0-dev";
+    version = "0.10.0";
 
     src = octo-fiesta-src;
 

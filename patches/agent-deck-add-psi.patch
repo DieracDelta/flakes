@@ -1,17 +1,17 @@
 diff --git a/README.md b/README.md
-index 0fb48a2..59d6994 100644
+index 4247fe9c..c6084b61 100644
 --- a/README.md
 +++ b/README.md
-@@ -588,6 +588,7 @@ Agent Deck works with any terminal-based AI tool:
+@@ -715,6 +715,7 @@ Agent Deck works with any terminal-based AI tool:
  | **Gemini CLI** | Full (status, MCP, resume) |
  | **OpenCode** | Status detection, organization, fork |
- | **Codex** | Status detection, organization, conductor, fork |
+ | **Codex** | Status detection, MCP, organization, conductor, fork |
 +| **PSI** | Status detection, organization |
  | **Copilot** | Organization, launch |
  | **Crush** (charmbracelet/crush) | Status detection, organization, launch |
  | **Cursor** (terminal) | Status detection, organization |
 diff --git a/cmd/agent-deck/copilot_detect_test.go b/cmd/agent-deck/copilot_detect_test.go
-index 2e09b60..6e1c5e5 100644
+index 2e09b602..6e1c5e58 100644
 --- a/cmd/agent-deck/copilot_detect_test.go
 +++ b/cmd/agent-deck/copilot_detect_test.go
 @@ -67,3 +67,23 @@ func TestDetectTool_Pi(t *testing.T) {
@@ -39,10 +39,10 @@ index 2e09b60..6e1c5e5 100644
 +	}
 +}
 diff --git a/cmd/agent-deck/session_cmd.go b/cmd/agent-deck/session_cmd.go
-index a052569..9a9be6e 100644
+index dc397e9e..3bafa1b0 100644
 --- a/cmd/agent-deck/session_cmd.go
 +++ b/cmd/agent-deck/session_cmd.go
-@@ -141,7 +141,7 @@ func printSessionHelp() {
+@@ -167,7 +167,7 @@ func printSessionHelp() {
  	fmt.Println("  title              Session title")
  	fmt.Println("  path               Project path")
  	fmt.Println("  command            Command to run")
@@ -51,7 +51,7 @@ index a052569..9a9be6e 100644
  	fmt.Println("  wrapper            Wrapper command (use {command} to include tool command)")
  	fmt.Println("  claude-session-id  Claude conversation ID (for fork/resume)")
  	fmt.Println("  gemini-session-id  Gemini conversation ID (for resume)")
-@@ -1344,7 +1344,7 @@ func handleSessionSet(profile string, args []string) {
+@@ -1863,7 +1863,7 @@ func handleSessionSet(profile string, args []string) {
  		fmt.Println("  title              Session title")
  		fmt.Println("  path               Project path")
  		fmt.Println("  command            Command to run")
@@ -61,7 +61,7 @@ index a052569..9a9be6e 100644
  		fmt.Println("  channels           Comma-separated plugin channel ids (claude only)")
  		fmt.Printf("  plugins            Comma-separated plugin catalog names (claude only) — see [plugins.<name>] in %s\n", effectiveUserConfigPathForHelp())
 diff --git a/internal/integration/detection_test.go b/internal/integration/detection_test.go
-index 98ce887..092f9be 100644
+index 98ce8876..092f9beb 100644
 --- a/internal/integration/detection_test.go
 +++ b/internal/integration/detection_test.go
 @@ -220,7 +220,7 @@ func TestDetection_CodexWaiting(t *testing.T) {
@@ -83,23 +83,9 @@ index 98ce887..092f9be 100644
  	for _, tool := range tools {
  		t.Run(tool, func(t *testing.T) {
 diff --git a/internal/session/builtins.go b/internal/session/builtins.go
-index a3b2232..cc7fe23 100644
+index fdc99f56..cc7fe236 100644
 --- a/internal/session/builtins.go
 +++ b/internal/session/builtins.go
-@@ -5,10 +5,10 @@ package session
- // Before this file, the built-in list lived split across two hand-synced
- // functions (issue #1258):
- //   - detectTool()        in cmd/agent-deck/main.go  — the strings.Contains
--//                          heuristic dispatcher (command string -> tool name).
-+//     heuristic dispatcher (command string -> tool name).
- //   - isBuiltinToolName()  in internal/session/userconfig.go — the strict
--//                          allowlist used to stop custom [tools.<name>] entries
--//                          from shadowing a built-in.
-+//     allowlist used to stop custom [tools.<name>] entries
-+//     from shadowing a built-in.
- //
- // Both are now derived from the single builtinTools() slice below.
- //
 @@ -59,6 +59,7 @@ func builtinTools() []builtinTool {
  		{Name: "opencode", Icon: "🌐", detectSubstrings: []string{"opencode", "open-code"}},
  		{Name: "gemini", Icon: "✨", detectSubstrings: []string{"gemini"}},
@@ -109,7 +95,7 @@ index a3b2232..cc7fe23 100644
  		{Name: "copilot", Icon: "🐙", detectSubstrings: []string{"copilot"}},
  		{Name: "crush", Icon: "💘", detectSubstrings: []string{"crush"}},
 diff --git a/internal/session/discovery.go b/internal/session/discovery.go
-index 84acf6f..af5dff5 100644
+index 84acf6f8..af5dff52 100644
 --- a/internal/session/discovery.go
 +++ b/internal/session/discovery.go
 @@ -160,6 +160,9 @@ func detectToolFromName(name string) string {
@@ -123,7 +109,7 @@ index 84acf6f..af5dff5 100644
  	return "shell"
  }
 diff --git a/internal/session/discovery_test.go b/internal/session/discovery_test.go
-index c2d576c..096f169 100644
+index c2d576c0..096f1690 100644
 --- a/internal/session/discovery_test.go
 +++ b/internal/session/discovery_test.go
 @@ -93,6 +93,7 @@ func TestDetectToolFromName(t *testing.T) {
@@ -135,11 +121,11 @@ index c2d576c..096f169 100644
  	}
  
 diff --git a/internal/session/instance.go b/internal/session/instance.go
-index 445fdd1..9f518e6 100644
+index 6daf8e3f..2276b51b 100644
 --- a/internal/session/instance.go
 +++ b/internal/session/instance.go
-@@ -1379,6 +1379,27 @@ func (i *Instance) buildCodexCommand(baseCommand string) string {
- 	return envPrefix + command + yoloFlag + modelFlag
+@@ -2135,6 +2135,27 @@ func (i *Instance) buildCodexCommandWithPrompt(baseCommand, prompt string) (stri
+ 	return command + " " + shellescape.Quote(prompt), true
  }
  
 +// buildPsiCommand builds the command for the PSI coding-agent CLI.
@@ -166,7 +152,7 @@ index 445fdd1..9f518e6 100644
  // piAgentDeckSessionDirExpr returns a target-shell expression for the Pi session
  // directory Agent Deck owns for an instance. It intentionally uses target-side
  // $HOME rather than resolving the Agent Deck process' home directory, keeping
-@@ -2646,7 +2667,7 @@ func (i *Instance) hasEffectiveWrapper() bool {
+@@ -3496,7 +3517,7 @@ func (i *Instance) hasEffectiveWrapper() bool {
  
  // loadCustomPatternsFromConfig loads detection patterns from built-in defaults + config.toml
  // overrides, and sets them on the tmux session for status detection and tool auto-detection.
@@ -175,7 +161,7 @@ index 445fdd1..9f518e6 100644
  func (i *Instance) loadCustomPatternsFromConfig() {
  	if i.tmuxSession == nil {
  		return
-@@ -2931,6 +2952,8 @@ func (i *Instance) Start() error {
+@@ -3865,6 +3886,8 @@ func (i *Instance) Start() error {
  		command = i.buildCodexCommand(i.Command)
  		// Record start time for session ID detection (Unix millis)
  		i.CodexStartedAt = time.Now().UnixMilli()
@@ -184,7 +170,7 @@ index 445fdd1..9f518e6 100644
  	case i.Tool == "pi":
  		if i.IsForkAwaitingStart {
  			command = i.consumeForkStartCommand()
-@@ -3065,7 +3088,7 @@ func (i *Instance) Start() error {
+@@ -4044,7 +4067,7 @@ func (i *Instance) Start() error {
  // StartWithMessage starts the session and sends an initial message when ready
  // The message is sent synchronously after detecting the agent's prompt
  // This approach is more reliable than embedding send logic in the tmux command
@@ -193,25 +179,25 @@ index 445fdd1..9f518e6 100644
  //
  // Issue #1040: same per-instance spawn lock as Start() — a concurrent
  // `launch -m "..."` racing with a poller-triggered Start() must not
-@@ -3092,7 +3115,7 @@ func (i *Instance) StartWithMessage(message string) error {
+@@ -4075,7 +4098,7 @@ func (i *Instance) StartWithMessage(message string) error {
  	i.prepareWorkerScratchConfigDirForSpawn() // also runs plugin auto-install per fix C1
  
  	// Start session normally (no embedded message logic)
 -	// Priority: built-in tools (claude, gemini, opencode, codex) → custom tools from config.toml → raw command
 +	// Priority: built-in tools (claude, gemini, opencode, codex, psi) → custom tools from config.toml → raw command
  	var command string
- 	switch {
- 	case IsClaudeCompatible(i.Tool):
-@@ -3164,6 +3187,8 @@ func (i *Instance) StartWithMessage(message string) error {
+ 	// Codex takes its initial prompt as a positional argument instead of having it
+ 	// typed into the TUI; when that happens there is nothing left to send.
+@@ -4150,6 +4173,8 @@ func (i *Instance) StartWithMessage(message string) error {
  		}
- 		command = i.buildCodexCommand(i.Command)
+ 		command, codexPromptEmbedded = i.buildCodexCommandWithPrompt(i.Command, message)
  		i.CodexStartedAt = time.Now().UnixMilli()
 +	case i.Tool == "psi":
 +		command = i.buildPsiCommand(i.Command)
  	case i.Tool == "pi":
  		if i.IsForkAwaitingStart {
  			command = i.consumeForkStartCommand()
-@@ -3720,11 +3745,11 @@ func (i *Instance) UpdateStatus() error {
+@@ -4984,11 +5009,11 @@ func (i *Instance) UpdateStatus() error {
  			// Preserve configured custom tool names.
  		} else {
  			switch detectedTool {
@@ -225,16 +211,16 @@ index 445fdd1..9f518e6 100644
  					i.Tool = detectedTool
  				}
  			}
-@@ -5809,6 +5834,8 @@ func (i *Instance) Restart() error {
+@@ -7503,6 +7528,8 @@ func (i *Instance) restart(env map[string]string) error {
  		command = i.buildOpenCodeCommand("opencode")
  	} else if IsCodexCompatible(i.Tool) && i.CodexSessionID != "" {
  		command = i.buildCodexCommand(i.Command)
 +	} else if i.Tool == "psi" {
 +		command = i.buildPsiCommand(i.Command)
- 	} else {
- 		// Route to appropriate command builder based on tool
- 		switch {
-@@ -5824,6 +5851,8 @@ func (i *Instance) Restart() error {
+ 	} else if i.Tool == "hermes" {
+ 		// Re-capture the pane's hermes session ID on EVERY restart (hermes
+ 		// doesn't export it). Overwriting rather than caching once self-heals a
+@@ -7537,6 +7564,8 @@ func (i *Instance) restart(env map[string]string) error {
  			command = i.buildCodexCommand(i.Command)
  			// Record start time for async session ID detection
  			i.CodexStartedAt = time.Now().UnixMilli()
@@ -243,7 +229,7 @@ index 445fdd1..9f518e6 100644
  		case i.Tool == "pi":
  			command = i.buildPiCommand(i.Command)
  		case i.Tool == "copilot":
-@@ -6163,6 +6192,10 @@ func (i *Instance) CanRestart() bool {
+@@ -7956,6 +7985,10 @@ func (i *Instance) CanRestart() bool {
  		return true
  	}
  
@@ -255,7 +241,7 @@ index 445fdd1..9f518e6 100644
  	// can always be relaunched with --continue.
  	if i.Tool == "pi" {
 diff --git a/internal/session/toolregistry_test.go b/internal/session/toolregistry_test.go
-index 2b6dda0..eb5792b 100644
+index 2b6dda08..eb5792bb 100644
 --- a/internal/session/toolregistry_test.go
 +++ b/internal/session/toolregistry_test.go
 @@ -5,10 +5,10 @@ import (
@@ -284,28 +270,28 @@ index 2b6dda0..eb5792b 100644
  		{"pi bare", "pi", "pi"},
  		{"pi with flags", "pi --profile dev", "pi"},
 diff --git a/internal/session/userconfig.go b/internal/session/userconfig.go
-index ea9935b..28c56d9 100644
+index 970964fc..51bf7d5b 100644
 --- a/internal/session/userconfig.go
 +++ b/internal/session/userconfig.go
-@@ -44,7 +44,7 @@ var ErrRefusingConfigSectionDrop = fmt.Errorf("session: refusing to save config.
- // UserConfig represents user-facing configuration in TOML format
+@@ -52,7 +52,7 @@ var ErrRefusingConfigSectionDrop = fmt.Errorf("session: refusing to save config.
+ // TestSaveUserConfig_ZeroValueConfigProducesNoSections enforces this invariant.
  type UserConfig struct {
  	// DefaultTool is the pre-selected AI tool when creating new sessions
 -	// Valid values: "claude", "gemini", "opencode", "codex", "pi", or any custom tool name
 +	// Valid values: "claude", "gemini", "opencode", "codex", "psi", "pi", or any custom tool name
  	// If empty or invalid, defaults to "shell" (no pre-selection)
- 	DefaultTool string `toml:"default_tool"`
+ 	DefaultTool string `toml:"default_tool,omitempty"`
  
-@@ -1546,7 +1546,7 @@ type ToolDef struct {
+@@ -2157,7 +2157,7 @@ type ToolDef struct {
  	// Example: env = { ANTHROPIC_BASE_URL = "https://...", API_KEY = "token" }
- 	Env map[string]string `toml:"env"`
+ 	Env map[string]string `toml:"env,omitempty"`
  
 -	// Pattern override fields (extend built-in defaults for claude/gemini/opencode/codex/pi)
 +	// Pattern override fields (extend built-in defaults for claude/gemini/opencode/codex/psi/pi)
  	// Patterns prefixed with "re:" are compiled as regex; everything else uses strings.Contains.
  
  	// BusyPatternsExtra appends additional busy patterns to the built-in defaults
-@@ -2639,7 +2639,7 @@ func GetToolDef(toolName string) *ToolDef {
+@@ -3378,7 +3378,7 @@ func GetToolDef(toolName string) *ToolDef {
  }
  
  // GetCustomToolNames returns sorted custom tool names from config.toml,
@@ -314,7 +300,7 @@ index ea9935b..28c56d9 100644
  // Returns nil if no custom tools are configured.
  func GetCustomToolNames() []string {
  	return currentRegistry().CustomNames()
-@@ -2702,6 +2702,8 @@ func GetToolIcon(toolName string) string {
+@@ -3441,6 +3441,8 @@ func GetToolIcon(toolName string) string {
  		return "🌐"
  	case "codex":
  		return "💻"
@@ -323,7 +309,7 @@ index ea9935b..28c56d9 100644
  	case "copilot":
  		return "🐙"
  	case "crush":
-@@ -3197,7 +3199,7 @@ func CreateExampleConfig() error {
+@@ -3980,7 +3982,7 @@ func CreateExampleConfig() error {
  
  # Default AI tool for new sessions
  # When creating a new session (pressing 'n'), this tool will be pre-selected
@@ -332,7 +318,7 @@ index ea9935b..28c56d9 100644
  # Leave commented out or empty to default to shell (no pre-selection)
  # default_tool = "claude"
  
-@@ -3509,7 +3511,7 @@ auto_cleanup = true
+@@ -4328,7 +4330,7 @@ auto_cleanup = true
  # ============================================================================
  # Status Detection Pattern Overrides (Advanced)
  # ============================================================================
@@ -342,7 +328,7 @@ index ea9935b..28c56d9 100644
  # (appended to defaults) or replace them entirely with the base fields.
  # Patterns prefixed with "re:" are compiled as regex.
 diff --git a/internal/tmux/detector.go b/internal/tmux/detector.go
-index 7f037ac..55e8316 100644
+index d984b64f..3d7f6af5 100644
 --- a/internal/tmux/detector.go
 +++ b/internal/tmux/detector.go
 @@ -81,6 +81,19 @@ func (d *PromptDetector) HasPrompt(content string) bool {
@@ -362,16 +348,16 @@ index 7f037ac..55e8316 100644
 +		}
 +		return d.hasLineEndingWith(content, ">")
 +
- 	default:
- 		// Generic shell - check for common prompts
- 		return d.hasShellPrompt(content)
+ 	case "cursor":
+ 		return d.hasCursorPrompt(content)
+ 
 diff --git a/internal/tmux/patterns.go b/internal/tmux/patterns.go
-index ba30d4d..58e3112 100644
+index 4f8f4391..4d421ef6 100644
 --- a/internal/tmux/patterns.go
 +++ b/internal/tmux/patterns.go
-@@ -88,6 +88,19 @@ func DefaultRawPatterns(toolName string) *RawPatterns {
- 			},
+@@ -113,6 +113,19 @@ func DefaultRawPatterns(toolName string) *RawPatterns {
  			PromptPatterns: []string{`re:(?m)^\s*pi>\s*`},
+ 			SpinnerChars:   []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
  		}
 +	case "psi":
 +		return &RawPatterns{
@@ -390,10 +376,10 @@ index ba30d4d..58e3112 100644
  		// GitHub Copilot CLI (the standalone `copilot` binary, Issue #556).
  		// Patterns are based on real-world Copilot CLI TUI transcripts.
 diff --git a/internal/tmux/patterns_test.go b/internal/tmux/patterns_test.go
-index 6abac71..2f27e8f 100644
+index 31927bdd..bfbbf4c7 100644
 --- a/internal/tmux/patterns_test.go
 +++ b/internal/tmux/patterns_test.go
-@@ -138,6 +138,19 @@ func TestDefaultRawPatterns_Pi(t *testing.T) {
+@@ -173,6 +173,19 @@ func TestDefaultRawPatterns_PiSubagentSignals(t *testing.T) {
  	}
  }
  
@@ -414,10 +400,10 @@ index 6abac71..2f27e8f 100644
  	raw := DefaultRawPatterns("unknowntool")
  	if raw != nil {
 diff --git a/internal/tmux/tmux.go b/internal/tmux/tmux.go
-index 9661acd..5c407f8 100644
+index 5b2dbddf..16702665 100644
 --- a/internal/tmux/tmux.go
 +++ b/internal/tmux/tmux.go
-@@ -538,7 +538,7 @@ func SupportsHyperlinks() bool {
+@@ -746,7 +746,7 @@ func SupportsHyperlinks() bool {
  }
  
  // Tool detection patterns (used by DetectTool for initial tool identification)
@@ -426,7 +412,7 @@ index 9661acd..5c407f8 100644
  
  var toolDetectionPatterns = map[string][]*regexp.Regexp{
  	"claude": {
-@@ -577,6 +577,10 @@ var toolDetectionPatterns = map[string][]*regexp.Regexp{
+@@ -785,6 +785,10 @@ var toolDetectionPatterns = map[string][]*regexp.Regexp{
  		regexp.MustCompile(`(?i)\bhermes\s+agent\b`),
  		regexp.MustCompile(`(?i)\bnous\s*research\b`),
  	},
@@ -437,7 +423,7 @@ index 9661acd..5c407f8 100644
  	"pi": {
  		regexp.MustCompile(`(?mi)^\s*pi>\s*`),
  		regexp.MustCompile(`(?i)\bpi\s+cli\b`),
-@@ -615,6 +619,8 @@ func detectToolFromCommand(command string) string {
+@@ -823,6 +827,8 @@ func detectToolFromCommand(command string) string {
  			return "cursor"
  		case "hermes":
  			return "hermes"
@@ -446,7 +432,7 @@ index 9661acd..5c407f8 100644
  		case "pi":
  			return "pi"
  		}
-@@ -637,6 +643,8 @@ func detectToolFromCommand(command string) string {
+@@ -845,6 +851,8 @@ func detectToolFromCommand(command string) string {
  		return "cursor"
  	case strings.Contains(cmdLower, "hermes"):
  		return "hermes"
@@ -456,10 +442,10 @@ index 9661acd..5c407f8 100644
  		return "pi"
  	default:
 diff --git a/internal/tmux/tmux_test.go b/internal/tmux/tmux_test.go
-index 7075ac1..a237b7a 100644
+index c46ecf07..88b74ba0 100644
 --- a/internal/tmux/tmux_test.go
 +++ b/internal/tmux/tmux_test.go
-@@ -569,6 +569,7 @@ func TestDetectToolFromCommand(t *testing.T) {
+@@ -637,6 +637,7 @@ func TestDetectToolFromCommand(t *testing.T) {
  		{name: "gemini", command: "gemini --yolo", want: "gemini"},
  		{name: "opencode", command: "open-code --continue", want: "opencode"},
  		{name: "codex", command: "codex --dangerously-bypass-approvals-and-sandbox", want: "codex"},
@@ -467,7 +453,7 @@ index 7075ac1..a237b7a 100644
  		{name: "pi", command: "pi --model fast", want: "pi"},
  		{name: "cursor", command: "cursor agent", want: "cursor"},
  		{name: "shell command", command: "npm run dev", want: ""},
-@@ -608,6 +609,12 @@ Do you trust the files in this folder?`,
+@@ -676,6 +677,12 @@ Do you trust the files in this folder?`,
  Yes, allow once`,
  			want: "claude",
  		},
@@ -481,10 +467,10 @@ index 7075ac1..a237b7a 100644
  			name: "pi prompt detects pi",
  			content: `Welcome to Pi CLI
 diff --git a/internal/ui/home.go b/internal/ui/home.go
-index 77324b7..d49934f 100644
+index f828d6d4..9551e2f0 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -9175,6 +9175,8 @@ func createSessionTool(command string) (string, string) {
+@@ -11632,6 +11632,8 @@ func createSessionTool(command string) (string, string) {
  		tool = "aider"
  	case "codex":
  		tool = "codex"
@@ -493,7 +479,7 @@ index 77324b7..d49934f 100644
  	case "opencode":
  		tool = "opencode"
  	case "pi":
-@@ -13935,6 +13937,13 @@ func (h *Home) renderLaunchingState(inst *session.Instance, width int, startTime
+@@ -17006,6 +17008,13 @@ func (h *Home) renderLaunchingState(inst *session.Instance, width int, startTime
  		} else {
  			toolDesc = "Starting Codex..."
  		}
@@ -508,10 +494,10 @@ index 77324b7..d49934f 100644
  		toolName = "OpenCode"
  		if isResuming {
 diff --git a/internal/ui/newdialog.go b/internal/ui/newdialog.go
-index ce43646..c826748 100644
+index fc4a0af4..58e6e87a 100644
 --- a/internal/ui/newdialog.go
 +++ b/internal/ui/newdialog.go
-@@ -261,7 +261,7 @@ func displayCommandPreset(cmd string) string {
+@@ -264,7 +264,7 @@ func displayCommandPreset(cmd string) string {
  // flag off FilterVisibleToolNames is a no-op, so the list is byte-identical to
  // before.
  func buildPresetCommands() []string {
@@ -521,10 +507,10 @@ index ce43646..c826748 100644
  		presets = append(presets, customTools...)
  	}
 diff --git a/internal/ui/newdialog_test.go b/internal/ui/newdialog_test.go
-index e3e352e..bc1a8d1 100644
+index 0ca7c7ac..dad92ec5 100644
 --- a/internal/ui/newdialog_test.go
 +++ b/internal/ui/newdialog_test.go
-@@ -267,8 +267,8 @@ func TestDisplayCommandPreset(t *testing.T) {
+@@ -420,8 +420,8 @@ func TestDisplayCommandPreset(t *testing.T) {
  func TestDialogPresetCommands(t *testing.T) {
  	d := NewNewDialog()
  
@@ -536,24 +522,9 @@ index e3e352e..bc1a8d1 100644
  	if len(d.presetCommands) != len(expectedCommands) {
  		t.Errorf("Expected %d preset commands, got %d", len(expectedCommands), len(d.presetCommands))
 diff --git a/internal/ui/settings_panel.go b/internal/ui/settings_panel.go
-index 5b2aa76..f4caf44 100644
+index 25f716d2..bdae8a2f 100644
 --- a/internal/ui/settings_panel.go
 +++ b/internal/ui/settings_panel.go
-@@ -101,10 +101,10 @@ type SettingsPanel struct {
- 	statsShowGPU        bool
- 	statsShowLoad       bool
- 
--	showSessionTimestamps   bool
--	showPaneTitles          bool
--	showOnlyInstalledTools  bool
--	pendingToolVisibility   bool
-+	showSessionTimestamps  bool
-+	showPaneTitles         bool
-+	showOnlyInstalledTools bool
-+	pendingToolVisibility  bool
- 
- 	// Text input state
- 	editingText bool
 @@ -120,8 +120,8 @@ type SettingsPanel struct {
  // builtinToolNames and builtinToolValues are the built-in tools. Custom tools
  // from config are appended dynamically in LoadConfig.
@@ -575,10 +546,10 @@ index 5b2aa76..f4caf44 100644
  		}
  		var custom []string
 diff --git a/internal/ui/settings_panel_test.go b/internal/ui/settings_panel_test.go
-index 55a8af2..2daf90d 100644
+index 8f96d0a1..68f060b0 100644
 --- a/internal/ui/settings_panel_test.go
 +++ b/internal/ui/settings_panel_test.go
-@@ -160,6 +160,7 @@ func TestSettingsPanel_LoadConfig_DefaultTool(t *testing.T) {
+@@ -162,6 +162,7 @@ func TestSettingsPanel_LoadConfig_DefaultTool(t *testing.T) {
  		{"gemini", "gemini", "gemini"},
  		{"opencode", "opencode", "opencode"},
  		{"codex", "codex", "codex"},
@@ -586,7 +557,7 @@ index 55a8af2..2daf90d 100644
  		{"pi", "pi", "pi"},
  		{"copilot", "copilot", "copilot"},
  		{"crush", "crush", "crush"},
-@@ -197,8 +198,8 @@ func TestSettingsPanel_LoadConfig_CustomTools(t *testing.T) {
+@@ -199,8 +200,8 @@ func TestSettingsPanel_LoadConfig_CustomTools(t *testing.T) {
  
  	panel.LoadConfig(config)
  
@@ -597,7 +568,7 @@ index 55a8af2..2daf90d 100644
  
  	if !reflect.DeepEqual(panel.toolNames, wantNames) {
  		t.Fatalf("toolNames = %#v, want %#v", panel.toolNames, wantNames)
-@@ -355,6 +356,7 @@ func TestSettingsPanel_GetConfig_ToolMapping(t *testing.T) {
+@@ -357,6 +358,7 @@ func TestSettingsPanel_GetConfig_ToolMapping(t *testing.T) {
  		{"gemini", "gemini", "gemini"},
  		{"opencode", "opencode", "opencode"},
  		{"codex", "codex", "codex"},
@@ -606,7 +577,7 @@ index 55a8af2..2daf90d 100644
  		{"copilot", "copilot", "copilot"},
  		{"crush", "crush", "crush"},
 diff --git a/internal/ui/setup_wizard.go b/internal/ui/setup_wizard.go
-index 089d141..b8ee521 100644
+index 30728da6..42d0ccf6 100644
 --- a/internal/ui/setup_wizard.go
 +++ b/internal/ui/setup_wizard.go
 @@ -54,7 +54,7 @@ func NewSetupWizard() *SetupWizard {
@@ -618,7 +589,7 @@ index 089d141..b8ee521 100644
  		selectedTool:        0, // Default to Claude
  		dangerousMode:       false,
  		useDefaultConfigDir: true,
-@@ -391,6 +391,7 @@ func (w *SetupWizard) View() string {
+@@ -390,6 +390,7 @@ func (w *SetupWizard) View() string {
  			"gemini":   "Gemini CLI - Google's AI assistant",
  			"opencode": "OpenCode - Open source AI coding tool",
  			"codex":    "Codex CLI - OpenAI's coding assistant",
@@ -627,7 +598,7 @@ index 089d141..b8ee521 100644
  			"crush":    "Crush - Charm's terminal-first AI coding assistant",
  			"shell":    "Shell - No AI tool (plain terminal)",
 diff --git a/internal/ui/setup_wizard_test.go b/internal/ui/setup_wizard_test.go
-index f7f0300..b163a1b 100644
+index f7f03002..b163a1b5 100644
 --- a/internal/ui/setup_wizard_test.go
 +++ b/internal/ui/setup_wizard_test.go
 @@ -140,7 +140,7 @@ func TestSetupWizard_ToolOptions(t *testing.T) {
@@ -640,7 +611,7 @@ index f7f0300..b163a1b 100644
  		t.Errorf("Tool options count: got %d, want %d", len(wizard.toolOptions), len(expectedTools))
  	}
 diff --git a/internal/ui/styles.go b/internal/ui/styles.go
-index c286e62..5b49d6d 100644
+index c286e627..5b49d6df 100644
 --- a/internal/ui/styles.go
 +++ b/internal/ui/styles.go
 @@ -521,6 +521,7 @@ func initStyles() {
@@ -670,7 +641,7 @@ index c286e62..5b49d6d 100644
  		return ColorAccent // Blue for GitHub Copilot
  	case "crush":
 diff --git a/internal/ui/styles_test.go b/internal/ui/styles_test.go
-index 45232f0..2218aca 100644
+index 45232f05..2218acaf 100644
 --- a/internal/ui/styles_test.go
 +++ b/internal/ui/styles_test.go
 @@ -47,6 +47,7 @@ func TestToolIcon(t *testing.T) {
@@ -682,7 +653,7 @@ index 45232f0..2218aca 100644
  		{"pi", IconPi},
  		{"shell", IconShell},
 diff --git a/skills/agent-deck/SKILL.md b/skills/agent-deck/SKILL.md
-index 0a2f674..3a027ec 100644
+index 5f70d67a..1bec889f 100644
 --- a/skills/agent-deck/SKILL.md
 +++ b/skills/agent-deck/SKILL.md
 @@ -2,7 +2,7 @@
@@ -694,7 +665,7 @@ index 0a2f674..3a027ec 100644
  ---
  
  # Agent Deck
-@@ -183,9 +183,9 @@ Notes:
+@@ -217,9 +217,9 @@ Notes:
  - Absent on ordinary mid-task `Stop` edges, so existing `waiting` behavior is unchanged.
  - Malformed sentinel lines (missing/invalid `status`) are ignored, not guessed at.
  
@@ -706,7 +677,7 @@ index 0a2f674..3a027ec 100644
  
  **IMPORTANT:** You MUST use the `--tool` flag to specify which agent. Without it, the script defaults to Claude.
  
-@@ -197,21 +197,26 @@ $SKILL_DIR/scripts/launch-subagent.sh "Consult Codex" "Your question here" --too
+@@ -231,21 +231,26 @@ $SKILL_DIR/scripts/launch-subagent.sh "Consult Codex" "Your question here" --too
  
  # Consult Gemini (MUST include --tool gemini)
  $SKILL_DIR/scripts/launch-subagent.sh "Consult Gemini" "Your question here" --tool gemini --wait --timeout 120
@@ -739,7 +710,7 @@ index 0a2f674..3a027ec 100644
  ### Supported Tools
  
  | Tool | Flag | Notes |
-@@ -219,6 +224,7 @@ $SKILL_DIR/scripts/launch-subagent.sh "Title" "Prompt" \
+@@ -253,6 +258,7 @@ $SKILL_DIR/scripts/launch-subagent.sh "Title" "Prompt" \
  | Claude | `--tool claude` | Default, no flag needed |
  | Codex | `--tool codex` | Requires `codex` CLI installed |
  | Gemini | `--tool gemini` | Requires `gemini` CLI installed |
@@ -747,7 +718,7 @@ index 0a2f674..3a027ec 100644
  
  ### How It Works
  
-@@ -238,6 +244,9 @@ $SKILL_DIR/scripts/launch-subagent.sh "Codex Review" "Read cmd/main.go and sugge
+@@ -272,6 +278,9 @@ $SKILL_DIR/scripts/launch-subagent.sh "Codex Review" "Read cmd/main.go and sugge
  # Architecture feedback from Gemini
  $SKILL_DIR/scripts/launch-subagent.sh "Gemini Arch" "Review the project structure and suggest better patterns" --tool gemini --wait --timeout 180
  
@@ -757,7 +728,7 @@ index 0a2f674..3a027ec 100644
  # Both in parallel (consult both, compare answers)
  $SKILL_DIR/scripts/launch-subagent.sh "Ask Codex" "Best way to handle errors in Go?" --tool codex --wait --timeout 120 &
  $SKILL_DIR/scripts/launch-subagent.sh "Ask Gemini" "Best way to handle errors in Go?" --tool gemini --wait --timeout 120 &
-@@ -263,7 +272,7 @@ agent-deck remove "Codex Review" && agent-deck remove "Gemini Arch"
+@@ -297,7 +306,7 @@ agent-deck remove "Codex Review" && agent-deck remove "Gemini Arch"
  | Use case | Parent linkage | Flag |
  |---|---|---|
  | Plan / impl / verify worker for the current task | ✅ child | (default) |
@@ -767,10 +738,10 @@ index 0a2f674..3a027ec 100644
  | Project session unrelated to current work | ❌ child | `-no-parent` |
  | Session intended to outlive the caller | ❌ child | `-no-parent` |
 diff --git a/skills/agent-deck/references/cli-reference.md b/skills/agent-deck/references/cli-reference.md
-index 4fe840c..794819b 100644
+index 6b1fbb80..1e825ad6 100644
 --- a/skills/agent-deck/references/cli-reference.md
 +++ b/skills/agent-deck/references/cli-reference.md
-@@ -35,7 +35,7 @@ agent-deck add [path] [options]
+@@ -37,7 +37,7 @@ agent-deck add [path] [options]
  |------|-------------|
  | `-t, --title` | Session title |
  | `-g, --group` | Group path |
@@ -780,10 +751,10 @@ index 4fe840c..794819b 100644
  | `--parent` | Parent session (creates child) |
  | `--no-parent` | Disable automatic parent linking |
 diff --git a/skills/agent-deck/references/config-reference.md b/skills/agent-deck/references/config-reference.md
-index 3362c01..979c500 100644
+index 2c06c944..d3dfc19d 100644
 --- a/skills/agent-deck/references/config-reference.md
 +++ b/skills/agent-deck/references/config-reference.md
-@@ -606,7 +606,7 @@ env = { API_KEY = "token", BASE_URL = "https://api.example.com" }
+@@ -783,7 +783,7 @@ env = { API_KEY = "token", BASE_URL = "https://api.example.com" }
  | `env_file` | string | No | A .env file sourced for this tool only. Sourced after global `[shell].env_files`. See [Path Resolution](#path-resolution). |
  | `env` | map | No | Inline environment variables exported for this tool. These take highest priority, overriding both `[shell].env_files` and `env_file`. Values are single-quoted to prevent shell expansion. |
  
@@ -793,10 +764,10 @@ index 3362c01..979c500 100644
  ## Path Resolution
  
 diff --git a/skills/agent-deck/references/sandbox.md b/skills/agent-deck/references/sandbox.md
-index c0ef9c4..ba5033d 100644
+index 18fa0bb4..c93baae9 100644
 --- a/skills/agent-deck/references/sandbox.md
 +++ b/skills/agent-deck/references/sandbox.md
-@@ -137,7 +137,7 @@ Example: `agent-deck-my-refactor-a1b2c3d4`
+@@ -138,7 +138,7 @@ Example: `agent-deck-my-refactor-a1b2c3d4`
  
  1. **Session Creation:** When you create a sandboxed session, Agent Deck records the sandbox configuration.
  2. **Container Start:** When the session starts, Agent Deck syncs host tool configs into shared sandbox directories and creates/starts the Docker container with bind mounts.
@@ -806,7 +777,7 @@ index c0ef9c4..ba5033d 100644
  5. **Cleanup:** When you remove the session, the container is automatically deleted. Sandbox directories persist for reuse.
  
 diff --git a/skills/agent-deck/scripts/launch-subagent.sh b/skills/agent-deck/scripts/launch-subagent.sh
-index db43eef..0f75060 100755
+index db43eeff..0f75060d 100755
 --- a/skills/agent-deck/scripts/launch-subagent.sh
 +++ b/skills/agent-deck/scripts/launch-subagent.sh
 @@ -5,7 +5,7 @@

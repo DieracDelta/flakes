@@ -1,11 +1,16 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.custom_modules.plane;
 
   # Build frontend with the configured base paths baked in
   planeFrontend = pkgs.plane-frontend.overrideAttrs (old: {
     # Cache buster: ensures rebuild when base derivation buildPhase changes
-    name = "plane-frontend-0-unstable-2026-04-28-v5";
+    name = "plane-frontend-1.4.0-v6";
     env = (old.env or { }) // {
       VITE_API_BASE_URL = cfg.basePath;
       VITE_WEB_BASE_URL = cfg.basePath;
@@ -214,9 +219,11 @@ in
       let
         commonEnv = {
           DJANGO_SETTINGS_MODULE = "plane.settings.production";
-          DATABASE_URL = if lib.hasPrefix "/" cfg.database.host
-            then "postgresql://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.host}"
-            else "postgresql://${cfg.database.user}@${cfg.database.host}:${toString cfg.database.port}/${cfg.database.name}";
+          DATABASE_URL =
+            if lib.hasPrefix "/" cfg.database.host then
+              "postgresql://${cfg.database.user}@/${cfg.database.name}?host=${cfg.database.host}"
+            else
+              "postgresql://${cfg.database.user}@${cfg.database.host}:${toString cfg.database.port}/${cfg.database.name}";
           REDIS_URL = "redis://127.0.0.1:${toString cfg.redis.port}/";
           AMQP_URL = "redis://127.0.0.1:${toString cfg.redis.port}/1";
           RABBITMQ_HOST = cfg.rabbitmq.host;
@@ -247,10 +254,12 @@ in
             "${cfg.stateDir}/secrets/s3.env"
           ];
         };
-        apiDeps =
-          [ "plane-migrator.service" "redis-plane.service" ]
-          ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ]
-          ++ lib.optionals cfg.storage.versitygw.enable [ "plane-versitygw.service" ];
+        apiDeps = [
+          "plane-migrator.service"
+          "redis-plane.service"
+        ]
+        ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ]
+        ++ lib.optionals cfg.storage.versitygw.enable [ "plane-versitygw.service" ];
       in
       {
         # ── Secret generator ──────────────────────────────────────
@@ -263,7 +272,8 @@ in
             "plane-worker.service"
             "plane-beat.service"
             "plane-live.service"
-          ] ++ lib.optionals cfg.storage.versitygw.enable [ "plane-versitygw.service" ];
+          ]
+          ++ lib.optionals cfg.storage.versitygw.enable [ "plane-versitygw.service" ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -329,12 +339,15 @@ in
         plane-migrator = {
           description = "Plane database migrator";
           wantedBy = [ "multi-user.target" ];
-          after =
-            [ "plane-secret-generator.service" "redis-plane.service" ]
-            ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ];
-          requires =
-            [ "plane-secret-generator.service" ]
-            ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ];
+          after = [
+            "plane-secret-generator.service"
+            "redis-plane.service"
+          ]
+          ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ];
+          requires = [
+            "plane-secret-generator.service"
+          ]
+          ++ lib.optionals cfg.database.createLocally [ "postgresql.service" ];
           serviceConfig = commonServiceConfig // {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -475,7 +488,10 @@ in
         plane-live = {
           description = "Plane Live collaboration server";
           wantedBy = [ "multi-user.target" ];
-          after = [ "plane-api.service" "redis-plane.service" ];
+          after = [
+            "plane-api.service"
+            "redis-plane.service"
+          ];
           serviceConfig = {
             Type = "simple";
             User = "plane";
@@ -495,67 +511,70 @@ in
       };
 
     # ── Caddy reverse proxy ───────────────────────────────────────
-    services.caddy.virtualHosts."${cfg.domain}".extraConfig = lib.mkBefore (let
-      bp = cfg.basePath;
-    in ''
-      # S3 uploads — presigned URLs signed against this domain, proxy to versitygw.
-      # Caddy preserves the original Host header by default, which matches the signature.
-      handle /${cfg.storage.bucketName} {
-        reverse_proxy ${cfg.storage.endpoint}
-      }
-      handle /${cfg.storage.bucketName}/* {
-        reverse_proxy ${cfg.storage.endpoint}
-      }
-
-      # Strip basePath prefix so backends receive clean paths
-      redir ${bp} ${bp}/ permanent
-      handle_path ${bp}/* {
-
-        # Space (SSR)
-        redir /spaces /spaces/ permanent
-        handle /spaces/* {
-          reverse_proxy 127.0.0.1:3002
+    services.caddy.virtualHosts."${cfg.domain}".extraConfig = lib.mkBefore (
+      let
+        bp = cfg.basePath;
+      in
+      ''
+        # S3 uploads — presigned URLs signed against this domain, proxy to versitygw.
+        # Caddy preserves the original Host header by default, which matches the signature.
+        handle /${cfg.storage.bucketName} {
+          reverse_proxy ${cfg.storage.endpoint}
         }
-
-        # Admin (static files)
-        redir /god-mode /god-mode/ permanent
-        handle_path /god-mode/* {
-          root * ${planeFrontend}/share/plane/admin
-          try_files {path} {path}/ /index.html
-          file_server
-        }
-
-        # Live (WebSocket collaboration)
-        handle /live/* {
-          reverse_proxy 127.0.0.1:3005
-        }
-
-        # API
-        handle /api/* {
-          reverse_proxy 127.0.0.1:${toString cfg.port}
-        }
-        handle /auth/* {
-          reverse_proxy 127.0.0.1:${toString cfg.port}
-        }
-
-        # Static files (Django collectstatic)
-        handle /static/* {
-          root * ${cfg.stateDir}
-          file_server
-        }
-
-        # S3 uploads
         handle /${cfg.storage.bucketName}/* {
           reverse_proxy ${cfg.storage.endpoint}
         }
 
-        # Web app (must be last)
-        handle /* {
-          root * ${planeFrontend}/share/plane/web
-          try_files {path} {path}/ /index.html
-          file_server
+        # Strip basePath prefix so backends receive clean paths
+        redir ${bp} ${bp}/ permanent
+        handle_path ${bp}/* {
+
+          # Space (SSR)
+          redir /spaces /spaces/ permanent
+          handle /spaces/* {
+            reverse_proxy 127.0.0.1:3002
+          }
+
+          # Admin (static files)
+          redir /god-mode /god-mode/ permanent
+          handle_path /god-mode/* {
+            root * ${planeFrontend}/share/plane/admin
+            try_files {path} {path}/ /index.html
+            file_server
+          }
+
+          # Live (WebSocket collaboration)
+          handle /live/* {
+            reverse_proxy 127.0.0.1:3005
+          }
+
+          # API
+          handle /api/* {
+            reverse_proxy 127.0.0.1:${toString cfg.port}
+          }
+          handle /auth/* {
+            reverse_proxy 127.0.0.1:${toString cfg.port}
+          }
+
+          # Static files (Django collectstatic)
+          handle /static/* {
+            root * ${cfg.stateDir}
+            file_server
+          }
+
+          # S3 uploads
+          handle /${cfg.storage.bucketName}/* {
+            reverse_proxy ${cfg.storage.endpoint}
+          }
+
+          # Web app (must be last)
+          handle /* {
+            root * ${planeFrontend}/share/plane/web
+            try_files {path} {path}/ /index.html
+            file_server
+          }
         }
-      }
-    '');
+      ''
+    );
   };
 }
