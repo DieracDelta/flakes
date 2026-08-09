@@ -16,7 +16,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
-      nixfmt-rfc-style
+      nixfmt
       bear
       nvim
     ]; # pkgs.neovitality ];
