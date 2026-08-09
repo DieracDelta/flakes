@@ -1240,17 +1240,6 @@ tmuxOverlay
 // {
   inherit audiomuse-ai-music-server-frontend;
 
-  # nixpkgs' croc 10.6.0 source hash predates the current upstream tag target.
-  # Pin the exact commit now referenced by the tag instead of trusting it again.
-  croc = prev.croc.overrideAttrs (_: {
-    src = final.fetchFromGitHub {
-      owner = "schollz";
-      repo = "croc";
-      rev = "2eeb798e7eef422c9ccaf6d12cb0769439f188d8";
-      hash = "sha256-2uso6xPBX/L0F5IbbauQBGDuSxVzA41fItLuL07zpS0=";
-    };
-  });
-
   # AudioMuse-AI - Music analysis and playlist generation service
   audiomuse-ai = final.stdenvNoCC.mkDerivation {
     pname = "audiomuse-ai";
@@ -2048,56 +2037,15 @@ tmuxOverlay
         patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-actions-api-jobs-logs.patch ];
       });
 
-  # Fix dcgm-exporter to find ldconfig in PATH instead of hardcoded /sbin/ldconfig
+  # NixOS has no ld.so cache for DCGM, so the local patch bypasses upstream's
+  # /sbin/ldconfig prerequisite check. Runtime loading is still enforced by the
+  # binary's RPATH; replace this bypass with a Nix-aware upstream check later.
   prometheus-dcgm-exporter = prev.prometheus-dcgm-exporter.overrideAttrs (oldAttrs: {
     patches = (oldAttrs.patches or [ ]) ++ [ ../patches/dcgm-exporter-fix-ldconfig.patch ];
     postInstall = (oldAttrs.postInstall or "") + ''
       mkdir -p $out/etc
       cp $src/etc/*.csv $out/etc/
     '';
-  });
-
-  # Fix azure-sdk-for-cpp packages with hardcoded sourceRoot
-  # See: https://github.com/NixOS/nixpkgs/issues/... (same issue as influxdb2)
-  azure-sdk-for-cpp = prev.azure-sdk-for-cpp.overrideScope (
-    azureFinal: azurePrev: {
-      core = azurePrev.core.overrideAttrs (
-        finalAttrs: oldAttrs: {
-          sourceRoot = "${finalAttrs.src.name}/sdk/core/azure-core";
-        }
-      );
-      identity = azurePrev.identity.overrideAttrs (
-        finalAttrs: oldAttrs: {
-          sourceRoot = "${finalAttrs.src.name}/sdk/identity/azure-identity";
-        }
-      );
-      storage-common = azurePrev.storage-common.overrideAttrs (
-        finalAttrs: oldAttrs: {
-          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-common";
-        }
-      );
-      storage-blobs = azurePrev.storage-blobs.overrideAttrs (
-        finalAttrs: oldAttrs: {
-          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-blobs";
-        }
-      );
-      storage-files-datalake = azurePrev.storage-files-datalake.overrideAttrs (
-        finalAttrs: oldAttrs: {
-          sourceRoot = "${finalAttrs.src.name}/sdk/storage/azure-storage-files-datalake";
-        }
-      );
-    }
-  );
-
-  # Fix librttopo source URL - OSGeo gitea server returns 404
-  # Use GitHub mirror instead
-  librttopo = prev.librttopo.overrideAttrs (oldAttrs: {
-    src = final.fetchFromGitHub {
-      owner = "CGX-GROUP";
-      repo = "librttopo";
-      rev = "librttopo-1.1.0";
-      hash = "sha256-VxyQr4nBy4PS2IjabBZHvzejFPDNBgSNn528ZCf99EA=";
-    };
   });
 
   # osm2pgsql uses opencv which is built with CUDA - need CUDA toolkit for CMake to find nvcc
