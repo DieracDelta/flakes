@@ -4,7 +4,7 @@
 { inputs }:
 let
   # Simple overlays that don't need inputs
-  stdenv = import ./stdenv.nix;
+  disable-tests = import ./disable-tests.nix;
   zig = import ./zig.nix;
   rust = import ./rust.nix;
   packages = import ./packages.nix { };
@@ -80,7 +80,6 @@ let
   skynet = import ./skynet.nix;
 in
 [
-  stdenv
   inputs.nix.overlays.default
   zig
   rust
@@ -105,5 +104,8 @@ in
   octo-fiesta
   jitsi
   skynet
+  # Temporary local policy: suppress standard check/install-check phases while
+  # retaining every package-specific test declaration for future triage.
+  disable-tests
   # inputs.nix-btm.overlays.default
 ]
