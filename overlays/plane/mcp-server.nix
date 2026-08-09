@@ -2,7 +2,6 @@
   lib,
   python312,
   plane-mcp-server-src,
-  fetchPypi ? python312.pkgs.fetchPypi,
 }:
 
 let
@@ -13,6 +12,9 @@ let
     version = "0.2.20";
     pyproject = true;
 
+    # Upstream's Git tests all make live API requests and are skipped without
+    # credentials; the PyPI source plus an import check is the useful offline
+    # validation available here.
     src = python.pkgs.fetchPypi {
       pname = "plane_sdk";
       inherit version;
@@ -56,7 +58,11 @@ python.pkgs.buildPythonApplication rec {
   # Relax exact version pins (e.g. fastmcp==2.14.4 vs nixpkgs' 2.14.5)
   pythonRelaxDeps = true;
 
-  doCheck = false;
+  nativeCheckInputs = [ python.pkgs.pytestCheckHook ];
+
+  # This file requires credentials and a live Plane deployment. The remaining
+  # AWS/Redis, OAuth, HTTP, and work-item suites use stubs or in-process clients.
+  disabledTestPaths = [ "tests/test_integration.py" ];
   pythonImportsCheck = [ "plane_mcp" ];
 
   meta = {

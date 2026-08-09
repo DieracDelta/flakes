@@ -7,7 +7,6 @@ let
   stdenv = import ./stdenv.nix;
   zig = import ./zig.nix;
   rust = import ./rust.nix;
-  python = import ./python.nix;
   packages = import ./packages.nix { };
   rmux = import ./rmux.nix;
   mcpRemote = import ./mcp-remote.nix;
@@ -85,7 +84,6 @@ in
   inputs.nix.overlays.default
   zig
   rust
-  python
   packages
   rmux
   pi

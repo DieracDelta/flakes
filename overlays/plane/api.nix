@@ -21,6 +21,7 @@ let
       # postgres
       psycopg
       psycopg-c
+      psycopg-pool
       dj-database-url
       # mongo
       pymongo

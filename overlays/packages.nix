@@ -2048,11 +2048,6 @@ tmuxOverlay
         patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-actions-api-jobs-logs.patch ];
       });
 
-  nototools = prev.nototools.overridePythonAttrs (old: {
-    dontCheckRuntimeDeps = true;
-    catchConflicts = false;
-  });
-
   # Fix dcgm-exporter to find ldconfig in PATH instead of hardcoded /sbin/ldconfig
   prometheus-dcgm-exporter = prev.prometheus-dcgm-exporter.overrideAttrs (oldAttrs: {
     patches = (oldAttrs.patches or [ ]) ++ [ ../patches/dcgm-exporter-fix-ldconfig.patch ];
@@ -2424,8 +2419,8 @@ tmuxOverlay
       runHook postBuild
     '';
 
-    # This repository's stdenv overlay disables checkPhase globally, so run the
-    # backend regression suite from the explicit post-build hook instead.
+    # This custom build phase has no upstream check hook; keep the backend
+    # regression suite explicit so it remains part of every package build.
     postBuild = ''
       npm run test:backend -- --timeout 10000
     '';

@@ -8,7 +8,8 @@ let
     rev = "50e6877686319ad163c9055b96ff6874bfda7d02";
     hash = "sha256-3VzAM+X2EutoLYuozNBW9Vv6xMJ27l9cTcioL7RjWqY=";
   };
-in {
+in
+{
   tdf = prev.rustPlatform.buildRustPackage {
     pname = "tdf";
     version = "unstable-2026-02-22";
@@ -30,8 +31,6 @@ in {
       prev.rustPlatform.bindgenHook
       prev.cairo
     ];
-
-    doCheck = false;
 
     postInstall = ''
       rm "$out/bin/for_profiling"

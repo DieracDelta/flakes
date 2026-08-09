@@ -25,7 +25,6 @@ final: _prev: {
 
     cargoHash = "sha256-VKh4v16cU/XJxJVWFDrXGgSaOm4HCmHY58zFMrC31uA=";
     buildNoDefaultFeatures = true;
-    doCheck = false;
     postPatch = ''
             mkdir -p vendor
             cp -R ${rmuxCoreSrc} vendor/rmux-core-0.10.0

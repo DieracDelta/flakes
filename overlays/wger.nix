@@ -214,14 +214,28 @@ in
         version = "2.0.0";
         format = "setuptools";
 
-        src = pyFinal.fetchPypi {
-          inherit pname version;
-          hash = "sha256-M6RnupuamWnL7Xay/WXpShmSjkjw7CsuW7GFUXcDbtI=";
+        # The PyPI sdist omits the Django test project and fixtures.
+        src = final.fetchFromGitHub {
+          owner = "justquick";
+          repo = "django-activity-stream";
+          tag = version;
+          hash = "sha256-fZrZDCWBFx1R9GGcTkjos7blSBNx1JTdTIVLKz+E2+c=";
         };
 
-        propagatedBuildInputs = [ pyFinal.django ];
+        dependencies = [ pyFinal.django ];
+        nativeCheckInputs = [
+          pyFinal.pytestCheckHook
+          pyFinal.pytest-django
+        ];
+        pytestFlags = [
+          "actstream"
+          "runtests/testapp"
+          "runtests/testapp_nested"
+        ];
+        # This file covers the package's optional `drf` extra, whose
+        # rest-framework-generic-relations dependency is not packaged here.
+        disabledTestPaths = [ "runtests/testapp/tests/test_drf.py" ];
         pythonImportsCheck = [ "actstream" ];
-        doCheck = false;
       };
 
       # django-sortedm2m - not in nixpkgs
@@ -353,6 +367,7 @@ in
 
       # Database
       psycopg
+      psycopg-pool
 
       # Async/background tasks
       celery
@@ -406,8 +421,9 @@ in
     # Don't try to run tests during build
     doCheck = false;
 
-    # Skip strict version checks - nixpkgs has slightly newer versions
-    dontCheckRuntimeDeps = true;
+    # Nixpkgs carries compatible newer releases; retain dependency-presence
+    # checks while relaxing only the upstream version constraints.
+    pythonRelaxDeps = true;
 
     # Post install: copy settings and resources
     postInstall = ''

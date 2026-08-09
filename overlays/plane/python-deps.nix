@@ -8,12 +8,16 @@ python-final: python-prev: {
   django = python-final.django_5;
   django-filter = python-prev.django-filter;
 
-  # websockets 16.1 has a timing-sensitive BrokenPipeError assertion that fails
-  # nondeterministically in the tuned build sandbox (different client/server
-  # variants failed on consecutive runs). Runtime imports are still checked by
-  # the upstream derivation; skip only its flaky 1,979-test unit phase.
-  websockets = python-prev.websockets.overridePythonAttrs (_: {
-    doCheck = false;
+  # These socket-shutdown tests assert a timing-sensitive BrokenPipeError and
+  # fail nondeterministically across their client/server variants in the tuned
+  # build sandbox. Preserve the rest of websockets' roughly 1,979-test suite.
+  websockets = python-prev.websockets.overridePythonAttrs (old: {
+    disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [
+      "tests/sync/test_connection.py::ClientConnectionTests::test_writing_in_recv_events_fails"
+      "tests/sync/test_connection.py::ServerConnectionTests::test_writing_in_recv_events_fails"
+      "tests/sync/test_connection.py::ClientConnectionTests::test_writing_in_send_context_fails"
+      "tests/sync/test_connection.py::ServerConnectionTests::test_writing_in_send_context_fails"
+    ];
   });
 
   scout-apm = python-final.buildPythonPackage rec {
@@ -41,7 +45,7 @@ python-final: python-prev: {
     # current wrapt 2.x API and imports successfully.
     pythonRelaxDeps = [ "wrapt" ];
 
-    # Tests require a running Scout APM service
+    # The PyPI sdist omits Scout's upstream test directory.
     doCheck = false;
 
     pythonImportsCheck = [ "scout_apm" ];
@@ -64,7 +68,18 @@ python-final: python-prev: {
       python-dateutil
     ];
 
-    doCheck = false;
+    nativeCheckInputs = [ python-final.pytestCheckHook ];
+
+    # The PyPI sdist omits tests/{__init__,utilities}.py and supporting project
+    # metadata. Keep the 122 self-contained tests and skip only cases that
+    # import those omitted fixtures.
+    disabledTestPaths = [
+      "tests/test_circular_references.py"
+      "tests/test_project.py"
+      "tests/test_schema.py"
+      "tests/test_lazy_loading.py::test_embedded_model[Third]"
+      "tests/test_lazy_loading.py::test_embedded_model[Sixth]"
+    ];
 
     pythonImportsCheck = [ "jsonmodels" ];
   };
@@ -147,6 +162,7 @@ python-final: python-prev: {
       django
     ];
 
+    # The PyPI sdist omits the upstream test directory.
     doCheck = false;
 
     pythonImportsCheck = [ "crum" ];
