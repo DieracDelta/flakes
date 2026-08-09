@@ -15,7 +15,7 @@ in
 {
   options.custom_modules.workstation_services.enable = lib.mkOption {
     description = ''
-      Enable workstation services (desktop environment, gaming, AI, etc.)
+      Enable workstation services (desktop environment, AI, etc.)
       This is a meta-module that enables various sub-modules.
     '';
     type = lib.types.bool;
@@ -26,7 +26,6 @@ in
     # Enable sub-modules
     custom_modules.desktop.enable = true;
     custom_modules.docker.enable = true;
-    custom_modules.gaming.enable = true;
     custom_modules.ollama.enable = true;
     custom_modules.sunshine.enable = true;
     custom_modules.homepage.enable = true;

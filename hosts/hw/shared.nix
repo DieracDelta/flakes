@@ -8,10 +8,8 @@
   # from hw
   hardware.enableRedistributableFirmware = lib.mkDefault true;
 
-  # steam shit
+  # Graphics acceleration
   hardware.graphics.enable = true;
-  hardware.graphics.enable32Bit = true;
-  services.pulseaudio.support32Bit = true;
 
   # Bluetooth is intentionally disabled; OBEX is masked separately so D-Bus
   # activation cannot start the file-transfer daemon.

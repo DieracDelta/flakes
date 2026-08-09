@@ -40,7 +40,6 @@ in
     services.pipewire = {
       enable = true;
       alsa.enable = true;
-      alsa.support32Bit = true;
       pulse.enable = true;
     };
 
@@ -638,7 +637,7 @@ in
         gc-keep-outputs = true
         warn-dirty = false
         experimental-features = nix-command flakes pipe-operators auto-allocate-uids cgroups
-        extra-platforms = x86_64-linux i686-linux aarch64-linux armv7l-linux
+        extra-platforms = x86_64-linux aarch64-linux armv7l-linux
         sandbox-dev-shm-size = 5%
         use-cgroups = true
         auto-allocate-uids = true
