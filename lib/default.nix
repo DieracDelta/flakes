@@ -12,8 +12,6 @@ in
     inherit lib inputs;
     inherit (inputs)
       self
-      nixpkgs-stable
-      nixpkgs-master
       home-manager
       quadlet-nix
       ;

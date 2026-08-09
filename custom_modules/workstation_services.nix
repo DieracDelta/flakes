@@ -7,8 +7,6 @@
   options,
   system,
   builtins,
-  nixpkgs-stable,
-  nixpkgs-master,
   ...
 }:
 let
@@ -308,7 +306,7 @@ in
       noisetorch
       syncthing
       redshift
-      xorg.xwininfo
+      xwininfo
       brightnessctl
       imagemagick
       arandr

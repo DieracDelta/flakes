@@ -3,9 +3,11 @@
 
   inputs = {
     hl.url = "github:pamburus/hl";
+    hl.inputs.nixpkgs.follows = "nixpkgs-unpatched";
     darwin.url = "github:lnl7/nix-darwin/master";
     darwin.inputs.nixpkgs.follows = "nixpkgs-unpatched";
     strace_macos.url = "github:Mic92/strace-macos";
+    strace_macos.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     flake-utils.url = "github:numtide/flake-utils";
 
@@ -21,13 +23,10 @@
     my-nvim.inputs.nixpkgs.url = "github:NixOS/nixpkgs/2a0e0baec1c99cdc087c14f83ac6c31c929d14eb";
 
     nix.url = "github:NixOS/nix/2.35.1";
+    nix.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     nixified-ai.url = "github:nixified-ai/flake";
     nixified-ai.inputs.nixpkgs.follows = "nixpkgs-unpatched";
-
-    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
-
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.11";
 
     nixpkgs-unpatched.url = "github:NixOS/nixpkgs/master";
 
@@ -48,10 +47,14 @@
     # CalDAV calendar web frontend; pin the clean upstream commit rather than
     # consuming the local checkout (which contains an untracked result link).
     caldav-calendar-web.url = "github:DieracDelta/webdav-cal-simple/fc56170b2a71e1bd7ccf774c3f9b8b81717621de";
+    caldav-calendar-web.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     # Rotki portfolio tracker: v1.43.2 local-premium/Cardano/NEAR port in an
     # isolated clean upgrade tree. The original dirty checkout remains intact.
     rotki.url = "path:/home/jrestivo/dev/rotki-1.43.2-upgrade";
+    # Compatibility exception: this flake currently hard-codes pnpm fetcher v3
+    # with the default pnpm. Following master selects pnpm 11 and fails during
+    # evaluation. Keep its pin until the upstream patch in this audit lands.
 
     # Plane MCP server (pinned release; the dirty local development checkout is preserved separately)
     plane-mcp-server-src.url = "github:makeplane/plane-mcp-server/96cf4d51d65cfa5e47d10ff7a4a4caba3b7a98d1";
@@ -67,12 +70,15 @@
 
     # eBPF process monitor
     bpftop.url = "github:DieracDelta/bpftop";
+    bpftop.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     # PSI coding agent
     psi-coding-agent.url = "git+ssh://forgejo@office-desktop.tail5ca7.ts.net/jrestivo/psi-coding-agent.git?ref=feature/aggregate-prs-63-55-51-33";
+    psi-coding-agent.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     # eBPF per-process bandwidth shaping daemon
     shapebpf.url = "github:DieracDelta/shapeBPF";
+    shapebpf.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     # Declarative Postfix/Dovecot/Rspamd mail stack.
     simple-nixos-mailserver.url = "gitlab:simple-nixos-mailserver/nixos-mailserver/nixos-26.05";
@@ -86,20 +92,7 @@
       ...
     }:
     let
-      # Apply patches to nixpkgs
-      tmp_pkgs = import nixpkgs-unpatched { localSystem = "x86_64-linux"; };
-      nixpkgs = tmp_pkgs.applyPatches {
-        name = "nixpkgs";
-        src = nixpkgs-unpatched;
-        patches = [
-          ./PATCH_SUNSHINE
-          ./patches/nixpkgs-replace-stdenv-cross-overlays.patch
-          (tmp_pkgs.fetchpatch {
-            url = "https://github.com/DieracDelta/nixpkgs/commit/a1d2240eebf50667a42b18c577c6a6f221e23e83.patch";
-            hash = "sha256-mnBr3SXqfU4LekbX8v0Pqg2RsUHVijKbokPkUbArW2k=";
-          })
-        ];
-      };
+      nixpkgs = nixpkgs-unpatched;
 
       # Import platform-specific builders
       myLib = import ./lib {
@@ -132,24 +125,24 @@
       # Darwin (macOS) configurations
       darwinConfigurations."jrestivo-4" = myLib.aarch64-darwin.buildDarwinConfiguration "jrestivo-4";
 
-      # Legacy home-manager configuration (standalone)
+      # Standalone Home Manager configuration using the same configured package
+      # set as the NixOS desktop.
       homeConfigurations.jrestivo = inputs.home-manager.lib.homeManagerConfiguration {
-        system = "x86_64-linux";
-        homeDirectory = /home/jrestivo;
-        username = "jrestivo";
-        configuration =
-          { pkgs, ... }:
+        pkgs = myLib.x86_64-linux.pkgs;
+        extraSpecialArgs = { inherit inputs; };
+        modules = [
+          ./home/home.nix
           {
-            imports = [ ./home/home.nix ];
-            nixpkgs.overlays = import ./overlays { inherit inputs; };
-          };
+            home.username = "jrestivo";
+            home.homeDirectory = "/home/jrestivo";
+          }
+        ];
       };
 
       # Hydra CI jobs
       hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
 
       # Debug outputs
-      mymaster = inputs.nixpkgs-master;
       mything = myLib.x86_64-linux.pkgs;
       mything2 = nixpkgs.outPath;
     };

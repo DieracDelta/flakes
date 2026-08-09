@@ -5,8 +5,6 @@
   inputs,
   self,
   nixpkgs,
-  nixpkgs-stable,
-  nixpkgs-master,
   overlays,
   home-manager,
   quadlet-nix,
@@ -84,12 +82,10 @@ let
                       path = toString ../.;
                     in
                     (lib.mapAttrsToList (name: _v: "${name}=${inputs.${name}}") inputs) ++ [ "repl=${path}/repl.nix" ];
-                  # Use upstream nixpkgs for registry so nix run works without custom config
+                  # Keep ad-hoc nix commands on the same locked source revision.
                   registry.nixpkgs.to = lib.mkForce {
-                    type = "github";
-                    owner = "NixOS";
-                    repo = "nixpkgs";
-                    ref = "master";
+                    type = "path";
+                    path = inputs.nixpkgs-unpatched;
                   };
                 };
               };
@@ -106,8 +102,6 @@ let
               system
               inputs
               builtins
-              nixpkgs-stable
-              nixpkgs-master
               ;
           };
         };

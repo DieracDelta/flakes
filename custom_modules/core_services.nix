@@ -4,7 +4,6 @@
   lib,
   options,
   system,
-  nixpkgs-stable,
   ...
 }:
 # TODO read these in from secrets.yaml by parsing yaml file

@@ -4,18 +4,9 @@
   lib,
   inputs,
   system,
-  nixpkgs-master,
   ...
 }:
 let
-  ollamaMasterPkgs = import nixpkgs-master {
-    inherit system;
-    config = {
-      allowUnfree = true;
-      cudaSupport = true;
-      cudaCapabilities = [ "8.9" ];
-    };
-  };
   forgejoDomain = "office-desktop.tail5ca7.ts.net";
   forgejoBasePath = "/forgejo";
   forgejoPort = 3010;
@@ -252,6 +243,7 @@ in
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
+  services.shapebpf.package = pkgs.shapebpf;
   services.shapebpf.interface = "enp6s0";
   systemd.services.shapebpf.serviceConfig.Environment = lib.mkForce "RUST_LOG=error";
   systemd.services.forgejo-mcp = {
@@ -295,7 +287,7 @@ in
       RestartSec = "10s";
     };
   };
-  services.ollama.package = ollamaMasterPkgs.ollama-cuda;
+  services.ollama.package = pkgs.ollama-cuda;
   users.users.jrestivo.extraGroups = [
     "forgejo"
     "shapebpf"
@@ -711,7 +703,7 @@ in
     pi-codex-goal
     context-mode
     forgejoNixosTestSwitch
-    inputs.psi-coding-agent.packages.${system}.default
+    psi-coding-agent
     forgejo-mcp
     plane-mcp-server
     repowise

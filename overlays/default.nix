@@ -15,7 +15,20 @@ let
 
   # Overlays that need flake inputs
   external = import ./external.nix {
-    inherit (inputs) nix my-nvim nixpkgs-master;
+    inherit (inputs) my-nvim;
+  };
+
+  caldav-calendar-web = import ./caldav-calendar-web.nix {
+    src = inputs.caldav-calendar-web;
+  };
+
+  psi-coding-agent = import ./psi-coding-agent.nix {
+    src = inputs.psi-coding-agent;
+    gitCommit = inputs.psi-coding-agent.shortRev or "unknown";
+  };
+
+  shapebpf = import ./shapebpf.nix {
+    inherit (inputs) shapebpf;
   };
 
   # wger workout/nutrition tracker (local development)
@@ -69,12 +82,15 @@ let
 in
 [
   stdenv
+  inputs.nix.overlays.default
   zig
   rust
   python
   packages
   rmux
   pi
+  psi-coding-agent
+  shapebpf
   external
   mcpRemote
   tmux-gruvbox-themes
@@ -83,7 +99,7 @@ in
   tdf
   tmux-resurrect-continuum
   wger
-  inputs.caldav-calendar-web.overlays.default
+  caldav-calendar-web
   rotki
   rapids
   plane

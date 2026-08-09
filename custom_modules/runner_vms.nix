@@ -2,13 +2,10 @@
   config,
   pkgs,
   lib,
-  nixpkgs-stable,
   ...
 }:
 let
   cfg = config.custom_modules.runner_vms;
-  # Use vanilla nixpkgs for github-runner to avoid znver3 dotnet source build
-  stablePkgs = import nixpkgs-stable { system = "x86_64-linux"; };
   scriptsDir = "/home/jrestivo/dev/runners_deployment/scripts";
   ghRepo = "DieracDelta/WeebTogether";
 
@@ -60,7 +57,7 @@ in
       replace = true;
       user = "jrestivo";
       group = "users";
-      package = stablePkgs.github-runner;
+      package = pkgs.github-runner;
       extraPackages = with pkgs; [
         bash
         docker
