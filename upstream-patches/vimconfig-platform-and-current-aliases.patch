@@ -1,0 +1,53 @@
+diff --git a/flake.nix b/flake.nix
+--- a/flake.nix
++++ b/flake.nix
+@@ -209,7 +209,2 @@
+-                gcc.mtune = "znver3";
++                gcc.tune = "znver3";
+               };
+-              crossSystem = {
+-                inherit system;
+-                gcc.arch = "znver3";
+-                gcc.mtune = "znver3";
+-              };
+@@ -237,14 +232,9 @@
+             (import nixpkgs {
+-              localSystem = {
+-                inherit system;
+-                gcc.arch = "-march=apple-m1";
+-                gcc.mtune = "-march=apple-m1";
+-              };
+-              crossSystem = {
+-                inherit system;
+-                gcc.arch = "-march=apple-m1";
+-                gcc.mtune = "-march=apple-m1";
+-              };
++              localSystem =
++                { inherit system; }
++                // nixpkgs.lib.optionalAttrs
++                  (system == "aarch64-darwin")
++                  nixpkgs.lib.systems.examples.apple-m1;
+               overlays = commonOverlays ++ [
+                 (prev: final: {
+                   nil = inputs.nil.packages.${system}.nil;
+@@ -352,7 +342,7 @@
+           extraBinPath =
+             builtins.attrValues {
+               inherit (pkgs)
+-                nixfmt-rfc-style
++                nixfmt
+                 ruff
+                 ripgrep
+                 fd
+diff --git a/plugins.nix b/plugins.nix
+--- a/plugins.nix
++++ b/plugins.nix
+@@ -66,7 +66,7 @@
+       };
+     });
+
+-  nil = inputs.nil.packages.${prev.system}.nil;
++  nil = inputs.nil.packages.${prev.stdenv.hostPlatform.system}.nil;
+
+   # Packaging plugins with Nix
+   blamer-nvim = plugin "blamer-nvim" blamer-nvim-src;

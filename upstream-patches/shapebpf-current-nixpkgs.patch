@@ -1,0 +1,26 @@
+diff --git a/flake.nix b/flake.nix
+--- a/flake.nix
++++ b/flake.nix
+@@ -134,9 +134,12 @@
+                 runHook preBuild
+ 
+                 # Phase 1a: Build Rust eBPF (tracepoints)
++                # Cargo merges parent configs; isolate the eBPF vendor source map.
++                mv .cargo/config.toml .cargo/config.workspace.toml
+                 pushd shapebpf-ebpf
+                 cargo build --target bpfel-unknown-none -Z build-std=core --release --features ${archFeature}
+                 popd
++                mv .cargo/config.workspace.toml .cargo/config.toml
+ 
+                 # Phase 1b: Build C eBPF (qdisc struct_ops)
+                 mkdir -p shapebpf-ebpf/target/bpf
+diff --git a/nix/module.nix b/nix/module.nix
+--- a/nix/module.nix
++++ b/nix/module.nix
+@@ -34,6 +34,6 @@ in {
+     package = lib.mkOption {
+       type = lib.types.package;
+-      default = flake.packages.${pkgs.system}.default;
++      default = flake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+       description = "The shapebpf package to use.";
+     };

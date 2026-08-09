@@ -1,0 +1,33 @@
+diff --git a/pkgs/stdenv/custom/default.nix b/pkgs/stdenv/custom/default.nix
+index a61a19ee0ab0..ae0d6a9ed626 100644
+--- a/pkgs/stdenv/custom/default.nix
++++ b/pkgs/stdenv/custom/default.nix
+@@ -4,6 +4,7 @@
+   crossSystem,
+   config,
+   overlays,
++  crossOverlays,
+ }:
+ 
+ assert crossSystem == localSystem;
+@@ -15,6 +16,7 @@ let
+       localSystem
+       crossSystem
+       overlays
++      crossOverlays
+       ;
+     # Remove config.replaceStdenv to ensure termination.
+     config = removeAttrs config [ "replaceStdenv" ];
+diff --git a/pkgs/stdenv/default.nix b/pkgs/stdenv/default.nix
+index 9e573477f290..86eff988d3dd 100644
+--- a/pkgs/stdenv/default.nix
++++ b/pkgs/stdenv/default.nix
+@@ -46,7 +46,7 @@ let
+ 
+   stagesCross = import ./cross (commonArgs // { inherit crossOverlays; });
+ 
+-  stagesCustom = import ./custom commonArgs;
++  stagesCustom = import ./custom (commonArgs // { inherit crossOverlays; });
+ 
+ in
+ # Select the appropriate stages for the platform `system'.

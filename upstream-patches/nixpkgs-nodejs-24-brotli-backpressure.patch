@@ -1,0 +1,15 @@
+diff --git a/pkgs/development/web/nodejs/v24.nix b/pkgs/development/web/nodejs/v24.nix
+--- a/pkgs/development/web/nodejs/v24.nix
++++ b/pkgs/development/web/nodejs/v24.nix
+@@ -63,5 +63,11 @@ buildNodejs {
+       ./bin-sh-node-run-v22.patch
+       ./use-nix-codesign.patch
++      # Avoid racing a fixed timeout against libuv worker-pool scheduling.
++      # Upstreamed in https://github.com/nodejs/node/pull/63389.
++      (fetchpatch2 {
++        url = "https://github.com/nodejs/node/commit/2adaeeee9cb7449062ca1c04526b680255bbaa73.patch?full_index=1";
++        hash = "sha256-k4JtmXeOBIrLccT3VitJvuotQRXxtIE88aGK3MnpDjM=";
++      })
+     ]
+     ++ gypPatches
+     ++ lib.optionals (!stdenv.buildPlatform.isDarwin) [

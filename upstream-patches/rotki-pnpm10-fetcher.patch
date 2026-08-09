@@ -1,0 +1,11 @@
+diff --git a/flake.nix b/flake.nix
+--- a/flake.nix
++++ b/flake.nix
+@@ -518,6 +518,7 @@
+             # Fetch pnpm dependencies (try fetcherVersion 3 for lockfileVersion 9.0)
+             pnpmDeps = pkgs.fetchPnpmDeps {
+               inherit pname src;
++              pnpm = pkgs.pnpm_10;
+               hash = "sha256-Ntl4rq+NSt/jUyBgX9LsigyPAfnKjN67se7qKa9hhuk=";
+               fetcherVersion = 3;
+             };
