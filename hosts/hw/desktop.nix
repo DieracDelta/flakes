@@ -27,7 +27,9 @@
   # hardware.logitech.wireless.enableGraphical = true;
 
   hardware.nvidia = {
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    package = config.boot.kernelPackages.nvidiaPackages.stable.override {
+      disable32Bit = true;
+    };
     # wakes this shit up
     nvidiaPersistenced = true; # TODO: re-enable after reboot
     modesetting.enable = true;
