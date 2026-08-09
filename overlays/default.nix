@@ -7,6 +7,7 @@ let
   disable-tests = import ./disable-tests.nix;
   zig = import ./zig.nix;
   rust = import ./rust.nix;
+  nodejs = import ./nodejs.nix;
   packages = import ./packages.nix { };
   rmux = import ./rmux.nix;
   mcpRemote = import ./mcp-remote.nix;
@@ -83,6 +84,7 @@ in
   inputs.nix.overlays.default
   zig
   rust
+  nodejs
   packages
   rmux
   pi
