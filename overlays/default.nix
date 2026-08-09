@@ -5,7 +5,6 @@
 let
   # Simple overlays that don't need inputs
   stdenv = import ./stdenv.nix;
-  haskell = import ./haskell.nix;
   zig = import ./zig.nix;
   rust = import ./rust.nix;
   python = import ./python.nix;
@@ -69,9 +68,7 @@ let
   skynet = import ./skynet.nix;
 in
 [
-  # Order matters: stdenv should be first since other overlays depend on it
   stdenv
-  haskell
   zig
   rust
   python
