@@ -1,6 +1,5 @@
 {
   config,
-  pkgs,
   lib,
   ...
 }:
@@ -90,7 +89,6 @@ in
       smtp_sasl_password_maps = "hash:${smtp2goSaslPasswd}";
       smtp_sasl_security_options = "noanonymous";
       smtp_sasl_tls_security_options = "noanonymous";
-      smtp_tls_CAfile = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
       smtp_tls_security_level = lib.mkForce "encrypt";
     };
 
