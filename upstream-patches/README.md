@@ -15,6 +15,15 @@ upstream source revisions.
 
 ## Candidates
 
+### `nixpkgs-croc-11.0.2.patch`
+
+Target: nixpkgs at the revision locked by this repository.
+
+Croc's upstream release tags have repeatedly been force-moved, including the
+11.0.1 tag after nixpkgs recorded its source hash. The patch updates to 11.0.2
+and pins the release's exact Git commit so another tag move cannot invalidate
+the fixed-output derivation.
+
 ### `caldav-calendar-web-composable-overlay.patch`
 
 Target: `DieracDelta/webdav-cal-simple` at

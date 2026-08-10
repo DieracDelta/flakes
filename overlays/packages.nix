@@ -1240,6 +1240,20 @@ tmuxOverlay
 // {
   inherit audiomuse-ai-music-server-frontend;
 
+  # croc has repeatedly moved release tags, most recently breaking nixpkgs'
+  # 11.0.1 source hash. Pin the 11.0.2 release commit until the nixpkgs update
+  # in upstream-patches/nixpkgs-croc-11.0.2.patch lands.
+  croc = prev.croc.overrideAttrs (_: {
+    version = "11.0.2";
+    src = final.fetchFromGitHub {
+      owner = "schollz";
+      repo = "croc";
+      rev = "b04883faadaae069800e3ccecc6da4af0f1792fc";
+      hash = "sha256-zuxWPFocdQn+fDXqJ/V4XrWTHicLQkrfw0y6Gk7A1LM=";
+    };
+    vendorHash = "sha256-Q3KUcAt2NEyONzM/fH61mtqbNTJqw3CnwKIgPrGwCRs=";
+  });
+
   # AudioMuse-AI - Music analysis and playlist generation service
   audiomuse-ai = final.stdenvNoCC.mkDerivation {
     pname = "audiomuse-ai";

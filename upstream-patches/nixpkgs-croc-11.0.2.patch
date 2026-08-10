@@ -1,0 +1,23 @@
+diff --git a/pkgs/by-name/cr/croc/package.nix b/pkgs/by-name/cr/croc/package.nix
+index 5dc09f6b6225..2d467a8a73e1 100644
+--- a/pkgs/by-name/cr/croc/package.nix
++++ b/pkgs/by-name/cr/croc/package.nix
+@@ -13,13 +13,14 @@ buildGoModule (finalAttrs: {
+   pname = "croc";
+-  version = "11.0.1";
++  version = "11.0.2";
+ 
+   src = fetchFromGitHub {
+     owner = "schollz";
+     repo = "croc";
+-    rev = "v${finalAttrs.version}";
+-    hash = "sha256-zd7P8p0mDUIZF/cvnG93MDfgh4kD4AtYkyalJMi+Tfk=";
++    # Release tags have repeatedly been force-moved upstream. Pin the commit.
++    rev = "b04883faadaae069800e3ccecc6da4af0f1792fc";
++    hash = "sha256-zuxWPFocdQn+fDXqJ/V4XrWTHicLQkrfw0y6Gk7A1LM=";
+   };
+ 
+-  vendorHash = "sha256-0tdDyE/86fuuYhtW1ApkF4jGDyXLsbztED6y8QFqK6M=";
++  vendorHash = "sha256-Q3KUcAt2NEyONzM/fH61mtqbNTJqw3CnwKIgPrGwCRs=";
+ 
+   subPackages = [ "." ];
