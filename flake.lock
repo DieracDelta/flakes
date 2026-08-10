@@ -2801,6 +2801,7 @@
         "quadlet-nix": "quadlet-nix",
         "repowise-src": "repowise-src",
         "rotki": "rotki",
+        "rust-overlay": "rust-overlay_4",
         "shapebpf": "shapebpf",
         "simple-nixos-mailserver": "simple-nixos-mailserver",
         "strace_macos": "strace_macos",
@@ -2922,6 +2923,26 @@
     "rust-overlay_4": {
       "inputs": {
         "nixpkgs": [
+          "nixpkgs-unpatched"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786247265,
+        "narHash": "sha256-cVTcTqAhzSNMOVddtBhFpuv+Vx6/SgrhgZWJiI61H24=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "6df7076ea0f5697e3242719a4c71211f00411cf5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "rust-overlay_5": {
+      "inputs": {
+        "nixpkgs": [
           "shapebpf",
           "nixpkgs"
         ]
@@ -2982,7 +3003,7 @@
       "inputs": {
         "fenix": "fenix_2",
         "nixpkgs": "nixpkgs_24",
-        "rust-overlay": "rust-overlay_4"
+        "rust-overlay": "rust-overlay_5"
       },
       "locked": {
         "lastModified": 1771698173,

@@ -132,6 +132,7 @@ in
       paths = [
         "/var/lib/forgejo"
         "/var/lib/plane"
+        "/var/lib/pijul-nest"
         "/var/backup/postgres"
       ];
       exclude = [
@@ -146,12 +147,15 @@ in
       startAt = repoCfg.startAt;
       preHook = ''
         set -o pipefail
-        ${pkgs.sudo}/bin/sudo -u postgres ${pgPkg}/bin/pg_dump forgejo \
+        ${pkgs.util-linux}/bin/runuser -u postgres -- ${pgPkg}/bin/pg_dump forgejo \
           | ${pkgs.zstd}/bin/zstd > /var/backup/postgres/forgejo.sql.zst.tmp
         mv /var/backup/postgres/forgejo.sql.zst.tmp /var/backup/postgres/forgejo.sql.zst
-        ${pkgs.sudo}/bin/sudo -u postgres ${pgPkg}/bin/pg_dump plane \
+        ${pkgs.util-linux}/bin/runuser -u postgres -- ${pgPkg}/bin/pg_dump plane \
           | ${pkgs.zstd}/bin/zstd > /var/backup/postgres/plane.sql.zst.tmp
         mv /var/backup/postgres/plane.sql.zst.tmp /var/backup/postgres/plane.sql.zst
+        ${pkgs.util-linux}/bin/runuser -u postgres -- ${pgPkg}/bin/pg_dump nest \
+          | ${pkgs.zstd}/bin/zstd > /var/backup/postgres/nest.sql.zst.tmp
+        mv /var/backup/postgres/nest.sql.zst.tmp /var/backup/postgres/nest.sql.zst
       '';
       prune.keep = {
         daily = cfg.prune.daily;

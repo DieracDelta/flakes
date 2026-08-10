@@ -33,6 +33,10 @@
 
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
 
+    # Required to evaluate the upstream Pijul Nest flake fetched by fetchpijul.
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    rust-overlay.inputs.nixpkgs.follows = "nixpkgs-unpatched";
+
     # wger workout/nutrition tracker (pinned upstream; dirty local checkouts are preserved separately)
     wger.url = "github:wger-project/wger/e1d70bcc38cd56ae4a254dca1713c404d069f319";
     wger.flake = false;

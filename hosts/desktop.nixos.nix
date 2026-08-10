@@ -215,6 +215,12 @@ in
     basePath = "/plane";
     port = 8085;
   };
+  custom_modules.pijul-nest = {
+    enable = true;
+    domain = "office-desktop.tail5ca7.ts.net";
+    httpsPort = 7443;
+    sshPort = 2223;
+  };
   custom_modules.borgbackup = {
     enable = true;
     repos = {
