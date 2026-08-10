@@ -29,7 +29,7 @@ let
     ];
 
     doCheck = false;
-    pythonImportsCheck = [ "plane_sdk" ];
+    pythonImportsCheck = [ "plane" ];
   };
 
 in

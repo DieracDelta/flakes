@@ -5,6 +5,7 @@
 let
   # Simple overlays that don't need inputs
   disable-tests = import ./disable-tests.nix;
+  nixpkgs-fixes = import ./nixpkgs-fixes.nix;
   zig = import ./zig.nix;
   rust = import ./rust.nix;
   nodejs = import ./nodejs.nix;
@@ -85,6 +86,7 @@ in
   # retaining every package-specific test declaration for future triage. This
   # must precede overlays that construct language-specific package scopes.
   disable-tests
+  nixpkgs-fixes
   inputs.nix.overlays.default
   zig
   rust

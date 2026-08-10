@@ -15,6 +15,25 @@ upstream source revisions.
 
 ## Candidates
 
+### `nixpkgs-python-runtime-dependencies.patch`
+
+Target: nixpkgs at the revision locked by this repository.
+
+Several package updates left newly mandatory wheel dependencies absent from
+their Nix `dependencies`. Normal test inputs masked the issue during package
+builds, but consumers did not receive the dependencies transitively. The patch
+aligns Autobahn, OpenTelemetry, and SSE-Starlette with their release metadata.
+
+### `nixpkgs-ollama-source-root.patch`
+
+Target: nixpkgs at the revision locked by this repository.
+
+Ollama's `postPatch` assumes its source is unpacked at
+`$NIX_BUILD_TOP/source`. Current `fetchFromGitHub` source names are
+release-specific, so the compat patch fails before compilation. The patch
+captures the actual unpacked source root before entering the llama.cpp
+subshell.
+
 ### `nixpkgs-croc-11.0.2.patch`
 
 Target: nixpkgs at the revision locked by this repository.

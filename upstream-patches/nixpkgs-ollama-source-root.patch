@@ -1,0 +1,12 @@
+diff --git a/pkgs/by-name/ol/ollama/package.nix b/pkgs/by-name/ol/ollama/package.nix
+--- a/pkgs/by-name/ol/ollama/package.nix
++++ b/pkgs/by-name/ol/ollama/package.nix
+@@ -228,5 +228,6 @@ goBuild (finalAttrs: {
++    ollamaCompatDir=$PWD/llama/compat
+     cp -r ${llamaCppSrc} $TMPDIR/llama-cpp-src
+     chmod -R +w $TMPDIR/llama-cpp-src
+     ( cd $TMPDIR/llama-cpp-src && \
+-      cmake -DPATCH_DIR=$NIX_BUILD_TOP/source/llama/compat \
+-        -P $NIX_BUILD_TOP/source/llama/compat/apply-patch.cmake )
++      cmake -DPATCH_DIR=$ollamaCompatDir \
++        -P $ollamaCompatDir/apply-patch.cmake )
