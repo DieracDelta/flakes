@@ -33,6 +33,7 @@ diff --git a/pkgs/development/python-modules/autobahn/default.nix b/pkgs/develop
  
    dependencies = [
 +    cbor2
++    cffi
      cryptography
      hyperlink
 +    msgpack

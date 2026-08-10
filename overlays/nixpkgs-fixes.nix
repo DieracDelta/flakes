@@ -30,6 +30,7 @@ in
       autobahn = pythonPrev.autobahn.overridePythonAttrs (old: {
         dependencies = (old.dependencies or [ ]) ++ [
           pythonFinal.cbor2
+          pythonFinal.cffi
           pythonFinal.msgpack
           pythonFinal.py-ubjson
           pythonFinal.ujson
