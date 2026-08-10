@@ -2381,10 +2381,13 @@ tmuxOverlay
       runHook postBuild
     '';
 
-    # This custom build phase has no upstream check hook; keep the backend
-    # regression suite explicit so it remains part of every package build.
-    postBuild = ''
+    # Keep the backend regression suite in the standard check phase so the
+    # temporary global test policy can suppress it without deleting coverage.
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
       npm run test:backend -- --timeout 10000
+      runHook postCheck
     '';
 
     # Don't run default npm install phase - we handle it

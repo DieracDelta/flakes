@@ -81,6 +81,10 @@ let
   skynet = import ./skynet.nix;
 in
 [
+  # Temporary local policy: suppress standard check/install-check phases while
+  # retaining every package-specific test declaration for future triage. This
+  # must precede overlays that construct language-specific package scopes.
+  disable-tests
   inputs.nix.overlays.default
   zig
   rust
@@ -106,8 +110,5 @@ in
   octo-fiesta
   jitsi
   skynet
-  # Temporary local policy: suppress standard check/install-check phases while
-  # retaining every package-specific test declaration for future triage.
-  disable-tests
   # inputs.nix-btm.overlays.default
 ]
