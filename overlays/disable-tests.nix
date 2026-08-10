@@ -63,6 +63,14 @@ in
     cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DVK_BOOTSTRAP_TEST=OFF" ];
   });
 
+  # This package derives its Meson test switch from finalAttrs.doCheck before
+  # the outer stdenv argument wrapper removes check-only inputs.
+  power-profiles-daemon = prev.power-profiles-daemon.overrideAttrs (old: {
+    mesonFlags =
+      builtins.filter (flag: flag != "-Dtests=true") (old.mesonFlags or [ ])
+      ++ [ "-Dtests=false" ];
+  });
+
   # Python package scopes capture their builders while nixpkgs constructs the
   # interpreter package sets. Rebind those builders to the policy stdenv so
   # explicit install checks cannot bypass the top-level wrapper.
