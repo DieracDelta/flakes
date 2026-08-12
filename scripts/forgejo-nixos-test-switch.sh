@@ -1,4 +1,4 @@
-# shellcheck shell=bash
+#!/usr/bin/env bash
 
 if [[ $# -gt 1 ]]; then
   printf 'usage: %s [REPOSITORY_ROOT]\n' "${0##*/}" >&2

@@ -7,32 +7,6 @@
 }:
 let
   cfg = config.profiles.dev;
-  haskellPack =
-    with pkgs.haskellPackages;
-    let
-      ps =
-        p: with p; [
-          async
-          base
-          containers
-          lens
-          mtl
-          random
-          stm
-          text
-          transformers
-          unliftio
-        ];
-      ghc = ghcWithHoogle ps;
-    in
-    [
-      # threadscope
-      # ghc
-      # cabal-install
-      # hlint
-      # ghcide
-      # hnix
-    ];
   devPack = with pkgs; [
     # openssl curl xxd age
     emacs

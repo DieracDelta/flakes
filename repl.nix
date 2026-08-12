@@ -4,7 +4,6 @@ let
   pkgs = import nixpkgs { system = "x86_64-linux"; };
 in
 {
-  pkgs = pkgs;
+  inherit flake pkgs;
   self = flake.inputs.self;
-  flake = flake;
 }

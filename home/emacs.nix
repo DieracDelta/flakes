@@ -4,9 +4,6 @@
   lib,
   ...
 }:
-let
-  cfg = config.profiles.emacs;
-in
 {
 
   options.profiles.emacs.enable = lib.mkOption {

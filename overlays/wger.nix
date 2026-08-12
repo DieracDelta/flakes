@@ -1,6 +1,6 @@
 # wger Workout Manager overlay - builds from pinned upstream sources
 { wger-src, wger-react-src }:
-final: prev:
+final: _:
 let
   python = final.python312;
   pythonPackages = python.pkgs;

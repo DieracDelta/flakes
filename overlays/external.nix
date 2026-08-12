@@ -6,7 +6,7 @@
 let
   myNvim = my-nvim.packages.x86_64-linux.default;
 in
-final: prev: {
+final: _: {
   # Nightly Neovim removed nixpkgs' functionaltest__treesitter CMake target.
   # Preserve the intended test scope through the current TEST_FILE interface.
   nvim = myNvim.override {

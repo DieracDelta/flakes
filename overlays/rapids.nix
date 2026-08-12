@@ -181,7 +181,6 @@ let
 
   # CUDA packages needed for cuda-bindings build
   cuda_profiler_api = final.cudaPackages.cuda_profiler_api;
-  cuda_nvrtc_dev = final.lib.getDev cuda_nvrtc;
 
   # Get include outputs for CUDA packages (headers are in 'include' output, not 'dev')
   cudart_dev = final.lib.getDev cuda_cudart;
@@ -604,7 +603,7 @@ in
   };
 
   # Cython 3.2 is required by all RAPIDS 26.06 Python bindings.
-  cython32 = final.python312Packages.cython.overrideAttrs (old: rec {
+  cython32 = final.python312Packages.cython.overrideAttrs (_: rec {
     version = "3.2.4";
     src = final.fetchFromGitHub {
       owner = "cython";

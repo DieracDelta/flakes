@@ -1,4 +1,4 @@
-final: prev: {
+final: _: {
   pi-coding-agent = final.buildNpmPackage rec {
     pname = "pi-coding-agent";
     version = "0.83.0";

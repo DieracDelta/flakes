@@ -9,21 +9,6 @@
 # TODO read these in from secrets.yaml by parsing yaml file
 # TODO fix naming inconsistency
 let
-  secrets = [
-    "zerotier_key"
-    "rust_filehost_secrets"
-    "rust_filehost_secret_key"
-    "email_password"
-    "hashed_email_password"
-    "gitlab_password"
-  ];
-  genDefaultPerms = secret: {
-    ${secret} = {
-      mode = "0440";
-      owner = config.users.users.jrestivo.name;
-      group = config.users.users.jrestivo.group;
-    };
-  };
   cfg = config.custom_modules.core_services;
 in
 {

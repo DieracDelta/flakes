@@ -1,5 +1,5 @@
 # Taskwarrior Web UI overlay - builds from GitHub
-final: prev:
+_: prev:
 let
   src = prev.fetchFromGitHub {
     owner = "tmahmood";

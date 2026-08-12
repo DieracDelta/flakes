@@ -1,6 +1,6 @@
 # mcp-remote overlay
 # Packages mcp-remote from npm tarball with reproducible source + npm deps hashes.
-final: prev:
+final: _:
 let
   version = "0.1.38";
 in

@@ -37,3 +37,26 @@ jobs:
           mapfile -d '' nix_files < <(git ls-files -z '*.nix')
           nix shell --inputs-from . nixpkgs-unpatched#nixfmt \
             --command nixfmt --check "${nix_files[@]}"
+
+  deadnix:
+    name: Dead Nix code
+    runs-on: jrestivo-workstation-local
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        env:
+          REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "${FORGEJO_HTTPS_GIT_URL}/${REPOSITORY}.git"
+          git -c http."${FORGEJO_HTTPS_GIT_URL}/".extraheader= \
+            fetch --depth=1 origin "$REVISION"
+          git checkout --detach FETCH_HEAD
+
+      - name: Check for dead Nix code
+        run: |
+          set -euo pipefail
+          nix run --inputs-from . nixpkgs-unpatched#deadnix -- \
+            --no-lambda-pattern-names --fail .

@@ -41,7 +41,7 @@ in
     haskellPackages = prev.haskellPackages.extend (
       _haskellFinal: haskellPrev: {
         cachix = prev.haskell.lib.addPkgconfigDepends haskellPrev.cachix nixStaticPkgconfigDeps;
-        hercules-ci-cnix-store = prev.haskell.lib.addPkgconfigDepends (haskellPrev.hercules-ci-cnix-store) nixStaticPkgconfigDeps;
+        hercules-ci-cnix-store = prev.haskell.lib.addPkgconfigDepends haskellPrev.hercules-ci-cnix-store nixStaticPkgconfigDeps;
       }
     );
   };

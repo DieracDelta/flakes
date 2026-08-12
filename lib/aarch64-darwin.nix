@@ -13,7 +13,7 @@ let
 
   # Darwin-specific overlays
   overlays = [
-    (final: prev: {
+    (_: _: {
       strace-macos = inputs.strace_macos.packages.aarch64-darwin.default;
       nix = inputs.nix.packages.aarch64-darwin.default;
       hl = inputs.hl.packages.aarch64-darwin.default;
@@ -35,7 +35,7 @@ let
   pkgs = pkgImport nixpkgs-unpatched;
 
   buildDarwinConfiguration =
-    hostName:
+    _:
     darwin.lib.darwinSystem {
       inherit system;
       modules = [

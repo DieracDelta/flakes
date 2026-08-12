@@ -1,5 +1,5 @@
 # Actual Budget overlay - builds from fork with base path support
-final: prev:
+_: prev:
 let
   # Build the current upstream release and apply the maintained subpath patch.
   actualSrc = prev.fetchFromGitHub {

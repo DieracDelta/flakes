@@ -9,7 +9,6 @@ let
 
   cfg = config.services.openstreetmap;
 
-  renderdHome = "/var/lib/renderd";
   renderdShare = "/var/lib/renderd_share";
   renderdSocket = "${renderdShare}/renderd.sock";
   tileDir = "${renderdShare}/tiles";

@@ -1,5 +1,5 @@
 { octo-fiesta-src }:
-final: prev: {
+final: _: {
   octo-fiesta = final.dotnetCorePackages.buildDotnetModule {
     pname = "octo-fiesta";
     version = "0.10.0";

@@ -1,4 +1,4 @@
-final: prev:
+final: _:
 let
   python = final.python312;
   pythonPackages = final.python312Packages;

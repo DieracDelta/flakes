@@ -2,9 +2,9 @@
 // Simple Pelias-to-Nominatim proxy for Digitransit geocoding
 // Translates Pelias API format to Nominatim and back
 
-const http = require('http')
-const https = require('https')
-const url = require('url')
+const http = require('node:http')
+const https = require('node:https')
+const url = require('node:url')
 
 const PORT = process.env.PORT || 3200
 const NOMINATIM_URL =

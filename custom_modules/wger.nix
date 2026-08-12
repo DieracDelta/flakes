@@ -37,7 +37,7 @@ let
 
   # Python environment with wger
   pythonEnv = pkgs.python312.withPackages (
-    ps:
+    _:
     [
       pkgs.wger
     ]
