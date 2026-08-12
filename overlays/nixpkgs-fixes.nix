@@ -22,13 +22,11 @@ let
       # nixpkgs' postPatch assumes fetchFromGitHub unpacks to
       # $NIX_BUILD_TOP/source, but current source names are release-specific.
       # Capture the real source root before the llama.cpp subshell changes $PWD.
-      postPatch =
-        ''
-          ollamaCompatDir=$PWD/llama/compat
-        ''
-        + builtins.replaceStrings
-          [ "$NIX_BUILD_TOP/source/llama/compat" ]
-          [ "$ollamaCompatDir" ]
+      postPatch = ''
+        ollamaCompatDir=$PWD/llama/compat
+      ''
+      +
+        builtins.replaceStrings [ "$NIX_BUILD_TOP/source/llama/compat" ] [ "$ollamaCompatDir" ]
           old.postPatch;
     });
 in
@@ -43,9 +41,7 @@ in
     haskellPackages = prev.haskellPackages.extend (
       _haskellFinal: haskellPrev: {
         cachix = prev.haskell.lib.addPkgconfigDepends haskellPrev.cachix nixStaticPkgconfigDeps;
-        hercules-ci-cnix-store = prev.haskell.lib.addPkgconfigDepends (
-          haskellPrev.hercules-ci-cnix-store
-        ) nixStaticPkgconfigDeps;
+        hercules-ci-cnix-store = prev.haskell.lib.addPkgconfigDepends (haskellPrev.hercules-ci-cnix-store) nixStaticPkgconfigDeps;
       }
     );
   };
@@ -74,21 +70,15 @@ in
             dependencies = (old.dependencies or [ ]) ++ [ pythonFinal.opentelemetry-sdk ];
           });
 
-      opentelemetry-instrumentation = pythonPrev.opentelemetry-instrumentation.overridePythonAttrs (
-        old: {
-          dependencies =
-            (old.dependencies or [ ])
-            ++ [
-              pythonFinal.opentelemetry-semantic-conventions
-              pythonFinal.packaging
-            ];
-        }
-      );
+      opentelemetry-instrumentation = pythonPrev.opentelemetry-instrumentation.overridePythonAttrs (old: {
+        dependencies = (old.dependencies or [ ]) ++ [
+          pythonFinal.opentelemetry-semantic-conventions
+          pythonFinal.packaging
+        ];
+      });
 
       opentelemetry-util-http = pythonPrev.opentelemetry-util-http.overridePythonAttrs (old: {
-        dependencies =
-          (old.dependencies or [ ])
-          ++ [ pythonFinal.opentelemetry-semantic-conventions ];
+        dependencies = (old.dependencies or [ ]) ++ [ pythonFinal.opentelemetry-semantic-conventions ];
       });
 
       sse-starlette = pythonPrev.sse-starlette.overridePythonAttrs (old: {
