@@ -52,9 +52,9 @@ in
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (pythonFinal: pythonPrev: {
-      # These dependencies became mandatory in upstream release metadata, but
-      # the corresponding nixpkgs updates left them in nativeCheckInputs or
-      # omitted them. Test inputs masked the defects until checks were disabled.
+      # These dependencies are required by upstream metadata or direct runtime
+      # imports, but the corresponding nixpkgs updates left them in check inputs
+      # or omitted them. Test inputs masked the defects until checks were disabled.
       autobahn = pythonPrev.autobahn.overridePythonAttrs (old: {
         dependencies = (old.dependencies or [ ]) ++ [
           pythonFinal.cbor2
@@ -78,7 +78,10 @@ in
         old: {
           dependencies =
             (old.dependencies or [ ])
-            ++ [ pythonFinal.opentelemetry-semantic-conventions ];
+            ++ [
+              pythonFinal.opentelemetry-semantic-conventions
+              pythonFinal.packaging
+            ];
         }
       );
 
