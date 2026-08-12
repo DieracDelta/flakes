@@ -184,6 +184,8 @@ in
     enable = true;
     enableStreamingWhisper = false;
   };
+  # Keep the unit definition available, but do not start it automatically.
+  systemd.services.skynet.wantedBy = lib.mkForce [ ];
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
@@ -212,6 +214,7 @@ in
     httpsPort = 7443;
     sshPort = 2223;
   };
+  custom_modules.pijul-flakes.enable = true;
   custom_modules.borgbackup = {
     enable = true;
     repos = {

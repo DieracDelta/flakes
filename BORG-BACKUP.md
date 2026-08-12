@@ -3,6 +3,10 @@
 Encrypted, deduplicated, compressed backups of Plane and Forgejo to multiple
 replicas, unlockable by any one of several independent keys.
 
+For extraction, directory layout, credentials, inspection, and full restoration,
+see [`BORG-RECOVERY.md`](./BORG-RECOVERY.md). That guide is the authoritative
+recovery procedure.
+
 ## What gets backed up
 
 - `/var/lib/forgejo` — git repos, LFS objects, config (excludes `/dump`)
@@ -15,7 +19,8 @@ replicas, unlockable by any one of several independent keys.
 | Name | Location | Schedule |
 |------|----------|----------|
 | local | `/storage/backups/borg/forgejo-plane` | 04:00 daily |
-| arm-vps | `ssh://borg@nixos-arm.tail5ca7.ts.net/./borg/desktop` | 04:30 daily |
+| arm-vps | `borg@100.104.74.94:.` | 04:30 daily |
+| beelink | `jrestivo@100.85.199.123:borg/desktop` | 05:00 daily |
 
 Each replica is an independent Borg repo. Dedup operates within each repo
 (not across them). If one corrupts, the other is unaffected.
@@ -256,11 +261,15 @@ If you only have a YubiKey:
 age -d -i /etc/borg/yubikey1-identity.txt /etc/borg/passphrase.age
 ```
 
-If you only have the KeePassXC password:
+If you only have the raw Borg passphrase stored in KeePassXC, use it directly:
 ```bash
-age -d -p /etc/borg/passphrase.age
-# type the password
+read -rsp 'Borg passphrase: ' BORG_PASSPHRASE
+printf '\n'
+export BORG_PASSPHRASE
 ```
+
+The current setup does not use an `age -p` password recipient. KeePassXC stores
+the raw Borg passphrase.
 
 If you only have the MBP:
 ```bash

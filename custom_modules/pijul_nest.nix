@@ -99,6 +99,50 @@ let
       --replace-fail \
         '    creation_ip text not null,' \
         '    creation_ip inet not null,'
+
+    # Several historical handlers hardcode "main" instead of honoring each
+    # repository's default_channel. This breaks normal URLs for master-based
+    # repositories even though explicit ":master" URLs and SSH pushes work.
+    substituteInPlace "$out/api/src/repository/router.rs" \
+      --replace-fail \
+        $'    let (id, _, _) = super::repository_id(&mut db, &tree.owner, &tree.repo, uid, Perm::READ).await?;\n\n    let c = super::channel_spec_id(id, tree.channel.as_deref().unwrap_or("main"));\n    debug!("channel {:?}", c);\n    let locks = config.repo_locks.clone();\n    let repo_ = locks.get(&id).await.unwrap();\n    let channels = repo_.channels().await;\n    let channel = tree.channel.unwrap_or_else(|| "main".to_string());' \
+        $'    let repository = super::repository(\n        &mut db,\n        &tree.owner,\n        &tree.repo,\n        uid.unwrap_or(uuid::Uuid::nil()),\n        Perm::READ,\n    )\n    .await?;\n    let id = repository.id;\n    let default_channel = repository.default_channel;\n    let channel = tree.channel.unwrap_or_else(|| default_channel.clone());\n    let is_default_channel = channel == default_channel;\n    let c = super::channel_spec_id(id, &channel);\n    debug!("channel {:?}", c);\n    let locks = config.repo_locks.clone();\n    let repo_ = locks.get(&id).await.unwrap();\n    let channels = repo_.channels().await;' \
+      --replace-fail \
+        'txn.channels("")?.is_empty() && channel_ == "main"' \
+        'txn.channels("")?.is_empty() && is_default_channel'
+
+    substituteInPlace "$out/api/src/repository/dot_pijul.rs" \
+      --replace-fail \
+        '    let mut db = config.db.get().await?;' \
+        $'    let mut db = config.db.get().await?;\n    let default_channel = super::repository(\n        &mut db,\n        &t.owner,\n        &t.repo,\n        uuid::Uuid::nil(),\n        super::Perm::READ,\n    )\n    .await?\n    .default_channel;' \
+      --replace-fail \
+        '    let mut channel = ChannelSpec::Channel("main".to_string());' \
+        '    let mut channel = ChannelSpec::Channel(default_channel.clone());' \
+      --replace-fail \
+        '    let is_default_channel = channel == ChannelSpec::Channel("main".to_string());' \
+        '    let is_default_channel = channel == ChannelSpec::Channel(default_channel);'
+
+    substituteInPlace "$out/api/src/change/list.rs" \
+      --replace-fail \
+        $'    let (id, _, _) =\n        crate::repository::repository_id(&mut db, &tree.owner, &tree.repo, uid, Perm::READ).await?;\n\n    let repo_locks = config.repo_locks.clone();\n    let channel_ = tree\n        .channel\n        .as_deref()\n        .unwrap_or_else(|| pijul_core::DEFAULT_CHANNEL)\n        .to_string();' \
+        $'    let repository = crate::repository::repository(\n        &mut db,\n        &tree.owner,\n        &tree.repo,\n        uid.unwrap_or(uuid::Uuid::nil()),\n        Perm::READ,\n    )\n    .await?;\n    let id = repository.id;\n    let default_channel = repository.default_channel;\n\n    let repo_locks = config.repo_locks.clone();\n    let channel_ = tree.channel.unwrap_or_else(|| default_channel.clone());' \
+      --replace-fail \
+        'list_changes(&repo_locks, id, &channel, &req_paths, reverse, from, count).await?;' \
+        'list_changes(&repo_locks, id, &channel, &default_channel, &req_paths, reverse, from, count).await?;' \
+      --replace-fail \
+        $'    channel: &str,\n    req_paths: &[String],' \
+        $'    channel: &str,\n    default_channel: &str,\n    req_paths: &[String],' \
+      --replace-fail \
+        'channel.is_empty() || channel == pijul_core::DEFAULT_CHANNEL' \
+        'channel.is_empty() || channel == default_channel'
+
+    substituteInPlace "$out/api/src/change/mod.rs" \
+      --replace-fail \
+        $'    let (id, _, _) =\n        crate::repository::repository_id(&mut db, &repo.owner, &repo.repo, Some(uid), Perm::APPLY)\n            .await?;' \
+        $'    let repository = crate::repository::repository(\n        &mut db,\n        &repo.owner,\n        &repo.repo,\n        uid,\n        Perm::APPLY,\n    )\n    .await?;\n    let id = repository.id;' \
+      --replace-fail \
+        'channel: repo.channel.clone().unwrap_or_else(|| "main".to_string()),' \
+        'channel: repo.channel.clone().unwrap_or(repository.default_channel),'
   '';
 
   # Nest's generated Cargo.nix expects a current stable Rust toolchain.

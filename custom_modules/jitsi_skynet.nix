@@ -124,10 +124,10 @@ in
     ];
 
     services.jitsi-meet = {
-      enable = true;
+      enable = false;
       hostName = cfg.domain;
       caddy.enable = false;
-      nginx.enable = true;
+      nginx.enable = false;
       jigasi.enable = cfg.enableStreamingWhisper;
       excalidraw.enable = false;
       prosody.lockdown = true;

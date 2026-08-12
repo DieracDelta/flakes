@@ -80,6 +80,9 @@ let
 
   # Jitsi Skynet AI services
   skynet = import ./skynet.nix;
+
+  # Native Pijul flake input support, built against the selected Nix package.
+  nix-plugin-pijul = import ./nix-plugin-pijul.nix;
 in
 [
   # Temporary local policy: suppress standard check/install-check phases while
@@ -97,6 +100,7 @@ in
   psi-coding-agent
   shapebpf
   external
+  nix-plugin-pijul
   mcpRemote
   tmux-gruvbox-themes
   actual
