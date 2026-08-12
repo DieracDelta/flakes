@@ -34,6 +34,16 @@ release-specific, so the compat patch fails before compilation. The patch
 captures the actual unpacked source root before entering the llama.cpp
 subshell.
 
+### `nixpkgs-hercules-ci-cnix-store-libblake3.patch`
+
+Target: nixpkgs at the revision locked by this repository.
+
+Nix 2.31's static pkg-config metadata declares private dependencies for
+`nix-util`, `nix-store`, `nix-fetchers`, and `nix-cmd`, but the Hercules CI
+Haskell binding does not put those packages in its pkg-config search path. The
+patch adds the complete set at the binding boundary; this fixes Cachix without
+propagating build-only dependencies across the whole configured package set.
+
 ### `nixpkgs-croc-11.0.2.patch`
 
 Target: nixpkgs at the revision locked by this repository.

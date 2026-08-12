@@ -2,6 +2,20 @@
 # narrow and remove each override when its matching upstream patch lands.
 final: prev:
 let
+  nixStaticPkgconfigDeps = [
+    final.brotli
+    final.curl
+    final.editline
+    final.libblake3
+    final.libcpuid
+    final.libgit2
+    final.libseccomp
+    final.libsodium
+    final.lowdown
+    final.openssl
+    final.sqlite
+  ];
+
   fixOllamaSourceRoot =
     drv:
     drv.overrideAttrs (old: {
@@ -21,6 +35,20 @@ in
 {
   ollama = fixOllamaSourceRoot prev.ollama;
   ollama-cuda = fixOllamaSourceRoot prev.ollama-cuda;
+
+  # Nix 2.31's static nix-util pkg-config metadata has private dependencies
+  # that the Haskell binding does not declare. Keep the repair inside Cachix's
+  # Haskell scope so unrelated packages do not acquire a second package set.
+  cachix = prev.cachix.override {
+    haskellPackages = prev.haskellPackages.extend (
+      _haskellFinal: haskellPrev: {
+        cachix = prev.haskell.lib.addPkgconfigDepends haskellPrev.cachix nixStaticPkgconfigDeps;
+        hercules-ci-cnix-store = prev.haskell.lib.addPkgconfigDepends (
+          haskellPrev.hercules-ci-cnix-store
+        ) nixStaticPkgconfigDeps;
+      }
+    );
+  };
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (pythonFinal: pythonPrev: {

@@ -1,0 +1,70 @@
+diff --git a/pkgs/development/haskell-modules/configuration-nix.nix b/pkgs/development/haskell-modules/configuration-nix.nix
+index 2b6f8a73fb56..3e127627d414 100644
+--- a/pkgs/development/haskell-modules/configuration-nix.nix
++++ b/pkgs/development/haskell-modules/configuration-nix.nix
+@@ -1839,5 +1839,19 @@
+   cachix = self.generateOptparseApplicativeCompletions [ "cachix" ] (
+-    enableSeparateBinOutput super.cachix
++    addPkgconfigDepends
++      (with pkgs; [
++        brotli
++        curl
++        editline
++        libblake3
++        libcpuid
++        libgit2
++        libseccomp
++        libsodium
++        lowdown
++        openssl
++        sqlite
++      ])
++      (enableSeparateBinOutput super.cachix)
+   );
+ 
+   hercules-ci-agent = super.hercules-ci-agent.override {
+@@ -1847,17 +1861,33 @@
+     super.hercules-ci-cnix-expr.override { nix = self.hercules-ci-cnix-store.passthru.nixPackage; }
+   );
+   hercules-ci-cnix-store =
+-    overrideCabal
+-      (old: {
+-        passthru = old.passthru or { } // {
+-          nixPackage = pkgs.nixVersions.nix_2_31;
+-        };
+-      })
+-      (
+-        super.hercules-ci-cnix-store.override {
+-          nix = self.hercules-ci-cnix-store.passthru.nixPackage;
+-        }
+-      );
++    addPkgconfigDepends
++      (with pkgs; [
++        brotli
++        curl
++        editline
++        libblake3
++        libcpuid
++        libgit2
++        libseccomp
++        libsodium
++        lowdown
++        openssl
++        sqlite
++      ])
++      (
++        overrideCabal
++        (old: {
++          passthru = old.passthru or { } // {
++            nixPackage = pkgs.nixVersions.nix_2_31;
++          };
++        })
++        (
++          super.hercules-ci-cnix-store.override {
++            nix = self.hercules-ci-cnix-store.passthru.nixPackage;
++          }
++        )
++      );
+ 
+   # the testsuite fails because of not finding tsc without some help
+   aeson-typescript = overrideCabal (drv: {
