@@ -81,7 +81,7 @@
     shapebpf.inputs.nixpkgs.follows = "nixpkgs-unpatched";
 
     # Declarative Postfix/Dovecot/Rspamd mail stack.
-    simple-nixos-mailserver.url = "gitlab:simple-nixos-mailserver/nixos-mailserver/nixos-26.05";
+    simple-nixos-mailserver.url = "gitlab:simple-nixos-mailserver/nixos-mailserver/main";
     simple-nixos-mailserver.inputs.nixpkgs.follows = "nixpkgs-unpatched";
   };
 
