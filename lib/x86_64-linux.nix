@@ -52,9 +52,22 @@ let
       };
     }
     quadlet-nix.nixosModules.quadlet
-    inputs.bpftop.nixosModules.default
+    ../custom_modules/bpftop.nix
     # inputs.nix-btm.nixosModules.default
-    inputs.shapebpf.nixosModules.default
+    # Upstream still reads the deprecated pkgs.system alias for its package
+    # default. Supply only that compatibility attribute to this closed module;
+    # the host explicitly selects the configured pkgs.shapebpf package below.
+    (
+      { pkgs, ... }@args:
+      inputs.shapebpf.nixosModules.default (
+        args
+        // {
+          pkgs = pkgs // {
+            system = pkgs.stdenv.hostPlatform.system;
+          };
+        }
+      )
+    )
   ];
 
   buildNixosConfigurations =

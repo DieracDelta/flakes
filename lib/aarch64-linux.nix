@@ -44,7 +44,7 @@ let
         imports = [ (../. + "/hosts/${hostname}.hm.nix") ];
       };
     }
-    inputs.bpftop.nixosModules.default
+    ../custom_modules/bpftop.nix
     ../custom_modules/mailserver-no-rspamd.nix
     inputs.simple-nixos-mailserver.nixosModules.default
     # inputs.nix-btm.nixosModules.default
