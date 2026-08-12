@@ -92,7 +92,8 @@ in
       "mlx5_core"
       # Fallback virtio network (in case different instance type)
       "virtio_net"
-    ] ++ lib.optionals cfg.enableLVM [
+    ]
+    ++ lib.optionals cfg.enableLVM [
       # LVM / device-mapper modules
       "dm-mod"
       "dm-snapshot"

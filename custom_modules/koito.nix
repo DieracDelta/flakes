@@ -135,19 +135,18 @@ in
       ];
       requires = [ "postgresql.service" ];
 
-      environment =
-        {
-          KOITO_ALLOWED_HOSTS = cfg.allowedHosts;
-          KOITO_LISTEN_PORT = toString cfg.port;
-          KOITO_CONFIG_DIR = configDir;
-          KOITO_BIND_ADDR = "127.0.0.1";
-          KOITO_LOG_LEVEL = "info";
-          KOITO_DEFAULT_USERNAME = cfg.defaultUsername;
-          KOITO_PUBLIC_BASE_PATH = "/koito";
-        }
-        // optionalAttrs (cfg.subsonicUrl != null) {
-          KOITO_SUBSONIC_URL = cfg.subsonicUrl;
-        };
+      environment = {
+        KOITO_ALLOWED_HOSTS = cfg.allowedHosts;
+        KOITO_LISTEN_PORT = toString cfg.port;
+        KOITO_CONFIG_DIR = configDir;
+        KOITO_BIND_ADDR = "127.0.0.1";
+        KOITO_LOG_LEVEL = "info";
+        KOITO_DEFAULT_USERNAME = cfg.defaultUsername;
+        KOITO_PUBLIC_BASE_PATH = "/koito";
+      }
+      // optionalAttrs (cfg.subsonicUrl != null) {
+        KOITO_SUBSONIC_URL = cfg.subsonicUrl;
+      };
 
       serviceConfig = {
         Type = "simple";
@@ -182,9 +181,16 @@ in
     };
 
     # Configure Navidrome to scrobble to Koito (skip if multi-scrobbler handles it)
-    services.navidrome.settings = mkIf (cfg.configureNavidrome && config.services.navidrome.enable && !config.custom_modules.multi-scrobbler.enable) {
-      "ListenBrainz.Enabled" = true;
-      "ListenBrainz.BaseURL" = "http://127.0.0.1:${toString cfg.port}/apis/listenbrainz/1";
-    };
+    services.navidrome.settings =
+      mkIf
+        (
+          cfg.configureNavidrome
+          && config.services.navidrome.enable
+          && !config.custom_modules.multi-scrobbler.enable
+        )
+        {
+          "ListenBrainz.Enabled" = true;
+          "ListenBrainz.BaseURL" = "http://127.0.0.1:${toString cfg.port}/apis/listenbrainz/1";
+        };
   };
 }

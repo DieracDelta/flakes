@@ -16,7 +16,8 @@ let
       enable = true;
       data = {
         token = listenBrainzEndpoint.token;
-      } // optionalAttrs (listenBrainzEndpoint.slug != null) {
+      }
+      // optionalAttrs (listenBrainzEndpoint.slug != null) {
         slug = listenBrainzEndpoint.slug;
       };
     }
@@ -25,18 +26,17 @@ let
     builtins.toJSON {
       name = audiomuseSource.sourceName;
       enable = true;
-      data =
-        {
-          url = audiomuseSource.url;
-          user = audiomuseSource.user;
-          password = "[[${audiomuseSource.apiKeyEnvVar}]]";
-          legacyAuthentication = true;
-          interval = audiomuseSource.interval;
-          maxInterval = audiomuseSource.maxInterval;
-        }
-        // optionalAttrs (audiomuseSource.usersAllow != [ ]) {
-          usersAllow = audiomuseSource.usersAllow;
-        };
+      data = {
+        url = audiomuseSource.url;
+        user = audiomuseSource.user;
+        password = "[[${audiomuseSource.apiKeyEnvVar}]]";
+        legacyAuthentication = true;
+        interval = audiomuseSource.interval;
+        maxInterval = audiomuseSource.maxInterval;
+      }
+      // optionalAttrs (audiomuseSource.usersAllow != [ ]) {
+        usersAllow = audiomuseSource.usersAllow;
+      };
     }
   );
 in
@@ -165,58 +165,57 @@ in
         BASE_URL = if cfg.baseUrl != null then cfg.baseUrl else "http://127.0.0.1:${toString cfg.port}";
       };
 
-      preStart =
-        ''
-          set -euo pipefail
+      preStart = ''
+        set -euo pipefail
 
-          app_cfg_file=${stateDir}/config.json
-          app_base_file=$(mktemp)
-          app_tmp_file=$(mktemp)
+        app_cfg_file=${stateDir}/config.json
+        app_base_file=$(mktemp)
+        app_tmp_file=$(mktemp)
 
-          cleanup_app_config() {
-            rm -f "$app_base_file" "$app_tmp_file"
-          }
-          trap cleanup_app_config EXIT
+        cleanup_app_config() {
+          rm -f "$app_base_file" "$app_tmp_file"
+        }
+        trap cleanup_app_config EXIT
 
-          if [ -s "$app_cfg_file" ]; then
-            jq 'if type == "object" then . else {} end' "$app_cfg_file" > "$app_base_file"
+        if [ -s "$app_cfg_file" ]; then
+          jq 'if type == "object" then . else {} end' "$app_cfg_file" > "$app_base_file"
+        else
+          printf '{}\n' > "$app_base_file"
+        fi
+
+        jq '.debugMode = false | .logging = ((.logging // {}) + { file: false, console: "warn", level: "warn" })' "$app_base_file" > "$app_tmp_file"
+        install -m 0600 "$app_tmp_file" "$app_cfg_file"
+      ''
+      + optionalString listenBrainzEndpoint.enable ''
+        set -euo pipefail
+
+        cfg_file=${stateDir}/endpointlz.json
+        base_file=$(mktemp)
+        tmp_file=$(mktemp)
+        source_name=${escapeShellArg listenBrainzEndpoint.sourceName}
+
+        cleanup() {
+          rm -f "$base_file" "$tmp_file"
+        }
+        trap cleanup EXIT
+
+        normalize_sources() {
+          if [ -s "$cfg_file" ]; then
+            jq 'if type == "array" then . elif type == "object" then [.] else [] end' "$cfg_file"
           else
-            printf '{}\n' > "$app_base_file"
+            printf '[]\n'
           fi
+        }
 
-          jq '.debugMode = false | .logging = ((.logging // {}) + { file: false, console: "warn", level: "warn" })' "$app_base_file" > "$app_tmp_file"
-          install -m 0600 "$app_tmp_file" "$app_cfg_file"
-        ''
-        + optionalString listenBrainzEndpoint.enable ''
-          set -euo pipefail
-
-          cfg_file=${stateDir}/endpointlz.json
-          base_file=$(mktemp)
-          tmp_file=$(mktemp)
-          source_name=${escapeShellArg listenBrainzEndpoint.sourceName}
-
-          cleanup() {
-            rm -f "$base_file" "$tmp_file"
-          }
-          trap cleanup EXIT
-
-          normalize_sources() {
-            if [ -s "$cfg_file" ]; then
-              jq 'if type == "array" then . elif type == "object" then [.] else [] end' "$cfg_file"
-            else
-              printf '[]\n'
-            fi
-          }
-
-          normalize_sources > "$base_file"
-          jq \
-            --arg name "$source_name" \
-            --slurpfile source ${listenBrainzEndpointJson} \
-            'map(select(.name != $name)) + [$source[0]]' \
-            "$base_file" > "$tmp_file"
-          install -m 0600 "$tmp_file" "$cfg_file"
-        ''
-        + optionalString audiomuseSource.enable ''
+        normalize_sources > "$base_file"
+        jq \
+          --arg name "$source_name" \
+          --slurpfile source ${listenBrainzEndpointJson} \
+          'map(select(.name != $name)) + [$source[0]]' \
+          "$base_file" > "$tmp_file"
+        install -m 0600 "$tmp_file" "$cfg_file"
+      ''
+      + optionalString audiomuseSource.enable ''
         set -euo pipefail
 
         cfg_file=${stateDir}/subsonic.json
@@ -259,8 +258,7 @@ in
         User = "multi-scrobbler";
         Group = "multi-scrobbler";
         ExecStart = "${pkgs.multi-scrobbler}/bin/multi-scrobbler";
-        EnvironmentFile =
-          optional audiomuseSource.enable "-${audiomuseSource.environmentFile}";
+        EnvironmentFile = optional audiomuseSource.enable "-${audiomuseSource.environmentFile}";
         Restart = "on-failure";
         RestartSec = "10s";
 

@@ -6,9 +6,12 @@
 let
   # Theme name based on host
   themeName =
-    if pkgs.stdenv.isDarwin then "gruvbox-darwin"
-    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then "gruvbox-arm"
-    else "gruvbox";
+    if pkgs.stdenv.isDarwin then
+      "gruvbox-darwin"
+    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then
+      "gruvbox-arm"
+    else
+      "gruvbox";
 
   # Color palettes matching tmux themes
   themes = {

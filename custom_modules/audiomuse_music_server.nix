@@ -141,9 +141,11 @@ in
       environment = {
         PORT = toString cfg.port;
         DATABASE_PATH = "${cfg.dataDir}/music.db";
-      } // optionalAttrs (cfg.audiomuseCoreUrl != null) {
+      }
+      // optionalAttrs (cfg.audiomuseCoreUrl != null) {
         AUDIOMUSE_AI_CORE_URL = cfg.audiomuseCoreUrl;
-      } // optionalAttrs cfg.listenBrainzForwarding.enable {
+      }
+      // optionalAttrs cfg.listenBrainzForwarding.enable {
         MULTI_SCROBBLER_LISTENBRAINZ_URL = cfg.listenBrainzForwarding.url;
         MULTI_SCROBBLER_LISTENBRAINZ_TOKEN = cfg.listenBrainzForwarding.token;
       };
@@ -162,10 +164,10 @@ in
         ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 
         ${optionalString (cfg.audiomuseCoreUrl != null) ''
-        INSERT INTO configuration (key, value)
-        VALUES ('audiomuse_ai_core_url', '${sqlString cfg.audiomuseCoreUrl}')
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value
-        WHERE configuration.value IS NULL OR length(configuration.value) = 0;
+          INSERT INTO configuration (key, value)
+          VALUES ('audiomuse_ai_core_url', '${sqlString cfg.audiomuseCoreUrl}')
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value
+          WHERE configuration.value IS NULL OR length(configuration.value) = 0;
         ''}
 
         CREATE TABLE IF NOT EXISTS library_paths (
@@ -195,11 +197,20 @@ in
         ProtectHome = true;
         ReadWritePaths = [ cfg.dataDir ];
         ReadOnlyPaths = [ cfg.musicDir ];
-      } // optionalAttrs (cfg.environmentFile != null || (cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null)) {
-        EnvironmentFile =
-          (optional (cfg.environmentFile != null) cfg.environmentFile)
-          ++ (optional (cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null) cfg.listenBrainzForwarding.tokenFile);
-      };
+      }
+      //
+        optionalAttrs
+          (
+            cfg.environmentFile != null
+            || (cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null)
+          )
+          {
+            EnvironmentFile =
+              (optional (cfg.environmentFile != null) cfg.environmentFile)
+              ++ (optional (
+                cfg.listenBrainzForwarding.enable && cfg.listenBrainzForwarding.tokenFile != null
+              ) cfg.listenBrainzForwarding.tokenFile);
+          };
     };
 
     services.caddy = mkIf cfg.caddy.enable {

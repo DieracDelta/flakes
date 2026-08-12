@@ -5,9 +5,12 @@ let
   # aarch64-linux = red crimson theme
   # x86_64-linux = original gruvbox
   themeName =
-    if pkgs.stdenv.isDarwin then "darwin"
-    else if pkgs.stdenv.hostPlatform.isAarch64 then "nixos-arm"
-    else "dark";
+    if pkgs.stdenv.isDarwin then
+      "darwin"
+    else if pkgs.stdenv.hostPlatform.isAarch64 then
+      "nixos-arm"
+    else
+      "dark";
 in
 {
   programs.tmux = {

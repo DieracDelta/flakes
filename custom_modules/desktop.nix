@@ -62,7 +62,7 @@ in
     services.xrdp.enable = true;
 
     networking.firewall.allowedTCPPorts = [
-      3389  # RDP
+      3389 # RDP
     ];
   };
 }

@@ -1,5 +1,9 @@
 # thank you Max : D : D
-{jq, sqlite, writeShellScript}:
+{
+  jq,
+  sqlite,
+  writeShellScript,
+}:
 writeShellScript "nix-extract-revs-from-cache" ''
   info() {
     label=$1;shift

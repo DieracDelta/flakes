@@ -24,15 +24,17 @@ let
     daily_bytes = if userCfg.dailyBytes == null then cfg.dailyBytes else userCfg.dailyBytes;
   }) cfg.users;
 
-  controllerConfig = pkgs.writeText "user-io-budget.json" (builtins.toJSON {
-    devices = cfg.devices;
-    users = resolvedUsers;
-    daily_bytes = cfg.dailyBytes;
-    burst_bps = cfg.burstBytesPerSecond;
-    exhausted_bps = cfg.exhaustedBytesPerSecond;
-    warning_percentages = cfg.warningPercentages;
-    terminal_notifications = cfg.terminalNotifications;
-  });
+  controllerConfig = pkgs.writeText "user-io-budget.json" (
+    builtins.toJSON {
+      devices = cfg.devices;
+      users = resolvedUsers;
+      daily_bytes = cfg.dailyBytes;
+      burst_bps = cfg.burstBytesPerSecond;
+      exhausted_bps = cfg.exhaustedBytesPerSecond;
+      warning_percentages = cfg.warningPercentages;
+      terminal_notifications = cfg.terminalNotifications;
+    }
+  );
 
   controller = pkgs.writeShellScript "user-io-budget" ''
     exec ${pkgs.python3}/bin/python3 ${../scripts/user_io_budget.py} "$@"
@@ -43,20 +45,22 @@ in
     enable = mkEnableOption "per-user daily cgroup-v2 physical write budgets";
 
     users = mkOption {
-      type = types.attrsOf (types.submodule {
-        options = {
-          uid = mkOption {
-            type = types.ints.positive;
-            description = "Deployed numeric UID used in the user slice name.";
-          };
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            uid = mkOption {
+              type = types.ints.positive;
+              description = "Deployed numeric UID used in the user slice name.";
+            };
 
-          dailyBytes = mkOption {
-            type = types.nullOr types.ints.positive;
-            default = null;
-            description = "Optional per-user daily write budget override in bytes.";
+            dailyBytes = mkOption {
+              type = types.nullOr types.ints.positive;
+              default = null;
+              description = "Optional per-user daily write budget override in bytes.";
+            };
           };
-        };
-      });
+        }
+      );
       default = { };
       description = "Normal users whose user slices receive write budgets.";
     };
@@ -131,18 +135,19 @@ in
         message = "every user I/O budget device must be an absolute /dev path";
       }
       {
-        assertion = builtins.length (unique (map (user: user.uid) resolvedUsers)) == builtins.length resolvedUsers;
+        assertion =
+          builtins.length (unique (map (user: user.uid) resolvedUsers)) == builtins.length resolvedUsers;
         message = "user I/O budget UIDs must be unique";
       }
       {
-        assertion = builtins.length (unique cfg.warningPercentages) == builtins.length cfg.warningPercentages;
+        assertion =
+          builtins.length (unique cfg.warningPercentages) == builtins.length cfg.warningPercentages;
         message = "user I/O budget warning percentages must be unique";
       }
       {
         assertion = builtins.all (
           user:
-          builtins.hasAttr user.name config.users.users
-          && config.users.users.${user.name}.uid == user.uid
+          builtins.hasAttr user.name config.users.users && config.users.users.${user.name}.uid == user.uid
         ) resolvedUsers;
         message = "every user I/O budget UID must match the UID pinned in users.users";
       }
@@ -160,9 +165,7 @@ in
           wantedBy = [ "slices.target" ];
           sliceConfig = {
             IOAccounting = true;
-            IOWriteBandwidthMax = map (
-              device: "${device} ${toString cfg.burstBytesPerSecond}"
-            ) cfg.devices;
+            IOWriteBandwidthMax = map (device: "${device} ${toString cfg.burstBytesPerSecond}") cfg.devices;
           };
         }
       ) resolvedUsers

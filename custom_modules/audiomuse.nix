@@ -156,7 +156,11 @@ in
       isSystemUser = true;
       group = cfg.group;
       home = cfg.dataDir;
-      extraGroups = [ "jellyfin" "video" "render" ]; # Access to music library + GPU
+      extraGroups = [
+        "jellyfin"
+        "video"
+        "render"
+      ]; # Access to music library + GPU
     };
     users.groups.${cfg.group} = mkIf (cfg.group == "audiomuse") { };
 
@@ -202,8 +206,8 @@ in
 
           # GPU performance tuning (RTX 4090 24GB)
           PER_SONG_MODEL_RELOAD = lib.boolToString cfg.analysis.perSongModelReload;
-          CLAP_MINI_BATCH_SIZE = "8";       # Process 8 segments at once
-          USE_GPU_CLUSTERING = "true";      # RAPIDS cuML GPU-accelerated clustering
+          CLAP_MINI_BATCH_SIZE = "8"; # Process 8 segments at once
+          USE_GPU_CLUSTERING = "true"; # RAPIDS cuML GPU-accelerated clustering
 
           # Clustering sample size: use 90th percentile of genre counts (~55K tracks vs default ~6.7K)
           STRATIFIED_SAMPLING_TARGET_PERCENTILE = "90";
@@ -224,7 +228,8 @@ in
           # AI model for cluster/playlist naming
           AI_MODEL_PROVIDER = "GEMINI";
           GEMINI_MODEL_NAME = "gemini-2.5-flash";
-        } // lib.optionalAttrs cfg.analysis.forceCpu {
+        }
+        // lib.optionalAttrs cfg.analysis.forceCpu {
           CUDA_VISIBLE_DEVICES = "-1";
           USE_GPU_CLUSTERING = "false";
         };
@@ -256,8 +261,12 @@ in
             "/dev/nvidia-uvm rw"
             "/dev/nvidia-uvm-tools rw"
           ];
-          SupplementaryGroups = [ "video" "render" ];
-        } // lib.optionalAttrs (cfg.environmentFile != null) {
+          SupplementaryGroups = [
+            "video"
+            "render"
+          ];
+        }
+        // lib.optionalAttrs (cfg.environmentFile != null) {
           EnvironmentFile = cfg.environmentFile;
         };
 

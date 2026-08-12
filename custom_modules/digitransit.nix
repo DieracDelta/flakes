@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.services.digitransit;
@@ -142,9 +147,11 @@ in
       environment = {
         PORT = "3200";
         # Use local Nominatim via nginx proxy on port 8088
-        NOMINATIM_URL = if config.services.nominatim.enable
-          then "http://127.0.0.1:8088"
-          else "https://nominatim.openstreetmap.org";
+        NOMINATIM_URL =
+          if config.services.nominatim.enable then
+            "http://127.0.0.1:8088"
+          else
+            "https://nominatim.openstreetmap.org";
       };
 
       serviceConfig = {
@@ -159,7 +166,11 @@ in
     systemd.services.digitransit = {
       description = "Digitransit Trip Planning UI";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" "opentripplanner.service" "digitransit-geocoding.service" ];
+      after = [
+        "network.target"
+        "opentripplanner.service"
+        "digitransit-geocoding.service"
+      ];
 
       environment = {
         NODE_ENV = "production";

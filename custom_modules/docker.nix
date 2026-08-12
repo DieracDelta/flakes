@@ -28,8 +28,8 @@ in
 
     environment.systemPackages = with pkgs; [
       docker-compose
-      oxker  # Docker TUI
-      dive   # Docker image explorer
+      oxker # Docker TUI
+      dive # Docker image explorer
     ];
   };
 }

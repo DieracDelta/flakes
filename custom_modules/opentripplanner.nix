@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.services.opentripplanner;
@@ -40,7 +45,11 @@ let
   # Helper script to download GTFS feeds
   otp-download-gtfs = pkgs.writeShellApplication {
     name = "otp-download-gtfs";
-    runtimeInputs = with pkgs; [ wget curl jq ];
+    runtimeInputs = with pkgs; [
+      wget
+      curl
+      jq
+    ];
     text = ''
       # OTP scans the data directory for .zip files - put GTFS directly there
       count=0
@@ -73,31 +82,38 @@ let
 
   # Build config JSON
   # Note: OSM files are auto-discovered from the data directory (*.osm.pbf)
-  buildConfigFile = pkgs.writeText "build-config.json" (builtins.toJSON {
-    # Transit data config
-    transitFeeds = map (feed: {
-      type = "gtfs";
-      source = feed;
-    }) cfg.gtfsFeeds;
+  buildConfigFile = pkgs.writeText "build-config.json" (
+    builtins.toJSON {
+      # Transit data config
+      transitFeeds = map (feed: {
+        type = "gtfs";
+        source = feed;
+      }) cfg.gtfsFeeds;
 
-    # Build settings
-    areaVisibility = true;
-    platformEntriesLinking = true;
-    parentStopLinking = true;
-    transitServiceStart = "-P1Y";
-    transitServiceEnd = "P2Y";
-  });
+      # Build settings
+      areaVisibility = true;
+      platformEntriesLinking = true;
+      parentStopLinking = true;
+      transitServiceStart = "-P1Y";
+      transitServiceEnd = "P2Y";
+    }
+  );
 
   # Router config JSON
-  routerConfigFile = pkgs.writeText "router-config.json" (builtins.toJSON ({
-    updaters = [ ];
-    routingDefaults = {
-      walkSpeed = 1.3;
-      bikeSpeed = 5.0;
-      carSpeed = 15.0;
-      numItineraries = 6;
-    };
-  } // cfg.routerConfig));
+  routerConfigFile = pkgs.writeText "router-config.json" (
+    builtins.toJSON (
+      {
+        updaters = [ ];
+        routingDefaults = {
+          walkSpeed = 1.3;
+          bikeSpeed = 5.0;
+          carSpeed = 15.0;
+          numItineraries = 6;
+        };
+      }
+      // cfg.routerConfig
+    )
+  );
 
 in
 {
@@ -194,7 +210,10 @@ in
     systemd.services.opentripplanner-setup = {
       description = "OpenTripPlanner Graph Builder";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" "openstreetmap-setup.service" ];
+      after = [
+        "network-online.target"
+        "openstreetmap-setup.service"
+      ];
       wants = [ "network-online.target" ];
 
       path = [
@@ -226,50 +245,57 @@ in
         install -m 644 ${routerConfigFile} ${otpHome}/router-config.json
 
         # Download GTFS feeds if URLs provided
-        ${lib.optionalString (cfg.gtfsUrls != []) ''
+        ${lib.optionalString (cfg.gtfsUrls != [ ]) ''
           echo "Downloading GTFS feeds..."
           otp-download-gtfs ${lib.concatStringsSep " " cfg.gtfsUrls}
         ''}
 
         # Get OSM data
-        ${if cfg.osmUrls != [] then ''
-          echo "Downloading OSM data files..."
-          OSM_FILES=""
-          count=0
-          for url in ${lib.concatStringsSep " " cfg.osmUrls}; do
-            filename="${otpHome}/osm-download-$count.osm.pbf"
-            echo "Downloading: $url"
-            wget -O "$filename" "$url"
-            OSM_FILES="$OSM_FILES $filename"
-            count=$((count + 1))
-          done
+        ${
+          if cfg.osmUrls != [ ] then
+            ''
+              echo "Downloading OSM data files..."
+              OSM_FILES=""
+              count=0
+              for url in ${lib.concatStringsSep " " cfg.osmUrls}; do
+                filename="${otpHome}/osm-download-$count.osm.pbf"
+                echo "Downloading: $url"
+                wget -O "$filename" "$url"
+                OSM_FILES="$OSM_FILES $filename"
+                count=$((count + 1))
+              done
 
-          if [ $count -eq 1 ]; then
-            # Single file, just rename
-            mv ${otpHome}/osm-download-0.osm.pbf ${otpHome}/osm-data.osm.pbf
+              if [ $count -eq 1 ]; then
+                # Single file, just rename
+                mv ${otpHome}/osm-download-0.osm.pbf ${otpHome}/osm-data.osm.pbf
+              else
+                # Multiple files, merge with osmium
+                echo "Merging $count OSM files..."
+                osmium merge $OSM_FILES -o ${otpHome}/osm-data.osm.pbf --overwrite
+                # Clean up individual files
+                rm -f ${otpHome}/osm-download-*.osm.pbf
+              fi
+              echo "OSM data ready: ${otpHome}/osm-data.osm.pbf"
+            ''
+          else if cfg.osmDataPath != null then
+            ''
+              # Check if OSM data exists
+              if [ ! -f "${cfg.osmDataPath}" ]; then
+                echo "ERROR: OSM data not found at ${cfg.osmDataPath}"
+                echo "Make sure openstreetmap service has completed setup first."
+                exit 1
+              fi
+
+              # Copy OSM data into OTP directory
+              cp "${cfg.osmDataPath}" "${otpHome}/osm-data.osm.pbf"
+              echo "Copied OSM data: ${cfg.osmDataPath} -> ${otpHome}/osm-data.osm.pbf"
+            ''
           else
-            # Multiple files, merge with osmium
-            echo "Merging $count OSM files..."
-            osmium merge $OSM_FILES -o ${otpHome}/osm-data.osm.pbf --overwrite
-            # Clean up individual files
-            rm -f ${otpHome}/osm-download-*.osm.pbf
-          fi
-          echo "OSM data ready: ${otpHome}/osm-data.osm.pbf"
-        '' else if cfg.osmDataPath != null then ''
-          # Check if OSM data exists
-          if [ ! -f "${cfg.osmDataPath}" ]; then
-            echo "ERROR: OSM data not found at ${cfg.osmDataPath}"
-            echo "Make sure openstreetmap service has completed setup first."
-            exit 1
-          fi
-
-          # Copy OSM data into OTP directory
-          cp "${cfg.osmDataPath}" "${otpHome}/osm-data.osm.pbf"
-          echo "Copied OSM data: ${cfg.osmDataPath} -> ${otpHome}/osm-data.osm.pbf"
-        '' else ''
-          echo "ERROR: No OSM data configured (set osmDataPath or osmUrls)"
-          exit 1
-        ''}
+            ''
+              echo "ERROR: No OSM data configured (set osmDataPath or osmUrls)"
+              exit 1
+            ''
+        }
 
         # Build the graph
         echo "Building routing graph (this may take a while)..."

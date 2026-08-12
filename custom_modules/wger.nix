@@ -36,9 +36,13 @@ let
   staticDir = "${stateDir}/static";
 
   # Python environment with wger
-  pythonEnv = pkgs.python312.withPackages (ps: [
-    pkgs.wger
-  ] ++ pkgs.wger.propagatedBuildInputs);
+  pythonEnv = pkgs.python312.withPackages (
+    ps:
+    [
+      pkgs.wger
+    ]
+    ++ pkgs.wger.propagatedBuildInputs
+  );
 
   # Settings directory that will be added to PYTHONPATH
   settingsDir = pkgs.writeTextDir "wger_settings.py" ''
@@ -149,7 +153,11 @@ in
     allowedHosts = mkOption {
       description = "Django ALLOWED_HOSTS list.";
       type = types.listOf types.str;
-      default = [ "localhost" "127.0.0.1" "office-desktop.tail5ca7.ts.net" ];
+      default = [
+        "localhost"
+        "127.0.0.1"
+        "office-desktop.tail5ca7.ts.net"
+      ];
     };
 
     trustedOrigins = mkOption {
@@ -212,7 +220,7 @@ in
       description = "wger service user";
     };
     users.groups.wger = {
-      members = [ "caddy" ];  # Allow Caddy to serve static/media files
+      members = [ "caddy" ]; # Allow Caddy to serve static/media files
     };
 
     # Ensure state directories exist
@@ -225,8 +233,14 @@ in
     # Setup service - runs migrations and collects static files
     systemd.services.wger-setup = {
       description = "wger Setup (migrations, collectstatic)";
-      after = [ "postgresql.service" "redis-wger.service" ];
-      requires = [ "postgresql.service" "redis-wger.service" ];
+      after = [
+        "postgresql.service"
+        "redis-wger.service"
+      ];
+      requires = [
+        "postgresql.service"
+        "redis-wger.service"
+      ];
       wantedBy = [ "multi-user.target" ];
 
       environment = {
@@ -234,7 +248,10 @@ in
         PYTHONPATH = pythonPath;
       };
 
-      path = [ pythonEnv pkgs.openssl ];
+      path = [
+        pythonEnv
+        pkgs.openssl
+      ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -248,7 +265,10 @@ in
         ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;
-        ReadWritePaths = [ stateDir "/run/redis-wger" ];
+        ReadWritePaths = [
+          stateDir
+          "/run/redis-wger"
+        ];
       };
 
       script = ''
@@ -281,20 +301,20 @@ in
 
         # Create admin user if configured and doesn't exist
         ${lib.optionalString (cfg.adminPasswordFile != null) ''
-          if [ -f "${cfg.adminPasswordFile}" ]; then
-            ADMIN_PASS=$(cat "${cfg.adminPasswordFile}")
-            ${pythonEnv}/bin/python -m django shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(username='${cfg.adminUser}').exists():
-    User.objects.create_superuser('${cfg.adminUser}', '${cfg.adminEmail}', '$ADMIN_PASS')
-    print('Admin user created.')
-else:
-    print('Admin user already exists.')
-"
-          else
-            echo "Warning: adminPasswordFile not found at ${cfg.adminPasswordFile}"
-          fi
+                    if [ -f "${cfg.adminPasswordFile}" ]; then
+                      ADMIN_PASS=$(cat "${cfg.adminPasswordFile}")
+                      ${pythonEnv}/bin/python -m django shell -c "
+          from django.contrib.auth import get_user_model
+          User = get_user_model()
+          if not User.objects.filter(username='${cfg.adminUser}').exists():
+              User.objects.create_superuser('${cfg.adminUser}', '${cfg.adminEmail}', '$ADMIN_PASS')
+              print('Admin user created.')
+          else:
+              print('Admin user already exists.')
+          "
+                    else
+                      echo "Warning: adminPasswordFile not found at ${cfg.adminPasswordFile}"
+                    fi
         ''}
       '';
     };
@@ -332,15 +352,24 @@ else:
         ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;
-        ReadWritePaths = [ stateDir "/run/redis-wger" ];
+        ReadWritePaths = [
+          stateDir
+          "/run/redis-wger"
+        ];
       };
     };
 
     # Celery worker for background tasks
     systemd.services.wger-celery-worker = {
       description = "wger Celery Worker";
-      after = [ "wger-setup.service" "redis-wger.service" ];
-      requires = [ "wger-setup.service" "redis-wger.service" ];
+      after = [
+        "wger-setup.service"
+        "redis-wger.service"
+      ];
+      requires = [
+        "wger-setup.service"
+        "redis-wger.service"
+      ];
       wantedBy = [ "multi-user.target" ];
 
       environment = {
@@ -366,15 +395,24 @@ else:
         ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;
-        ReadWritePaths = [ stateDir "/run/redis-wger" ];
+        ReadWritePaths = [
+          stateDir
+          "/run/redis-wger"
+        ];
       };
     };
 
     # Celery beat for scheduled tasks
     systemd.services.wger-celery-beat = {
       description = "wger Celery Beat Scheduler";
-      after = [ "wger-setup.service" "redis-wger.service" ];
-      requires = [ "wger-setup.service" "redis-wger.service" ];
+      after = [
+        "wger-setup.service"
+        "redis-wger.service"
+      ];
+      requires = [
+        "wger-setup.service"
+        "redis-wger.service"
+      ];
       wantedBy = [ "multi-user.target" ];
 
       environment = {
@@ -400,7 +438,10 @@ else:
         ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;
-        ReadWritePaths = [ stateDir "/run/redis-wger" ];
+        ReadWritePaths = [
+          stateDir
+          "/run/redis-wger"
+        ];
       };
     };
 

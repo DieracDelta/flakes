@@ -80,10 +80,10 @@ in
           hide-version = true;
 
           # Additional security hardening
-          aggressive-nsec = true;           # Use NSEC records to deny non-existent domains (faster NXDOMAIN)
-          deny-any = true;                  # Refuse ANY queries (prevents amplification attacks)
-          val-clean-additional = true;      # Remove untrusted data from additional section
-          minimal-responses = true;         # Only return requested data, reduce info leakage
+          aggressive-nsec = true; # Use NSEC records to deny non-existent domains (faster NXDOMAIN)
+          deny-any = true; # Refuse ANY queries (prevents amplification attacks)
+          val-clean-additional = true; # Remove untrusted data from additional section
+          minimal-responses = true; # Only return requested data, reduce info leakage
           unwanted-reply-threshold = 10000; # Detect/ignore spoofed replies (threshold before warning)
 
           # Logging
@@ -120,8 +120,8 @@ in
     # ===================
     services.adguardhome = {
       enable = true;
-      mutableSettings = false;  # NixOS controls config, ensures upstream settings are applied
-      port = 3003;  # Web UI port
+      mutableSettings = false; # NixOS controls config, ensures upstream settings are applied
+      port = 3003; # Web UI port
       settings = {
         http = {
           address = "127.0.0.1:3003";
@@ -148,11 +148,11 @@ in
           ratelimit = 1000;
           upstream_dns = [
             "[/tail5ca7.ts.net/]100.100.100.100" # Tailscale MagicDNS
-            "127.0.0.1:5335"                      # Local Unbound (primary)
-            "9.9.9.9"                             # Quad9 plain DNS (fallback)
+            "127.0.0.1:5335" # Local Unbound (primary)
+            "9.9.9.9" # Quad9 plain DNS (fallback)
           ];
           bootstrap_dns = [
-            "9.9.9.9"                             # Quad9 IP
+            "9.9.9.9" # Quad9 IP
           ];
           # Use Unbound for reverse DNS of private IPs
           local_ptr_upstreams = [ "127.0.0.1:5335" ];

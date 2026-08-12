@@ -1,6 +1,6 @@
 cradle:
-    direct:
-        arguments:
-            - -Wall
-            - -Werror
-            - -fno-warn-missing-signatures
+  direct:
+    arguments:
+      - -Wall
+      - -Werror
+      - -fno-warn-missing-signatures

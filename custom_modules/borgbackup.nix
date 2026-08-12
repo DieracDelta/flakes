@@ -38,24 +38,26 @@ in
     };
 
     repos = mkOption {
-      type = types.attrsOf (types.submodule {
-        options = {
-          path = mkOption {
-            type = types.str;
-            description = "Borg repo path (local path or ssh://user@host/path).";
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            path = mkOption {
+              type = types.str;
+              description = "Borg repo path (local path or ssh://user@host/path).";
+            };
+            sshKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "SSH private key for remote repositories.";
+            };
+            startAt = mkOption {
+              type = types.str;
+              default = "*-*-* 04:00:00";
+              description = "systemd calendar expression for backup schedule.";
+            };
           };
-          sshKey = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "SSH private key for remote repositories.";
-          };
-          startAt = mkOption {
-            type = types.str;
-            default = "*-*-* 04:00:00";
-            description = "systemd calendar expression for backup schedule.";
-          };
-        };
-      });
+        }
+      );
       default = { };
       description = "Backup destinations. Each entry creates an independent Borg job.";
     };
@@ -90,7 +92,8 @@ in
 
     # Grant backup jobs write access to the dump directory
     systemd.services = lib.mkMerge [
-      (mapAttrs' (name: _:
+      (mapAttrs' (
+        name: _:
         nameValuePair "borgbackup-job-${name}" {
           serviceConfig.ReadWritePaths = [ "/var/backup/postgres" ];
           # Borg exit 1 = warning (e.g., file changed during backup). Not a failure.
@@ -99,33 +102,38 @@ in
       ) cfg.repos)
 
       # Auto-initialize repos on first backup trigger
-      (mapAttrs' (name: repoCfg:
-      nameValuePair "borgbackup-init-${name}" {
-        description = "Auto-initialize Borg repo ${name} if needed";
-        requiredBy = [ "borgbackup-job-${name}.service" ];
-        before = [ "borgbackup-job-${name}.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-        };
-        environment = {
-          BORG_PASSCOMMAND = passCommand;
-        } // optionalAttrs (repoCfg.sshKey != null) {
-          BORG_RSH = "ssh -i ${repoCfg.sshKey} -o StrictHostKeyChecking=accept-new";
-        };
-        path = [ pkgs.borgbackup pkgs.age ];
-        script = ''
-          if [ ! -f "${cfg.passphraseAgeFile}" ]; then
-            echo "Borg not configured yet — run setup-borg-backup.sh first"
-            exit 0
-          fi
-          if ! borg info ${escapeShellArg repoCfg.path} &>/dev/null; then
-            echo "Initializing Borg repo: ${repoCfg.path}"
-            borg init --encryption=repokey-blake2 ${escapeShellArg repoCfg.path}
-          fi
-        '';
-      }
-    ) cfg.repos)
+      (mapAttrs' (
+        name: repoCfg:
+        nameValuePair "borgbackup-init-${name}" {
+          description = "Auto-initialize Borg repo ${name} if needed";
+          requiredBy = [ "borgbackup-job-${name}.service" ];
+          before = [ "borgbackup-job-${name}.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          environment = {
+            BORG_PASSCOMMAND = passCommand;
+          }
+          // optionalAttrs (repoCfg.sshKey != null) {
+            BORG_RSH = "ssh -i ${repoCfg.sshKey} -o StrictHostKeyChecking=accept-new";
+          };
+          path = [
+            pkgs.borgbackup
+            pkgs.age
+          ];
+          script = ''
+            if [ ! -f "${cfg.passphraseAgeFile}" ]; then
+              echo "Borg not configured yet — run setup-borg-backup.sh first"
+              exit 0
+            fi
+            if ! borg info ${escapeShellArg repoCfg.path} &>/dev/null; then
+              echo "Initializing Borg repo: ${repoCfg.path}"
+              borg init --encryption=repokey-blake2 ${escapeShellArg repoCfg.path}
+            fi
+          '';
+        }
+      ) cfg.repos)
     ];
 
     services.borgbackup.jobs = mapAttrs (_name: repoCfg: {

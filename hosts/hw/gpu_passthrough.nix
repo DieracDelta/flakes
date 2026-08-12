@@ -1,20 +1,30 @@
 # unused right now... morally speaking should be moved to hardware for desktop only
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 {
   environment.pathsToLink = [ "/share/zsh" ];
   # TODO find out if you need hugepages on
-  boot.kernelParams = [ /* "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" */ /* "hugepagesz=1G" "hugepages=64" */];
+  boot.kernelParams = [
+    # "video=efifb:off" "amd_iommu=on" "amd_iommu=pt" "hugepagesz=1G" "hugepages=64"
+  ];
   boot.kernelPackages = pkgs.linuxPackages;
 
   virtualisation.libvirtd.enable = true;
-  users.groups.libvirtd.members = [ "root" "jrestivo" ];
+  users.groups.libvirtd.members = [
+    "root"
+    "jrestivo"
+  ];
   #boot.postBootCommands = ''
-    #DEVS="0000:2f:00.0 0000:2f:00.1"
+  #DEVS="0000:2f:00.0 0000:2f:00.1"
 
-    #for DEV in $DEVS; do
-      #echo "vfio-pci" > /sys/bus/pci/devices/$DEV/driver_override
-    #done
-    #modprobe -i vfio-pci
+  #for DEV in $DEVS; do
+  #echo "vfio-pci" > /sys/bus/pci/devices/$DEV/driver_override
+  #done
+  #modprobe -i vfio-pci
   #'';
   # boot.extraModprobeConfig = "options vfio-pci ids=1002:67ef,1002:aae0";
   # TODO make sure the OVMF/OVMF_VARS are uniquely named files otherwise will conflict when you have multiple VMs
@@ -46,9 +56,17 @@
   #     '';
   #   }
   # ];
-  boot.extraModulePackages = [ /* pkgs.linuxPackages_latest.vendor-reset */ ];
-  boot.initrd.availableKernelModules = [ /* "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" */  "amdgpu" ];
-  boot.initrd.kernelModules = [ /* "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" */ "amdgpu" ];
+  boot.extraModulePackages = [
+    # pkgs.linuxPackages_latest.vendor-reset
+  ];
+  boot.initrd.availableKernelModules = [
+    # "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"
+    "amdgpu"
+  ];
+  boot.initrd.kernelModules = [
+    # "vendor-reset" "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd"
+    "amdgpu"
+  ];
   boot.runSize = "10G";
   boot.devShmSize = "10G";
   security.wrapperDirSize = "10G";

@@ -167,7 +167,7 @@
         color.mode = "palette-classic";
         unit = "kwatth";
         decimals = 2;
-        mappings = [];
+        mappings = [ ];
         thresholds = {
           mode = "absolute";
           steps = [
@@ -182,7 +182,7 @@
           ];
         };
       };
-      fieldConfig.overrides = [];
+      fieldConfig.overrides = [ ];
       options = {
         colorMode = "value";
         graphMode = "area";

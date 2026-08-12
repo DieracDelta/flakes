@@ -9,9 +9,12 @@
 }:
 let
   colorScheme =
-    if pkgs.stdenv.isDarwin then 4        # MC (green-ish)
-    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then 5  # Black Night (warm)
-    else 0;                                # Default
+    if pkgs.stdenv.isDarwin then
+      4 # MC (green-ish)
+    else if pkgs.stdenv.hostPlatform.isAarch64 && pkgs.stdenv.isLinux then
+      5 # Black Night (warm)
+    else
+      0; # Default
 in
 {
   programs.htop = {

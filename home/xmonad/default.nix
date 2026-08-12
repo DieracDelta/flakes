@@ -23,7 +23,7 @@ in
       enable = true;
       config = ./xmonad.hs;
     };
-    xsession.profileExtra = ''export $(dbus-launch)'';
+    xsession.profileExtra = "export $(dbus-launch)";
     xsession.enable = true;
     home.file.".wallpaper.jpg".source = ./wallpaper.jpg;
   };

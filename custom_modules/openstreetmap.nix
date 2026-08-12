@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
 
@@ -18,7 +23,9 @@ let
 
   mapnik-carto =
     let
-      env = { nativeBuildInputs = [ pkgs.carto ]; };
+      env = {
+        nativeBuildInputs = [ pkgs.carto ];
+      };
     in
     pkgs.runCommand "mapnik-carto" env ''
       mkdir $out
@@ -29,7 +36,12 @@ let
 
   osm2pgsql-runner = pkgs.writeShellApplication {
     name = "osm-osm2pgsql-runner";
-    runtimeInputs = with pkgs; [ osm2pgsql postgresql procps gawk ];
+    runtimeInputs = with pkgs; [
+      osm2pgsql
+      postgresql
+      procps
+      gawk
+    ];
     text = ''
       cores=$(nproc)
       mem=$(($(free -m | awk '/^Mem:/{print $2}') * 3 / 4))
@@ -54,7 +66,13 @@ let
   osm-carto-get-external-data = pkgs.writeShellApplication {
     name = "osm-get-external-data";
     runtimeInputs = with pkgs; [
-      (python3.withPackages (p: with p; [ pyaml requests psycopg2 ]))
+      (python3.withPackages (
+        p: with p; [
+          pyaml
+          requests
+          psycopg2
+        ]
+      ))
       gdal
     ];
     text = ''
@@ -221,8 +239,15 @@ in
       description = "RenderD Daemon";
       wantedBy = [ "multi-user.target" ];
       before = [ "httpd.service" ];
-      after = [ "openstreetmap-db-init.service" "openstreetmap-setup.service" ];
-      wants = [ "postgresql.service" "openstreetmap-db-init.service" "openstreetmap-setup.service" ];
+      after = [
+        "openstreetmap-db-init.service"
+        "openstreetmap-setup.service"
+      ];
+      wants = [
+        "postgresql.service"
+        "openstreetmap-db-init.service"
+        "openstreetmap-setup.service"
+      ];
       serviceConfig = {
         ExecStart = "${mod_tile}/bin/renderd --config ${renderdConfigFile} --foreground";
         StateDirectory = "renderd";
@@ -237,71 +262,82 @@ in
     };
 
     # Automatic setup service - downloads map data, imports to PostGIS, gets fonts
-    systemd.services.openstreetmap-setup = lib.mkIf (cfg.mapDataPath != null || cfg.mapDataUrl != null) {
-      description = "OpenStreetMap Initial Data Setup";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "postgresql.service" "network-online.target" "openstreetmap-db-init.service" ];
-      requires = [ "openstreetmap-db-init.service" ];
-      wants = [ "network-online.target" ];
+    systemd.services.openstreetmap-setup =
+      lib.mkIf (cfg.mapDataPath != null || cfg.mapDataUrl != null)
+        {
+          description = "OpenStreetMap Initial Data Setup";
+          wantedBy = [ "multi-user.target" ];
+          after = [
+            "postgresql.service"
+            "network-online.target"
+            "openstreetmap-db-init.service"
+          ];
+          requires = [ "openstreetmap-db-init.service" ];
+          wants = [ "network-online.target" ];
 
-      path = [
-        osm2pgsql-runner
-        osm-carto-get-fonts
-        osm-carto-get-external-data
-        pkgs.wget
-        pkgs.systemd
-      ];
+          path = [
+            osm2pgsql-runner
+            osm-carto-get-fonts
+            osm-carto-get-external-data
+            pkgs.wget
+            pkgs.systemd
+          ];
 
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = "renderd";
-        WorkingDirectory = renderdShare;
-      };
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            User = "renderd";
+            WorkingDirectory = renderdShare;
+          };
 
-      script = let
-        # Use Nix path if provided, otherwise download from URL
-        mapDataSource = if cfg.mapDataPath != null
-          then cfg.mapDataPath
-          else null;
-      in ''
-        STATE_FILE="${renderdShare}/.setup-complete"
-        if [ -f "$STATE_FILE" ]; then
-          echo "Setup already completed, skipping"
-          exit 0
-        fi
+          script =
+            let
+              # Use Nix path if provided, otherwise download from URL
+              mapDataSource = if cfg.mapDataPath != null then cfg.mapDataPath else null;
+            in
+            ''
+              STATE_FILE="${renderdShare}/.setup-complete"
+              if [ -f "$STATE_FILE" ]; then
+                echo "Setup already completed, skipping"
+                exit 0
+              fi
 
-        echo "Starting OpenStreetMap setup..."
+              echo "Starting OpenStreetMap setup..."
 
-        # Get map data
-        MAP_FILE="${renderdShare}/map-data.osm.pbf"
-        if [ ! -f "$MAP_FILE" ]; then
-          ${if mapDataSource != null then ''
-          echo "Using Nix-managed map data from ${mapDataSource}..."
-          cp "${mapDataSource}" "$MAP_FILE"
-          '' else ''
-          echo "Downloading map data from ${cfg.mapDataUrl}..."
-          wget -O "$MAP_FILE" "${cfg.mapDataUrl}"
-          ''}
-        fi
+              # Get map data
+              MAP_FILE="${renderdShare}/map-data.osm.pbf"
+              if [ ! -f "$MAP_FILE" ]; then
+                ${
+                  if mapDataSource != null then
+                    ''
+                      echo "Using Nix-managed map data from ${mapDataSource}..."
+                      cp "${mapDataSource}" "$MAP_FILE"
+                    ''
+                  else
+                    ''
+                      echo "Downloading map data from ${cfg.mapDataUrl}..."
+                      wget -O "$MAP_FILE" "${cfg.mapDataUrl}"
+                    ''
+                }
+              fi
 
-        # Import to PostGIS
-        echo "Importing map data to PostGIS (this may take a while)..."
-        osm-osm2pgsql-runner "$MAP_FILE"
+              # Import to PostGIS
+              echo "Importing map data to PostGIS (this may take a while)..."
+              osm-osm2pgsql-runner "$MAP_FILE"
 
-        # Get fonts
-        echo "Downloading fonts..."
-        osm-get-fonts
+              # Get fonts
+              echo "Downloading fonts..."
+              osm-get-fonts
 
-        # Get external data (shapefiles)
-        echo "Downloading external data..."
-        osm-get-external-data
+              # Get external data (shapefiles)
+              echo "Downloading external data..."
+              osm-get-external-data
 
-        # Mark setup complete
-        touch "$STATE_FILE"
-        echo "Setup complete!"
-      '';
-    };
+              # Mark setup complete
+              touch "$STATE_FILE"
+              echo "Setup complete!"
+            '';
+        };
 
     services.postgresql = {
       enable = true;
@@ -336,7 +372,10 @@ in
       description = "Initialize OpenStreetMap PostGIS database";
       after = [ "postgresql.service" ];
       requires = [ "postgresql.service" ];
-      before = [ "openstreetmap-setup.service" "renderd.service" ];
+      before = [
+        "openstreetmap-setup.service"
+        "renderd.service"
+      ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
@@ -395,7 +434,7 @@ in
       virtualHosts = {
         "tileserver" = {
           documentRoot = wwwroot;
-          listen = [{ inherit (cfg) port; }];
+          listen = [ { inherit (cfg) port; } ];
           extraConfig = ''
             LoadTileConfigFile ${renderdConfigFile}
             ModTileTileDir ${tileDir}

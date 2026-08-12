@@ -1,13 +1,14 @@
-{ stdenv
-, callPackage
-, makeRustPlatform
-, fetchFromGitHub
-, IOKit ? null
-, makeWrapper
-, glib
-, gst_all_1
+{
+  stdenv,
+  callPackage,
+  makeRustPlatform,
+  fetchFromGitHub,
+  IOKit ? null,
+  makeWrapper,
+  glib,
+  gst_all_1,
 }:
-/*with import <nixpkgs> {};*/
+# with import <nixpkgs> {};
 
 assert stdenv.isDarwin -> IOKit != null;
 let
@@ -19,11 +20,12 @@ let
     sha256 = "08fvzb8w80bkkabc1iyhzd15f4sm7ra10jn32kfch5klgl0gj3j3";
   };
   mozilla = callPackage "${mozillaOverlay.out}/package-set.nix" { };
-  rustNightly = (mozilla.rustChannelOf {
-    inherit date;
-    channel = "nightly";
-    sha256 = "sha256-wOlAS9KJp9UBP/W4maScqf9iu7MvweaJ7pCqeAnuh8Q=";
-  }).rust;
+  rustNightly =
+    (mozilla.rustChannelOf {
+      inherit date;
+      channel = "nightly";
+      sha256 = "sha256-wOlAS9KJp9UBP/W4maScqf9iu7MvweaJ7pCqeAnuh8Q=";
+    }).rust;
   rustPlatform = makeRustPlatform {
     cargo = rustNightly;
     rustc = rustNightly;
@@ -50,7 +52,8 @@ rustPlatform.buildRustPackage rec {
     gst_all_1.gst-plugins-good
     gst_all_1.gst-plugins-ugly
     gst_all_1.gst-plugins-bad
-  ] ++ stdenv.lib.optionals stdenv.isDarwin [ IOKit ];
+  ]
+  ++ stdenv.lib.optionals stdenv.isDarwin [ IOKit ];
 
   postInstall = ''
     wrapProgram $out/bin/hunter --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "$GST_PLUGIN_SYSTEM_PATH_1_0"
@@ -60,7 +63,7 @@ rustPlatform.buildRustPackage rec {
 
   meta = with stdenv.lib; {
     description = "The fastest file manager in the galaxy!";
-    homepage = https://github.com/rabite0/hunter;
+    homepage = "https://github.com/rabite0/hunter";
     license = licenses.wtfpl;
     maintainers = [ ];
     platforms = platforms.unix;

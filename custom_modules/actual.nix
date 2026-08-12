@@ -89,7 +89,10 @@ in
     # Daily bank sync service
     systemd.services.actual-bank-sync = {
       description = "Actual Budget Bank Sync";
-      after = [ "actual.service" "network-online.target" ];
+      after = [
+        "actual.service"
+        "network-online.target"
+      ];
       wants = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
@@ -105,9 +108,9 @@ in
       description = "Daily Actual Budget Bank Sync";
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnCalendar = "daily";  # Runs at midnight
-        RandomizedDelaySec = "1h";  # Random delay up to 1 hour to avoid exact midnight
-        Persistent = true;  # Run immediately if missed (e.g., system was off)
+        OnCalendar = "daily"; # Runs at midnight
+        RandomizedDelaySec = "1h"; # Random delay up to 1 hour to avoid exact midnight
+        Persistent = true; # Run immediately if missed (e.g., system was off)
       };
     };
 
