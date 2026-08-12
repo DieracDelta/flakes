@@ -46,7 +46,7 @@
     # ollama
     fd
     spicetify-cli
-    gemini-cli
+    antigravity-cli
     nix-top
     strace-macos
     entr

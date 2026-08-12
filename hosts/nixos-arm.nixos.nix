@@ -62,7 +62,7 @@
   environment.systemPackages = with pkgs; [
     gh
     bat
-    gemini-cli
+    antigravity-cli
     vim
     git
     htop

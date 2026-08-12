@@ -264,7 +264,7 @@ in
       # AI/LLM tools
       opencode
       lmstudio
-      gemini-cli
+      antigravity-cli
       goose-cli
       bingrep
       qwen-code
