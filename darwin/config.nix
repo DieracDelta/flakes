@@ -72,7 +72,7 @@
     nix
     ripgrep-all
     yazi
-    corepack_latest
+    (corepack.override { nodejs-slim = nodejs-slim_latest; })
     nodejs_latest
     delta
     duf

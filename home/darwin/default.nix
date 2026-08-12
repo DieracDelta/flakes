@@ -11,9 +11,11 @@
 
   programs.git = {
     enable = true;
-    userName = "Justin Restivo";
-    userEmail = "justin@restivo.me";
-    extraConfig = {
+    settings = {
+      user = {
+        name = "Justin Restivo";
+        email = "justin@restivo.me";
+      };
       github.user = "DieracDelta";
       #tag.gpgSign = true;
     };
