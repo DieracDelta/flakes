@@ -66,9 +66,22 @@ in
   # This package derives its Meson test switch from finalAttrs.doCheck before
   # the outer stdenv argument wrapper removes check-only inputs.
   power-profiles-daemon = prev.power-profiles-daemon.overrideAttrs (old: {
-    mesonFlags =
-      builtins.filter (flag: flag != "-Dtests=true") (old.mesonFlags or [ ])
-      ++ [ "-Dtests=false" ];
+    mesonFlags = builtins.filter (flag: flag != "-Dtests=true") (old.mesonFlags or [ ]) ++ [
+      "-Dtests=false"
+    ];
+  });
+
+  # yubico-piv-tool adds its test subdirectory unconditionally and ignores
+  # CMake's conventional BUILD_TESTING switch. Remove only that entry while
+  # this temporary policy is active; the package's doCheck/nativeCheckInputs
+  # declarations remain intact underneath the overlay for future triage.
+  yubico-piv-tool = prev.yubico-piv-tool.overrideAttrs (old: {
+    postPatch = (old.postPatch or "") + ''
+      for cmakeFile in lib/CMakeLists.txt tool/CMakeLists.txt ykcs11/CMakeLists.txt; do
+        substituteInPlace "$cmakeFile" \
+          --replace-fail "add_subdirectory(tests)" ""
+      done
+    '';
   });
 
   # Python package scopes capture their builders while nixpkgs constructs the
