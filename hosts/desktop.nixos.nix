@@ -243,6 +243,11 @@ in
     ProcessSizeMax = 0;
   };
 
+  # Plasma enables a DrKonqi processor for every systemd-coredump event. With
+  # payload storage disabled it cannot produce actionable reports, and build
+  # probe crashes can leave expensive transient processor instances behind.
+  systemd.services."drkonqi-coredump-processor@".enable = false;
+
   programs.bpftop.enable = true;
   # services.nix-btm.enable = false;
   services.shapebpf.enable = true;
