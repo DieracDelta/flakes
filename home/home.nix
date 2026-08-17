@@ -133,6 +133,17 @@
     # signing.key = "E68281EB2ABCE9B8";
   };
 
+  programs.jujutsu = {
+    enable = true;
+    settings = {
+      user = {
+        name = "Justin Restivo";
+        email = "justinrestivodev@gmail.com";
+      };
+      git.executable-path = "${pkgs.git}/bin/git";
+    };
+  };
+
   # programs.zellij = {
   #   enable = true;
   #   settings = pkgs.lib.literalExpression ''
