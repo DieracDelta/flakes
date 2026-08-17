@@ -31,19 +31,38 @@ let
         "USER_CGROUP_IO_OUTPUT",
         "/var/lib/node_exporter/textfile_collector/user_cgroup_io.prom",
     ))
-    cgroup_root = Path("/sys/fs/cgroup")
+    cgroup_root = Path(os.environ.get(
+        "USER_CGROUP_IO_CGROUP_ROOT",
+        "/sys/fs/cgroup",
+    ))
+    sys_dev_block_root = Path(os.environ.get(
+        "USER_CGROUP_IO_SYS_DEV_BLOCK_ROOT",
+        "/sys/dev/block",
+    ))
+    systemd_unit_roots = tuple(
+        Path(path) for path in os.environ.get(
+            "USER_CGROUP_IO_SYSTEMD_UNIT_ROOTS",
+            "/etc/systemd/system:/run/systemd/system:/run/current-system/systemd/lib/systemd/system",
+        ).split(":") if path
+    )
     metric_definitions = (
-        ("rbytes", "user_cgroup_io_read_bytes_total", "Bytes read by a user cgroup from a physical block device."),
-        ("wbytes", "user_cgroup_io_write_bytes_total", "Bytes written by a user cgroup to a physical block device."),
-        ("rios", "user_cgroup_io_read_operations_total", "Read operations issued by a user cgroup to a physical block device."),
-        ("wios", "user_cgroup_io_write_operations_total", "Write operations issued by a user cgroup to a physical block device."),
+        ("rbytes", "user_cgroup_io_read_bytes_total", "Bytes charged by the kernel as reads to a cgroup for a physical block device; filesystem and kernel I/O may be uncharged."),
+        ("wbytes", "user_cgroup_io_write_bytes_total", "Bytes charged by the kernel as writes to a cgroup for a physical block device; filesystem metadata and kernel writeback may be uncharged."),
+        ("rios", "user_cgroup_io_read_operations_total", "Read operations charged by the kernel to a cgroup for a physical block device."),
+        ("wios", "user_cgroup_io_write_operations_total", "Write operations charged by the kernel to a cgroup for a physical block device."),
+    )
+    service_metric_definitions = (
+        ("rbytes", "systemd_service_cgroup_io_read_bytes_total", "Bytes charged by the kernel as reads to one systemd service cgroup for a physical block device."),
+        ("wbytes", "systemd_service_cgroup_io_write_bytes_total", "Bytes charged by the kernel as writes to one systemd service cgroup for a physical block device; filesystem metadata and kernel writeback may be uncharged."),
+        ("rios", "systemd_service_cgroup_io_read_operations_total", "Read operations charged by the kernel to one systemd service cgroup for a physical block device."),
+        ("wios", "systemd_service_cgroup_io_write_operations_total", "Write operations charged by the kernel to one systemd service cgroup for a physical block device."),
     )
 
     def escape_label(value):
         return str(value).replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 
     def physical_device_name(major_minor):
-        sys_device = Path("/sys/dev/block") / major_minor
+        sys_device = sys_dev_block_root / major_minor
         if not sys_device.exists():
             return None
         resolved = os.path.realpath(sys_device)
@@ -51,7 +70,7 @@ let
             return None
         return os.path.basename(resolved)
 
-    def read_scope(path, user, uid):
+    def read_cgroup(path, static_labels, definitions):
         rows = []
         try:
             stat_lines = (path / "io.stat").read_text().splitlines()
@@ -73,12 +92,15 @@ let
                     counters[key] = int(value)
                 except (ValueError, TypeError):
                     continue
-            labels = (
-                f'user="{escape_label(user)}",uid="{escape_label(uid)}",'
-                f'cgroup="{escape_label(path.name)}",device="{escape_label(device)}",'
-                f'major_minor="{escape_label(major_minor)}"'
+            labels = ",".join(
+                f'{key}="{escape_label(value)}"'
+                for key, value in (
+                    *static_labels,
+                    ("device", device),
+                    ("major_minor", major_minor),
+                )
             )
-            for field, metric, _help in metric_definitions:
+            for field, metric, _help in definitions:
                 if field in counters:
                     rows.append((metric, labels, counters[field]))
         return rows
@@ -101,17 +123,49 @@ let
         if path.exists():
             scopes.append((path, label, label))
 
+    # Restrict service labels to installed, non-template unit files. Runtime
+    # transient units often contain unique invocation IDs; retaining those
+    # labels for five years would create unbounded Prometheus cardinality.
+    installed_service_units = {
+        path.name
+        for root in systemd_unit_roots
+        if root.exists()
+        for path in root.glob("*.service")
+        if "@" not in path.name
+    }
+    system_slice = cgroup_root / "system.slice"
+    service_paths = sorted(
+        path for path in system_slice.rglob("*.service")
+        if path.is_dir() and path.name in installed_service_units
+    ) if system_slice.exists() else []
+
     lines = []
-    for _field, metric, help_text in metric_definitions:
-        lines.append(f"# HELP {metric} {help_text}")
-        lines.append(f"# TYPE {metric} counter")
+    for definitions in (metric_definitions, service_metric_definitions):
+        for _field, metric, help_text in definitions:
+            lines.append(f"# HELP {metric} {help_text}")
+            lines.append(f"# TYPE {metric} counter")
     for path, user, uid in scopes:
-        for metric, labels, value in read_scope(path, user, uid):
+        for metric, labels, value in read_cgroup(
+            path,
+            (("user", user), ("uid", uid), ("cgroup", path.name)),
+            metric_definitions,
+        ):
+            lines.append(f"{metric}{{{labels}}} {value}")
+    for path in service_paths:
+        relative_path = str(path.relative_to(cgroup_root))
+        for metric, labels, value in read_cgroup(
+            path,
+            (("unit", path.name), ("cgroup", relative_path)),
+            service_metric_definitions,
+        ):
             lines.append(f"{metric}{{{labels}}} {value}")
     lines.extend((
         "# HELP user_cgroup_io_collector_timestamp_seconds Unix timestamp of the last successful collection.",
         "# TYPE user_cgroup_io_collector_timestamp_seconds gauge",
         f"user_cgroup_io_collector_timestamp_seconds {time.time():.6f}",
+        "# HELP systemd_service_cgroup_io_collector_units Number of installed non-template system service cgroups exported by the last successful collection.",
+        "# TYPE systemd_service_cgroup_io_collector_units gauge",
+        f"systemd_service_cgroup_io_collector_units {len(service_paths)}",
     ))
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -155,12 +209,52 @@ in
                   expr: increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[7d])
                 - record: node_disk_written_bytes_30d
                   expr: increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[30d])
+                - record: node_disk_read_bytes_1d
+                  expr: increase(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[1d])
+                - record: node_disk_read_bytes_7d
+                  expr: increase(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[7d])
+                - record: node_disk_read_bytes_30d
+                  expr: increase(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[30d])
                 - record: user_cgroup_io_write_bytes_per_second
                   expr: rate(user_cgroup_io_write_bytes_total[5m])
+                - record: user_cgroup_io_read_bytes_per_second
+                  expr: rate(user_cgroup_io_read_bytes_total[5m])
                 - record: user_cgroup_io_write_operations_per_second
                   expr: rate(user_cgroup_io_write_operations_total[5m])
+                - record: user_cgroup_io_read_operations_per_second
+                  expr: rate(user_cgroup_io_read_operations_total[5m])
                 - record: user_cgroup_io_written_bytes_1d
                   expr: increase(user_cgroup_io_write_bytes_total[1d])
+                - record: user_cgroup_io_read_bytes_1d
+                  expr: increase(user_cgroup_io_read_bytes_total[1d])
+                - record: systemd_service_cgroup_io_write_bytes_per_second
+                  expr: rate(systemd_service_cgroup_io_write_bytes_total[5m])
+                - record: systemd_service_cgroup_io_read_bytes_per_second
+                  expr: rate(systemd_service_cgroup_io_read_bytes_total[5m])
+                - record: systemd_service_cgroup_io_write_operations_per_second
+                  expr: rate(systemd_service_cgroup_io_write_operations_total[5m])
+                - record: systemd_service_cgroup_io_read_operations_per_second
+                  expr: rate(systemd_service_cgroup_io_read_operations_total[5m])
+                - record: node_disk_unattributed_write_bytes_per_second
+                  expr: >-
+                    clamp_min(
+                      rate(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m])
+                        - on (device) (
+                          sum by (device) (rate(user_cgroup_io_write_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m]))
+                          or sum by (device) (rate(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m])) * 0
+                        ),
+                      0
+                    )
+                - record: node_disk_unattributed_read_bytes_per_second
+                  expr: >-
+                    clamp_min(
+                      rate(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m])
+                        - on (device) (
+                          sum by (device) (rate(user_cgroup_io_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m]))
+                          or sum by (device) (rate(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m])) * 0
+                        ),
+                      0
+                    )
                 - record: ironmain_ci_aggregate_scope_physical_write_bytes_per_second
                   expr: rate(ironmain_ci_aggregate_scope_physical_write_bytes_total[5m])
                 - record: ironmain_ci_aggregate_scope_physical_read_bytes_per_second
@@ -169,6 +263,28 @@ in
                   expr: sum(ironmain_ci_role_bytes)
                 - record: ironmain_ci_exact_io_unavailable
                   expr: 1 - ironmain_ci_invocation_io_available
+                # 50 MiB/s is about 4.5 TB/day per drive. The 30-minute hold
+                # ignores ordinary bursts while catching SSD-endurance threats.
+                - alert: PhysicalDiskWriteRateHigh
+                  expr: rate(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[5m]) > 52428800
+                  for: 30m
+                  labels:
+                    severity: warning
+                    category: storage
+                  annotations:
+                    summary: "Sustained high physical writes on {{ $labels.device }}"
+                    description: "Physical writes on {{ $labels.device }} have exceeded 50 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
+                # Alert separately when at least 25 MiB/s cannot be assigned to
+                # a top-level cgroup, which catches filesystem metadata storms.
+                - alert: UnattributedDiskWriteRateHigh
+                  expr: node_disk_unattributed_write_bytes_per_second > 26214400
+                  for: 30m
+                  labels:
+                    severity: warning
+                    category: storage
+                  annotations:
+                    summary: "Sustained unattributed writes on {{ $labels.device }}"
+                    description: "Filesystem or kernel writes not charged to a monitored cgroup on {{ $labels.device }} have exceeded 25 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
         ''
       ];
 

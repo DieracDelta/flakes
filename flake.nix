@@ -162,6 +162,81 @@
             touch "$out"
           '';
 
+      # Ensure cgroup attribution never hides whole-device I/O. The SMART
+      # dashboard must expose both reads and writes plus their unattributed
+      # filesystem/kernel remainder, and all generated Prometheus rules must
+      # remain valid.
+      checks.x86_64-linux.disk-io-attribution-config =
+        let
+          cfg = self.nixosConfigurations.desktop.config;
+          pkgs = myLib.x86_64-linux.pkgs;
+          dashboard = pkgs.writeText "smart-dashboard.json" (
+            cfg.environment.etc."grafana-dashboards/smart/smart-dashboard.json".text
+          );
+          rules = pkgs.writeText "prometheus-rules.yml" (
+            builtins.concatStringsSep "\n" cfg.services.prometheus.rules
+          );
+          collector = cfg.systemd.services.prometheus-user-cgroup-io.serviceConfig.ExecStart;
+        in
+        pkgs.runCommand "disk-io-attribution-config-check"
+          {
+            nativeBuildInputs = [
+              pkgs.jq
+              pkgs.prometheus.cli
+            ];
+          }
+          ''
+            promtool check rules ${rules}
+            jq -e '
+              any(.panels[]; .title == "Physical Write Attribution by Drive") and
+              any(.panels[]; .title == "Physical Read Attribution by Drive") and
+              any(.panels[]; .title == "Physical Writes by Source — Selected Range") and
+              any(.panels[]; .title == "Physical Reads by Source — Selected Range") and
+              any(.panels[]; .title == "System Service Write Throughput") and
+              any(.panels[]; .title == "System Service Read Throughput")
+            ' ${dashboard} >/dev/null
+            grep -F 'node_disk_unattributed_write_bytes_per_second' ${rules}
+            grep -F 'node_disk_unattributed_read_bytes_per_second' ${rules}
+            grep -F 'systemd_service_cgroup_io_write_bytes_per_second' ${rules}
+            grep -F 'systemd_service_cgroup_io_read_bytes_per_second' ${rules}
+            grep -F 'alert: PhysicalDiskWriteRateHigh' ${rules}
+            grep -F 'alert: UnattributedDiskWriteRateHigh' ${rules}
+
+            fixture="$TMPDIR/cgroup-fixture"
+            mkdir -p \
+              "$fixture/cgroup/system.slice/nix-daemon.service" \
+              "$fixture/cgroup/system.slice/transient-123.service" \
+              "$fixture/systemd-units" \
+              "$fixture/sys-dev-block" \
+              "$fixture/devices/nvme0n1"
+            touch "$fixture/systemd-units/nix-daemon.service"
+            ln -s "$fixture/devices/nvme0n1" "$fixture/sys-dev-block/259:0"
+            printf '%s\n' \
+              '259:0 rbytes=2000 wbytes=1000 rios=20 wios=10' \
+              > "$fixture/cgroup/system.slice/io.stat"
+            printf '%s\n' \
+              '259:0 rbytes=800 wbytes=456 rios=8 wios=4' \
+              > "$fixture/cgroup/system.slice/nix-daemon.service/io.stat"
+            printf '%s\n' \
+              '259:0 rbytes=9000 wbytes=9000 rios=90 wios=90' \
+              > "$fixture/cgroup/system.slice/transient-123.service/io.stat"
+            USER_CGROUP_IO_OUTPUT="$fixture/metrics.prom" \
+              USER_CGROUP_IO_CGROUP_ROOT="$fixture/cgroup" \
+              USER_CGROUP_IO_SYS_DEV_BLOCK_ROOT="$fixture/sys-dev-block" \
+              USER_CGROUP_IO_SYSTEMD_UNIT_ROOTS="$fixture/systemd-units" \
+              ${collector}
+            grep -F 'user_cgroup_io_write_bytes_total{user="system",uid="system",cgroup="system.slice",device="nvme0n1",major_minor="259:0"} 1000' \
+              "$fixture/metrics.prom"
+            grep -F 'systemd_service_cgroup_io_write_bytes_total{unit="nix-daemon.service",cgroup="system.slice/nix-daemon.service",device="nvme0n1",major_minor="259:0"} 456' \
+              "$fixture/metrics.prom"
+            grep -F 'systemd_service_cgroup_io_collector_units 1' "$fixture/metrics.prom"
+            if grep -F 'transient-123.service' "$fixture/metrics.prom"; then
+              echo 'transient service unexpectedly exported' >&2
+              exit 1
+            fi
+            touch "$out"
+          '';
+
       # Hydra CI jobs
       hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
 

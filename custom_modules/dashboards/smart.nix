@@ -43,8 +43,10 @@ let
       title,
       description,
       x,
+      y ? 48,
       unit,
       expr,
+      legendFormat ? "{{user}} · {{device}}",
     }:
     {
       type = "timeseries";
@@ -52,8 +54,7 @@ let
       gridPos = {
         h = 8;
         w = 12;
-        inherit x;
-        y = 48;
+        inherit x y;
       };
       fieldConfig.defaults = {
         inherit unit;
@@ -80,7 +81,43 @@ let
       };
       targets = [
         {
+          inherit expr legendFormat;
+          refId = "A";
+        }
+      ];
+    };
+
+  userIoSelectedRangePanel =
+    {
+      title,
+      description,
+      x,
+      expr,
+    }:
+    {
+      type = "stat";
+      inherit title description;
+      gridPos = {
+        h = 8;
+        w = 12;
+        inherit x;
+        y = 56;
+      };
+      fieldConfig.defaults = {
+        unit = "decbytes";
+        color.mode = "palette-classic";
+      };
+      options = {
+        reduceOptions.calcs = [ "lastNotNull" ];
+        colorMode = "value";
+        graphMode = "none";
+        textMode = "auto";
+      };
+      targets = [
+        {
           inherit expr;
+          instant = true;
+          range = false;
           legendFormat = "{{user}} · {{device}}";
           refId = "A";
         }
@@ -734,55 +771,126 @@ in
       instant = true;
     })
 
-    # Row 8: Per-user physical disk I/O
+    # Row 8: Cgroup-attributed and residual physical disk I/O. Filesystem
+    # metadata and kernel writeback are not always charged to a child cgroup,
+    # so expose the whole-device remainder instead of silently dropping it.
     (userIoTimeseriesPanel {
-      title = "Write Throughput by User and Drive";
-      description = "Five-minute write throughput grouped by login user and physical drive; system services are labelled system";
+      title = "Physical Write Attribution by Drive";
+      description = "Five-minute physical write throughput. Named users and system are cgroup-attributed; unattributed is the nonnegative remainder of the whole-device counter and includes filesystem metadata and kernel writeback.";
       x = 0;
       unit = "Bps";
-      expr = "sum by (user, device) (user_cgroup_io_write_bytes_per_second)";
+      expr = ''
+        sum by (user, device) (
+          user_cgroup_io_write_bytes_per_second{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}
+        )
+        or label_replace(
+          node_disk_unattributed_write_bytes_per_second,
+          "user", "unattributed", "", ""
+        )
+      '';
     })
     (userIoTimeseriesPanel {
-      title = "Write IOPS by User and Drive";
-      description = "Five-minute write-operation rate grouped by login user and physical drive";
+      title = "Physical Read Attribution by Drive";
+      description = "Five-minute physical read throughput. Named users and system are cgroup-attributed; unattributed is the nonnegative remainder of the whole-device counter.";
       x = 12;
-      unit = "iops";
-      expr = "sum by (user, device) (user_cgroup_io_write_operations_per_second)";
+      unit = "Bps";
+      expr = ''
+        sum by (user, device) (
+          user_cgroup_io_read_bytes_per_second{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}
+        )
+        or label_replace(
+          node_disk_unattributed_read_bytes_per_second,
+          "user", "unattributed", "", ""
+        )
+      '';
     })
 
-    # Row 9: Per-user selected-range totals
-    {
-      type = "stat";
-      title = "Written by User and Drive — Selected Range";
-      description = "Exact increase over the dashboard-selected range attributed through cgroup-v2 user slices";
-      gridPos = {
-        h = 8;
-        w = 24;
-        x = 0;
-        y = 56;
-      };
-      fieldConfig.defaults = {
-        unit = "decbytes";
-        color.mode = "palette-classic";
-      };
-      options = {
-        reduceOptions.calcs = [ "lastNotNull" ];
-        colorMode = "value";
-        graphMode = "none";
-        textMode = "auto";
-      };
-      targets = [
-        {
-          expr = ''sum by (user, device) (increase(user_cgroup_io_write_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range]))'';
-          instant = true;
-          range = false;
-          legendFormat = "{{user}} · {{device}}";
-          refId = "A";
-        }
-      ];
-    }
+    # Row 9: Selected-range totals with the same explicit residual.
+    (userIoSelectedRangePanel {
+      title = "Physical Writes by Source — Selected Range";
+      description = "Cgroup-attributed writes plus the whole-device remainder. The series sum to the kernel physical-write counter for each drive.";
+      x = 0;
+      expr = ''
+        sum by (user, device) (
+          increase(user_cgroup_io_write_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+        )
+        or label_replace(
+          clamp_min(
+            increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+              - on (device) (
+                sum by (device) (
+                  increase(user_cgroup_io_write_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+                )
+                or sum by (device) (
+                  increase(node_disk_written_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+                ) * 0
+              ),
+            0
+          ),
+          "user", "unattributed", "", ""
+        )
+      '';
+    })
+    (userIoSelectedRangePanel {
+      title = "Physical Reads by Source — Selected Range";
+      description = "Cgroup-attributed reads plus the whole-device remainder. The series sum to the kernel physical-read counter for each drive.";
+      x = 12;
+      expr = ''
+        sum by (user, device) (
+          increase(user_cgroup_io_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+        )
+        or label_replace(
+          clamp_min(
+            increase(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+              - on (device) (
+                sum by (device) (
+                  increase(user_cgroup_io_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+                )
+                or sum by (device) (
+                  increase(node_disk_read_bytes_total{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}[$__range])
+                ) * 0
+              ),
+            0
+          ),
+          "user", "unattributed", "", ""
+        )
+      '';
+    })
 
-    # Row 10: SMART Attributes (for SATA drives)
+    # Row 10: Per-service I/O. Service cgroups are descendants of system.slice,
+    # so these panels diagnose the system aggregate and are never added to it.
+    (userIoTimeseriesPanel {
+      title = "System Service Write Throughput";
+      description = "Top systemd services by cgroup-charged physical writes. Filesystem metadata and kernel writeback remain in the unattributed series above.";
+      x = 0;
+      y = 64;
+      unit = "Bps";
+      expr = ''
+        topk(15,
+          sum by (unit, device) (
+            systemd_service_cgroup_io_write_bytes_per_second{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}
+          )
+        )
+      '';
+      legendFormat = "{{unit}} · {{device}}";
+    })
+    (userIoTimeseriesPanel {
+      title = "System Service Read Throughput";
+      description = "Top systemd services by cgroup-charged physical reads.";
+      x = 12;
+      y = 64;
+      unit = "Bps";
+      expr = ''
+        topk(15,
+          sum by (unit, device) (
+            systemd_service_cgroup_io_read_bytes_per_second{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"}
+          )
+        )
+      '';
+      legendFormat = "{{unit}} · {{device}}";
+    })
+
+    # Row 11: SMART Attributes (for SATA drives)
     {
       type = "table";
       title = "SMART Attributes";
@@ -791,7 +899,7 @@ in
         h = 10;
         w = 24;
         x = 0;
-        y = 64;
+        y = 72;
       };
 
       targets = [
