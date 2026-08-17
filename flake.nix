@@ -177,12 +177,24 @@
             builtins.concatStringsSep "\n" cfg.services.prometheus.rules
           );
           collector = cfg.systemd.services.prometheus-user-cgroup-io.serviceConfig.ExecStart;
+          alertmanagerConfig = pkgs.writeText "alertmanager.json" (
+            builtins.toJSON cfg.services.prometheus.alertmanager.configuration
+          );
+          alertmanagerWiring = pkgs.writeText "alertmanager-wiring.json" (
+            builtins.toJSON {
+              inherit (cfg.services.prometheus) alertmanagers;
+              conditions = cfg.systemd.services.alertmanager.unitConfig.ConditionPathExists;
+              credentials = cfg.systemd.services.alertmanager.serviceConfig.LoadCredential;
+            }
+          );
         in
         pkgs.runCommand "disk-io-attribution-config-check"
           {
             nativeBuildInputs = [
+              pkgs.envsubst
               pkgs.jq
               pkgs.prometheus.cli
+              cfg.services.prometheus.alertmanager.package
             ];
           }
           ''
@@ -201,6 +213,31 @@
             grep -F 'systemd_service_cgroup_io_read_bytes_per_second' ${rules}
             grep -F 'alert: PhysicalDiskWriteRateHigh' ${rules}
             grep -F 'alert: UnattributedDiskWriteRateHigh' ${rules}
+            grep -F 'alert: PhysicalDiskWrites24hWarning' ${rules}
+            grep -F 'alert: PhysicalDiskWrites24hCritical' ${rules}
+            grep -F 'alert: UnattributedDiskWrites24hWarning' ${rules}
+            grep -F 'alert: UnattributedDiskWrites24hCritical' ${rules}
+
+            alertmanager_fixture="$TMPDIR/alertmanager-fixture"
+            mkdir -p "$alertmanager_fixture"
+            printf '%s\n' '123456789:fixture-token' > "$alertmanager_fixture/telegram-bot-token"
+            printf '%s\n' '123456789' > "$alertmanager_fixture/telegram-chat-id"
+            CREDENTIALS_DIRECTORY="$alertmanager_fixture" \
+              envsubst -i ${alertmanagerConfig} -o "$alertmanager_fixture/alertmanager.json"
+            amtool check-config "$alertmanager_fixture/alertmanager.json"
+            jq -e '
+              .route.group_by == ["category"] and
+              .route.group_wait == "5m" and
+              .route.group_interval == "1h" and
+              .route.repeat_interval == "24h" and
+              any(.receivers[]; .name == "telegram-silent") and
+              any(.receivers[]; .name == "telegram-critical")
+            ' "$alertmanager_fixture/alertmanager.json" >/dev/null
+            jq -e '
+              .alertmanagers[0].static_configs[0].targets == ["127.0.0.1:9093"] and
+              (.conditions | length) == 2 and
+              (.credentials | length) == 2
+            ' ${alertmanagerWiring} >/dev/null
 
             fixture="$TMPDIR/cgroup-fixture"
             mkdir -p \

@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   pkgs,
   lib,
   ...
@@ -7,6 +8,11 @@
 
 let
   cfg = config.custom_modules.monitoring;
+  # Alertmanager's UI toolchain is expensive under the host-wide znver3
+  # package set. The architecture-generic build is functionally identical and
+  # available from the official binary cache.
+  alertmanagerPackage =
+    inputs.nixpkgs-unpatched.legacyPackages.${pkgs.stdenv.hostPlatform.system}.prometheus-alertmanager;
 
   # Import dashboard definitions
   dashboards = {
@@ -227,6 +233,16 @@ in
                   expr: increase(user_cgroup_io_write_bytes_total[1d])
                 - record: user_cgroup_io_read_bytes_1d
                   expr: increase(user_cgroup_io_read_bytes_total[1d])
+                - record: node_disk_unattributed_written_bytes_1d
+                  expr: >-
+                    clamp_min(
+                      node_disk_written_bytes_1d
+                        - on (device) (
+                          sum by (device) (user_cgroup_io_written_bytes_1d{device=~"nvme[0-9]+n[0-9]+|sd[a-z]+"})
+                          or sum by (device) (node_disk_written_bytes_1d) * 0
+                        ),
+                      0
+                    )
                 - record: systemd_service_cgroup_io_write_bytes_per_second
                   expr: rate(systemd_service_cgroup_io_write_bytes_total[5m])
                 - record: systemd_service_cgroup_io_read_bytes_per_second
@@ -271,6 +287,7 @@ in
                   labels:
                     severity: warning
                     category: storage
+                    signal: physical-rate
                   annotations:
                     summary: "Sustained high physical writes on {{ $labels.device }}"
                     description: "Physical writes on {{ $labels.device }} have exceeded 50 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
@@ -282,10 +299,124 @@ in
                   labels:
                     severity: warning
                     category: storage
+                    signal: unattributed-rate
                   annotations:
                     summary: "Sustained unattributed writes on {{ $labels.device }}"
                     description: "Filesystem or kernel writes not charged to a monitored cgroup on {{ $labels.device }} have exceeded 25 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
+                - alert: PhysicalDiskWrites24hWarning
+                  expr: node_disk_written_bytes_1d > 500000000000
+                  for: 10m
+                  labels:
+                    severity: warning
+                    category: storage
+                    signal: physical-volume
+                  annotations:
+                    summary: "More than 500 GB written to {{ $labels.device }} in 24 hours"
+                    description: "Physical writes to {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                - alert: PhysicalDiskWrites24hCritical
+                  expr: node_disk_written_bytes_1d > 1000000000000
+                  for: 10m
+                  labels:
+                    severity: critical
+                    category: storage
+                    signal: physical-volume
+                  annotations:
+                    summary: "More than 1 TB written to {{ $labels.device }} in 24 hours"
+                    description: "Physical writes to {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                - alert: UnattributedDiskWrites24hWarning
+                  expr: node_disk_unattributed_written_bytes_1d > 500000000000
+                  for: 10m
+                  labels:
+                    severity: warning
+                    category: storage
+                    signal: unattributed-volume
+                  annotations:
+                    summary: "More than 500 GB of unattributed writes on {{ $labels.device }}"
+                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                - alert: UnattributedDiskWrites24hCritical
+                  expr: node_disk_unattributed_written_bytes_1d > 1000000000000
+                  for: 10m
+                  labels:
+                    severity: critical
+                    category: storage
+                    signal: unattributed-volume
+                  annotations:
+                    summary: "More than 1 TB of unattributed writes on {{ $labels.device }}"
+                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value }} bytes."
         ''
+      ];
+
+      # Telegram delivery is intentionally low-noise: warnings are silent,
+      # critical alerts may notify normally, related storage alerts are grouped,
+      # and an unresolved incident repeats at most once per day. Runtime
+      # credentials are supplied through systemd LoadCredential below and never
+      # enter the Nix store.
+      alertmanager = {
+        enable = true;
+        package = alertmanagerPackage;
+        listenAddress = "127.0.0.1";
+        openFirewall = false;
+        checkConfig = false;
+        configuration = {
+          global.resolve_timeout = "5m";
+          route = {
+            receiver = "telegram-silent";
+            group_by = [ "category" ];
+            group_wait = "5m";
+            group_interval = "1h";
+            repeat_interval = "24h";
+            routes = [
+              {
+                receiver = "telegram-critical";
+                matchers = [ ''severity="critical"'' ];
+              }
+            ];
+          };
+          inhibit_rules = [
+            {
+              source_matchers = [ ''severity="critical"'' ];
+              target_matchers = [ ''severity="warning"'' ];
+              equal = [
+                "category"
+                "device"
+                "signal"
+              ];
+            }
+          ];
+          receivers = [
+            {
+              name = "telegram-silent";
+              telegram_configs = [
+                {
+                  bot_token_file = "$CREDENTIALS_DIRECTORY/telegram-bot-token";
+                  chat_id_file = "$CREDENTIALS_DIRECTORY/telegram-chat-id";
+                  disable_notifications = true;
+                  send_resolved = true;
+                  parse_mode = "HTML";
+                }
+              ];
+            }
+            {
+              name = "telegram-critical";
+              telegram_configs = [
+                {
+                  bot_token_file = "$CREDENTIALS_DIRECTORY/telegram-bot-token";
+                  chat_id_file = "$CREDENTIALS_DIRECTORY/telegram-chat-id";
+                  disable_notifications = false;
+                  send_resolved = true;
+                  parse_mode = "HTML";
+                }
+              ];
+            }
+          ];
+        };
+      };
+      alertmanagers = [
+        {
+          static_configs = [
+            { targets = [ "127.0.0.1:9093" ]; }
+          ];
+        }
       ];
 
       exporters.node = {
@@ -371,7 +502,23 @@ in
 
     systemd.tmpfiles.rules = [
       "d /var/lib/node_exporter/textfile_collector 0777 root root -"
+      "d /var/lib/alertmanager-secrets 0700 root root -"
     ];
+
+    # Keep Telegram credentials outside the store. Missing credentials skip
+    # Alertmanager cleanly rather than breaking activation; after installing
+    # both files, starting alertmanager.service enables delivery immediately.
+    systemd.services.alertmanager = {
+      after = [ "systemd-tmpfiles-setup.service" ];
+      unitConfig.ConditionPathExists = [
+        "/var/lib/alertmanager-secrets/telegram-bot-token"
+        "/var/lib/alertmanager-secrets/telegram-chat-id"
+      ];
+      serviceConfig.LoadCredential = [
+        "telegram-bot-token:/var/lib/alertmanager-secrets/telegram-bot-token"
+        "telegram-chat-id:/var/lib/alertmanager-secrets/telegram-chat-id"
+      ];
+    };
 
     # node_exporter has no per-user disk collector. Export the recursive
     # cgroup-v2 counters from each user slice, plus system and machine slices,
