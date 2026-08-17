@@ -139,6 +139,29 @@
         ];
       };
 
+      # Regression check for the network monitor's documented collection and
+      # bounded-retention policy.
+      checks.x86_64-linux.network-monitor-config =
+        let
+          cfg = self.nixosConfigurations.desktop.config;
+          pkgs = myLib.x86_64-linux.pkgs;
+          timer = cfg.systemd.timers.systemd-net-logger.timerConfig;
+          rotation = cfg.services.logrotate.settings.systemd-network-csv;
+        in
+        pkgs.runCommand "network-monitor-config-check"
+          {
+            nativeBuildInputs = [ pkgs.gnugrep ];
+          }
+          ''
+            test ${lib.escapeShellArg timer.OnCalendar} = '*:0/1'
+            test ${toString rotation.rotate} -eq 31
+            test ${lib.escapeShellArg rotation.frequency} = daily
+            test ${lib.escapeShellArg (lib.boolToString rotation.compress)} = true
+            grep -F '"/var/log/network/systemd.csv"' ${cfg.services.logrotate.configFile}
+            grep -F 'maxsize 25M' ${cfg.services.logrotate.configFile}
+            touch "$out"
+          '';
+
       # Hydra CI jobs
       hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
 

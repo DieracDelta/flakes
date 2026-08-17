@@ -18,23 +18,38 @@ let
       ''
         import pandas as pd
         import argparse
+        import os
         import sys
         from datetime import datetime, timedelta
+        from pathlib import Path
 
-        LOG_FILE = "/var/log/network/systemd.csv"
+        LOG_DIR = Path(os.environ.get("NET_SUMMARY_LOG_DIR", "/var/log/network"))
+        LOG_PATTERN = "systemd.csv*"
 
         def get_data(hours):
-            try:
-                # Read CSV. We don't rely on automatic parsing in read_csv
-                # to ensure we can control the UTC conversion explicitly below.
-                df = pd.read_csv(LOG_FILE)
-            except FileNotFoundError:
-                print(f"Error: Log file {LOG_FILE} not found. Wait for the hourly timer to run.")
+            log_files = sorted(LOG_DIR.glob(LOG_PATTERN))
+            if not log_files:
+                print(
+                    f"Error: No {LOG_PATTERN} files found in {LOG_DIR}. "
+                    "Wait for the one-minute timer to run."
+                )
                 sys.exit(1)
 
-            # Convert timestamp column to timezone-aware UTC
-            # This handles the mixed offsets (e.g. -05:00) provided by `date -Iseconds`
-            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+            frames = []
+            for log_file in log_files:
+                try:
+                    # compression='infer' reads both the current CSV and rotated .gz files.
+                    frame = pd.read_csv(log_file, compression='infer')
+                except pd.errors.EmptyDataError:
+                    continue
+                frame['timestamp'] = pd.to_datetime(frame['timestamp'], utc=True)
+                frames.append(frame)
+
+            if not frames:
+                print("No network history found in the retained CSV files.")
+                sys.exit(0)
+
+            df = pd.concat(frames, ignore_index=True)
 
             # Generate the start time as timezone-aware UTC
             start_time = pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=hours)
@@ -140,7 +155,7 @@ in
     ];
 
     systemd.services.systemd-net-logger = {
-      description = "Log Systemd IP Counters to CSV";
+      description = "Export systemd IP counters to Prometheus and bounded CSV history";
       serviceConfig.Type = "oneshot";
 
       # 1. Provide necessary tools
@@ -159,7 +174,8 @@ in
         # Ensure directory exists
         mkdir -p "$(dirname "$PROM_TMP")"
 
-        if [ ! -f "$LOG_FILE" ]; then
+        # logrotate creates an empty replacement after each daily rotation.
+        if [ ! -s "$LOG_FILE" ]; then
           echo "timestamp,unit,ingress_bytes,egress_bytes" > "$LOG_FILE"
         fi
 
@@ -208,14 +224,31 @@ in
       '';
     };
 
-    # 4. The Timer (Runs exactly at :00 every hour)
+    # Keep one-minute samples: the network dashboard uses five-minute irate
+    # windows, and hourly collection would leave those panels mostly empty.
     systemd.timers.systemd-net-logger = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "*:0/1";
-        Persistent = true; # Run immediately if we missed the last hour while off
+        Persistent = true; # Run once after startup if a minute was missed.
         Unit = "systemd-net-logger.service";
       };
+    };
+
+    # The CSV backs the local net-summary CLI. At the observed growth rate of
+    # roughly 5 MiB/day, 31 daily archives bound raw retention near 160 MiB
+    # before compression while Prometheus remains the long-term history store.
+    services.logrotate.settings.systemd-network-csv = {
+      files = [ "/var/log/network/systemd.csv" ];
+      frequency = "daily";
+      rotate = 31;
+      compress = true;
+      delaycompress = false;
+      dateext = true;
+      maxsize = "25M";
+      missingok = true;
+      notifempty = true;
+      create = "0644 root root";
     };
 
     services.vnstat.enable = true;
