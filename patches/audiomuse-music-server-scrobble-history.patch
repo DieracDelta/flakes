@@ -1,15 +1,3 @@
-diff --git a/music-server-backend/main.go b/music-server-backend/main.go
-index bb9b339..743c5b3 100644
---- a/music-server-backend/main.go
-+++ b/music-server-backend/main.go
-@@ -166,6 +166,7 @@ func main() {
- 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsPlaylist", subsonicHLSPlaylist) // NEW: HLS playlist
- 		subsonicCompatibilityHandler(subsonic, "GET", "/hlsSegment", subsonicHLSSegment)   // NEW: HLS segments
- 		subsonicCompatibilityHandler(subsonic, "GET", "/scrobble", subsonicScrobble)
-+		subsonicCompatibilityHandler(subsonic, "GET", "/getNowPlaying", subsonicGetNowPlaying)
- 
- 		// Browsing endpoints
- 		subsonicCompatibilityHandler(subsonic, "GET", "/getMusicFolders", subsonicGetMusicFolders)
 diff --git a/music-server-backend/models.go b/music-server-backend/models.go
 index 99ec6ee..e262aff 100644
 --- a/music-server-backend/models.go

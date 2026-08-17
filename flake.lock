@@ -2660,8 +2660,8 @@
         "nixpkgs": "nixpkgs_18"
       },
       "locked": {
-        "lastModified": 1786110560,
-        "narHash": "sha256-F+u/JWo+gTXyN3vugjq53LZPXYb6I+bkotF5OlTani8=",
+        "lastModified": 1786973579,
+        "narHash": "sha256-yapYEso6XNUOWnShq8JB3tq747wehOlEsy4MG9sWx3k=",
         "path": "/home/jrestivo/dev/rotki-1.43.2-upgrade",
         "type": "path"
       },

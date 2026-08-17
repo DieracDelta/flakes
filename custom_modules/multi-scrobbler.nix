@@ -157,6 +157,11 @@ in
         pkgs.jq
       ];
 
+      unitConfig = {
+        StartLimitIntervalSec = "5min";
+        StartLimitBurst = 5;
+      };
+
       environment = {
         NODE_ENV = "production";
         DEBUG_MODE = "false";
@@ -251,6 +256,24 @@ in
             "$base_file" > "$tmp_file"
           install -m 0600 "$tmp_file" "$cfg_file"
         fi
+      '';
+
+      postStart = ''
+        healthy=0
+        for attempt in $(seq 1 30); do
+          if ${lib.getExe pkgs.curl} --max-time 2 --silent --show-error --output /dev/null \
+            "http://127.0.0.1:${toString cfg.port}/"; then
+            healthy=$((healthy + 1))
+            if [ "$healthy" -ge 5 ]; then
+              exit 0
+            fi
+          else
+            healthy=0
+          fi
+          sleep 1
+        done
+        echo "Multi-scrobbler did not remain healthy for five consecutive probes within 30 seconds" >&2
+        exit 1
       '';
 
       serviceConfig = {

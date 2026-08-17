@@ -8,6 +8,12 @@ with lib;
 let
   cfg = config.services.audiomuse-ai-music-server;
   sqlString = value: replaceStrings [ "'" ] [ "''" ] (toString value);
+  jwtSecretFile = "${cfg.dataDir}/jwt-secret";
+  serverStart = pkgs.writeShellScript "audiomuse-ai-music-server-start" ''
+    set -euo pipefail
+    export JWT_SECRET="$(${pkgs.coreutils}/bin/cat "${jwtSecretFile}")"
+    exec ${cfg.package}/bin/audiomuse-ai-music-server
+  '';
 in
 {
   options.services.audiomuse-ai-music-server = {
@@ -138,6 +144,11 @@ in
       after = [ "network.target" ] ++ optional config.services.audiomuse-ai.enable "audiomuse-ai.service";
       wants = optional config.services.audiomuse-ai.enable "audiomuse-ai.service";
 
+      unitConfig = {
+        StartLimitIntervalSec = "5min";
+        StartLimitBurst = 5;
+      };
+
       environment = {
         PORT = toString cfg.port;
         DATABASE_PATH = "${cfg.dataDir}/music.db";
@@ -152,6 +163,16 @@ in
 
       preStart = ''
         set -euo pipefail
+
+        if [ ! -s "${jwtSecretFile}" ]; then
+          secret_tmp="${jwtSecretFile}.tmp.$$"
+          trap 'rm -f "$secret_tmp"' EXIT
+          umask 0077
+          ${lib.getExe pkgs.openssl} rand -hex 32 > "$secret_tmp"
+          chmod 0600 "$secret_tmp"
+          mv -f "$secret_tmp" "${jwtSecretFile}"
+          trap - EXIT
+        fi
 
         ${pkgs.sqlite}/bin/sqlite3 "${cfg.dataDir}/music.db" <<'SQL'
         CREATE TABLE IF NOT EXISTS configuration (
@@ -182,14 +203,33 @@ in
         SQL
       '';
 
+      postStart = ''
+        healthy=0
+        for attempt in $(seq 1 60); do
+          if ${lib.getExe pkgs.curl} --max-time 2 --fail --silent --show-error --output /dev/null \
+            "http://127.0.0.1:${toString cfg.port}/rest/ping.view?f=json&v=1.16.1&c=nixos"; then
+            healthy=$((healthy + 1))
+            if [ "$healthy" -ge 5 ]; then
+              exit 0
+            fi
+          else
+            healthy=0
+          fi
+          sleep 1
+        done
+        echo "AudioMuse MusicServer did not pass five consecutive ping checks within 60 seconds" >&2
+        exit 1
+      '';
+
       serviceConfig = {
         Type = "simple";
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = cfg.dataDir;
-        ExecStart = "${cfg.package}/bin/audiomuse-ai-music-server";
+        ExecStart = serverStart;
         Restart = "on-failure";
         RestartSec = "10s";
+        UMask = "0077";
 
         NoNewPrivileges = true;
         PrivateTmp = true;

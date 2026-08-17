@@ -1,0 +1,496 @@
+diff --git a/src/lean_lsp_mcp/client_utils.py b/src/lean_lsp_mcp/client_utils.py
+index b3149f6..0feeced 100644
+--- a/src/lean_lsp_mcp/client_utils.py
++++ b/src/lean_lsp_mcp/client_utils.py
+@@ -13,12 +13,14 @@ from lean_lsp_mcp.file_utils import (
+     resolve_input_path,
+     valid_lean_project_path,
+ )
++from lean_lsp_mcp.devshell import leanclient_subprocess_for_project
+ from lean_lsp_mcp.utils import OutputCapture
+ 
+ 
+ logger = get_logger(__name__)
+ CLIENT_LOCK = Lock()
+ _ACTIVE_TRANSPORT_ENV = "LEAN_LSP_MCP_ACTIVE_TRANSPORT"
++_ALLOW_PROJECT_SWITCHING_ENV = "LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING"
+ _shared_clients: dict[Path, LeanLSPClient] = {}
+ _builds_in_progress: set[Path] = set()
+ 
+@@ -41,6 +43,9 @@ def _project_switching_allowed(ctx: Context | None = None) -> bool:
+         explicit = getattr(lifespan, "project_switching_allowed", None)
+         if explicit is not None:
+             return bool(explicit)
++    explicit_env = os.environ.get(_ALLOW_PROJECT_SWITCHING_ENV)
++    if explicit_env is not None:
++        return explicit_env.strip().lower() in {"1", "true", "yes", "on"}
+     return _active_transport(ctx) == "stdio"
+ 
+ 
+@@ -124,12 +129,13 @@ def _start_client(project_path: Path) -> LeanLSPClient:
+     prevent_cache = bool(os.environ.get("LEAN_LSP_TEST_MODE"))
+     try:
+         with OutputCapture() as output:
+-            client = LeanLSPClient(
+-                project_path,
+-                initial_build=False,
+-                prevent_cache_get=prevent_cache,
+-                max_opened_files=_max_opened_files(),
+-            )
++            with leanclient_subprocess_for_project(project_path):
++                client = LeanLSPClient(
++                    project_path,
++                    initial_build=False,
++                    prevent_cache_get=prevent_cache,
++                    max_opened_files=_max_opened_files(),
++                )
+             logger.info("Shared LSP client connected at %s", project_path)
+         build_output = output.get_output()
+         if build_output:
+diff --git a/src/lean_lsp_mcp/file_utils.py b/src/lean_lsp_mcp/file_utils.py
+index 9c266d9..de9d42f 100644
+--- a/src/lean_lsp_mcp/file_utils.py
++++ b/src/lean_lsp_mcp/file_utils.py
+@@ -7,6 +7,8 @@ from functools import lru_cache
+ from pathlib import Path
+ from typing import Optional
+ 
++from lean_lsp_mcp.devshell import run_for_project
++
+ 
+ _LAKEFILE_NAMES = ("lakefile.lean", "lakefile.toml")
+ _STDLIB_DISPLAY_ROOT = ".lean-stdlib"
+@@ -97,7 +99,8 @@ def require_lean_project_path(path: Path | str) -> Path:
+ @lru_cache(maxsize=16)
+ def _stdlib_src_root(project_root: str) -> Path | None:
+     try:
+-        completed = subprocess.run(
++        completed = run_for_project(
++            project_root,
+             ["lean", "--print-prefix"],
+             capture_output=True,
+             text=True,
+diff --git a/src/lean_lsp_mcp/profile_utils.py b/src/lean_lsp_mcp/profile_utils.py
+index 8436d65..2202cce 100644
+--- a/src/lean_lsp_mcp/profile_utils.py
++++ b/src/lean_lsp_mcp/profile_utils.py
+@@ -7,6 +7,7 @@ import tempfile
+ from collections import defaultdict
+ from pathlib import Path
+ 
++from lean_lsp_mcp.devshell import create_subprocess_exec_for_project
+ from lean_lsp_mcp.models import LineProfile, ProofProfileResult
+ 
+ _TRACE_RE = re.compile(r"^(\s*)\[([^\]]+)\]\s+\[([\d.]+)\]\s+(.+)$")
+@@ -161,7 +162,8 @@ async def _run_lean_profile(file_path: Path, project_path: Path, timeout: float)
+     Uses start_new_session so lake/elan/lean share a process group that we
+     can kill as a unit.  Without this, lean survives as an orphan (~2.5 GB).
+     """
+-    proc = await asyncio.create_subprocess_exec(
++    proc = await create_subprocess_exec_for_project(
++        project_path,
+         "lake",
+         "env",
+         "lean",
+diff --git a/src/lean_lsp_mcp/repl.py b/src/lean_lsp_mcp/repl.py
+index 0964f3a..0345c16 100644
+--- a/src/lean_lsp_mcp/repl.py
++++ b/src/lean_lsp_mcp/repl.py
+@@ -9,6 +9,8 @@ import platform
+ from dataclasses import dataclass, field
+ from typing import Any
+ 
++from lean_lsp_mcp.devshell import create_subprocess_exec_for_project
++
+ if platform.system() != "Windows":
+     import resource
+ 
+@@ -105,8 +107,8 @@ class Repl:
+                 limit = resource.RLIMIT_RSS  # Resident set size
+             mem = self.mem_mb * 1024 * 1024
+             kwargs["preexec_fn"] = lambda: resource.setrlimit(limit, (mem, mem))
+-        self._proc = await asyncio.create_subprocess_exec(
+-            "lake", "env", self.repl_path, **kwargs
++        self._proc = await create_subprocess_exec_for_project(
++            self.project_dir, "lake", "env", self.repl_path, **kwargs
+         )
+ 
+     async def _send(self, cmd: dict[str, Any]) -> dict[str, Any]:
+diff --git a/src/lean_lsp_mcp/server.py b/src/lean_lsp_mcp/server.py
+index 656a96b..ea41690 100644
+--- a/src/lean_lsp_mcp/server.py
++++ b/src/lean_lsp_mcp/server.py
+@@ -38,6 +38,10 @@ from lean_lsp_mcp.client_utils import (
+     setup_client_for_file,
+     startup_client,
+ )
++from lean_lsp_mcp.devshell import (
++    create_subprocess_exec_for_project,
++    leanclient_subprocess_for_project,
++)
+ from lean_lsp_mcp.file_utils import (
+     build_lean_path_policy,
+     get_file_contents,
+@@ -102,7 +106,7 @@ from lean_lsp_mcp.utils import (
+     extract_goals_list,
+     extract_range,
+     filter_diagnostics_by_position,
+-    find_start_position,
++    find_all_positions,
+     get_declaration_range,
+     is_build_stderr,
+ )
+@@ -586,7 +590,9 @@ async def _run_build(
+ 
+     async def _run_proc(*args: str, **kwargs) -> asyncio.subprocess.Process:
+         nonlocal active_proc
+-        proc = await asyncio.create_subprocess_exec(*args, **kwargs)
++        proc = await create_subprocess_exec_for_project(
++            lean_project_path_obj, *args, **kwargs
++        )
+         active_proc = proc
+         return proc
+ 
+@@ -694,12 +700,13 @@ async def _run_build(
+ 
+         # Start LSP client (without initial build since we just did it)
+         with OutputCapture():
+-            client = LeanLSPClient(
+-                lean_project_path_obj,
+-                initial_build=False,
+-                prevent_cache_get=True,
+-                max_opened_files=_max_opened_files(),
+-            )
++            with leanclient_subprocess_for_project(lean_project_path_obj):
++                client = LeanLSPClient(
++                    lean_project_path_obj,
++                    initial_build=False,
++                    prevent_cache_get=True,
++                    max_opened_files=_max_opened_files(),
++                )
+ 
+         logger.info("Built project and re-started LSP client")
+         with CLIENT_LOCK:
+@@ -1342,16 +1349,21 @@ def declaration_file(
+     client.open_file(rel_path)
+     orig_file_content = client.get_file_content(rel_path)
+ 
+-    # Find the first occurence of the symbol (line and column) in the file
+-    position = find_start_position(orig_file_content, symbol)
+-    if not position:
++    # Find all occurrences of the symbol and try each until one yields a declaration.
++    # This skips comment/docstring hits where LSP returns no declarations.
++    positions = find_all_positions(orig_file_content, symbol)
++    if not positions:
+         raise LeanToolError(
+             f"Symbol `{symbol}` (case sensitive) not found in file. Add it first."
+         )
+ 
+-    declaration = client.get_declarations(
+-        rel_path, position["line"], position["column"]
+-    )
++    declaration = []
++    for position in positions:
++        declaration = client.get_declarations(
++            rel_path, position["line"], position["column"]
++        )
++        if declaration:
++            break
+ 
+     if len(declaration) == 0:
+         raise LeanToolError(f"No declaration available for `{symbol}`.")
+diff --git a/src/lean_lsp_mcp/utils.py b/src/lean_lsp_mcp/utils.py
+index 667535d..77a5554 100644
+--- a/src/lean_lsp_mcp/utils.py
++++ b/src/lean_lsp_mcp/utils.py
+@@ -254,6 +254,29 @@ def find_start_position(content: str, query: str) -> dict | None:
+     return None
+ 
+ 
++def find_all_positions(content: str, query: str) -> List[dict]:
++    """Find all positions of the query in the content.
++
++    Args:
++        content (str): The content to search in.
++        query (str): The query to find.
++
++    Returns:
++        List[dict]: All positions of the query. Each is {"line": int, "column": int}.
++    """
++    positions = []
++    lines = content.splitlines()
++    for line_number, line in enumerate(lines):
++        start = 0
++        while True:
++            char_index = line.find(query, start)
++            if char_index == -1:
++                break
++            positions.append({"line": line_number, "column": char_index})
++            start = char_index + 1
++    return positions
++
++
+ def format_line(
+     file_content: str,
+     line_number: int,
+diff --git a/src/lean_lsp_mcp/devshell.py b/src/lean_lsp_mcp/devshell.py
+new file mode 100644
+index 0000000..cc35af1
+--- /dev/null
++++ b/src/lean_lsp_mcp/devshell.py
+@@ -0,0 +1,255 @@
++from __future__ import annotations
++
++import asyncio
++import os
++import subprocess
++from contextlib import contextmanager
++from dataclasses import dataclass
++from functools import lru_cache
++from pathlib import Path
++from tempfile import NamedTemporaryFile
++from typing import Iterator, Sequence
++
++import psutil
++
++
++DEVSHELL_FILE = ".lean_mcp_devshell"
++
++
++@dataclass(frozen=True)
++class DevshellSpec:
++    config_path: Path
++    target: str
++    flake_ref: str
++
++
++def _first_config_line(config_path: Path) -> str | None:
++    for line in config_path.read_text(encoding="utf-8").splitlines():
++        stripped = line.strip()
++        if stripped and not stripped.startswith("#"):
++            return stripped
++    return None
++
++
++def _looks_like_flake_ref(value: str) -> bool:
++    return ":" in value or value.startswith(("/", "~"))
++
++
++def _normalize_flake_ref(target: str, config_dir: Path) -> str:
++    if target.startswith(".#"):
++        return f"{config_dir}{target[1:]}"
++    if target.startswith("#"):
++        return f"{config_dir}{target}"
++
++    if "#" in target:
++        path_part, fragment = target.split("#", 1)
++        if path_part in {"", "."}:
++            return f"{config_dir}#{fragment}"
++        if _looks_like_flake_ref(path_part):
++            return target
++        return f"{(config_dir / path_part).resolve(strict=False)}#{fragment}"
++
++    if _looks_like_flake_ref(target):
++        return target
++
++    return f"{config_dir}#{target}"
++
++
++def find_devshell(project_path: Path | str) -> DevshellSpec | None:
++    current = Path(project_path).expanduser().resolve(strict=False)
++    if current.is_file():
++        current = current.parent
++
++    for directory in (current, *current.parents):
++        config_path = directory / DEVSHELL_FILE
++        if not config_path.is_file():
++            continue
++        target = _first_config_line(config_path)
++        if target is None:
++            return None
++        return DevshellSpec(
++            config_path=config_path,
++            target=target,
++            flake_ref=_normalize_flake_ref(target, directory),
++        )
++
++    return None
++
++
++def command_for_project(
++    project_path: Path | str, command: Sequence[str | Path]
++) -> list[str]:
++    return [str(part) for part in command]
++
++
++def _decode_env_key_value(item: bytes) -> tuple[str, str] | None:
++    if not item or b"=" not in item:
++        return None
++    key, value = item.split(b"=", 1)
++    return (
++        key.decode(errors="surrogateescape"),
++        value.decode(errors="surrogateescape"),
++    )
++
++
++@lru_cache(maxsize=32)
++def _devshell_env(project_path: str) -> dict[str, str] | None:
++    project = Path(project_path).expanduser().resolve(strict=False)
++    spec = find_devshell(project)
++    if spec is None:
++        return None
++
++    with NamedTemporaryFile(prefix="lean-mcp-devshell-env-", delete=False) as env_file:
++        env_path = env_file.name
++
++    try:
++        completed = subprocess.run(
++            [
++                "nix",
++                "develop",
++                spec.flake_ref,
++                "-c",
++                "sh",
++                "-c",
++                'env -0 > "$1"',
++                "sh",
++                env_path,
++            ],
++            cwd=project,
++            stdout=subprocess.DEVNULL,
++            stderr=subprocess.PIPE,
++            text=True,
++            check=False,
++        )
++        if completed.returncode != 0:
++            raise RuntimeError(
++                f"Failed to evaluate Lean MCP devshell {spec.flake_ref}: "
++                f"{completed.stderr.strip()}"
++            )
++
++        env: dict[str, str] = {}
++        for item in Path(env_path).read_bytes().split(b"\0"):
++            decoded = _decode_env_key_value(item)
++            if decoded is not None:
++                key, value = decoded
++                env[key] = value
++        return env
++    finally:
++        try:
++            Path(env_path).unlink()
++        except FileNotFoundError:
++            pass
++
++
++def env_for_project(
++    project_path: Path | str, base_env: dict[str, str] | None = None
++) -> dict[str, str] | None:
++    env = _devshell_env(str(Path(project_path).expanduser().resolve(strict=False)))
++    if env is None:
++        return base_env
++
++    merged = os.environ.copy()
++    if base_env is not None:
++        merged.update(base_env)
++    merged.update(env)
++    return merged
++
++
++def _kwargs_with_project_env(project_path: Path | str, kwargs: dict) -> dict:
++    updated = dict(kwargs)
++    env = env_for_project(project_path, updated.get("env"))
++    if env is not None:
++        updated["env"] = env
++    return updated
++
++
++def run_for_project(
++    project_path: Path | str, command: Sequence[str | Path], **kwargs
++) -> subprocess.CompletedProcess:
++    return subprocess.run(
++        command_for_project(project_path, command),
++        **_kwargs_with_project_env(project_path, kwargs),
++    )
++
++
++def popen_for_project(
++    project_path: Path | str, command: Sequence[str | Path], **kwargs
++) -> subprocess.Popen:
++    return subprocess.Popen(
++        command_for_project(project_path, command),
++        **_kwargs_with_project_env(project_path, kwargs),
++    )
++
++
++async def create_subprocess_exec_for_project(
++    project_path: Path | str, *command: str | Path, **kwargs
++) -> asyncio.subprocess.Process:
++    return await asyncio.create_subprocess_exec(
++        *command_for_project(project_path, command),
++        **_kwargs_with_project_env(project_path, kwargs),
++    )
++
++
++class _ProjectSubprocessProxy:
++    def __init__(self, wrapped, project_path: Path | str) -> None:
++        self._wrapped = wrapped
++        self._project_path = project_path
++        self.processes: list[subprocess.Popen] = []
++
++    def __getattr__(self, name: str):
++        return getattr(self._wrapped, name)
++
++    def run(self, command: Sequence[str | Path], **kwargs):
++        return self._wrapped.run(
++            command_for_project(self._project_path, command),
++            **_kwargs_with_project_env(self._project_path, kwargs),
++        )
++
++    def Popen(self, command: Sequence[str | Path], **kwargs):
++        proc = self._wrapped.Popen(
++            command_for_project(self._project_path, command),
++            **_kwargs_with_project_env(self._project_path, kwargs),
++        )
++        self.processes.append(proc)
++        return proc
++
++
++def _terminate_process_tree(proc: subprocess.Popen) -> None:
++    if proc.poll() is not None:
++        return
++    try:
++        parent = psutil.Process(proc.pid)
++    except psutil.Error:
++        return
++
++    processes = parent.children(recursive=True) + [parent]
++    for process in processes:
++        try:
++            process.terminate()
++        except psutil.Error:
++            pass
++
++    gone, alive = psutil.wait_procs(processes, timeout=2)
++    _ = gone
++    for process in alive:
++        try:
++            process.kill()
++        except psutil.Error:
++            pass
++
++
++@contextmanager
++def leanclient_subprocess_for_project(project_path: Path | str) -> Iterator[None]:
++    import leanclient.base_client as base_client
++
++    original = base_client.subprocess
++    proxy = _ProjectSubprocessProxy(original, project_path)
++    base_client.subprocess = proxy
++    try:
++        yield
++    except Exception:
++        for proc in proxy.processes:
++            _terminate_process_tree(proc)
++        raise
++    finally:
++        base_client.subprocess = original

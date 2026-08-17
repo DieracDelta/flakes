@@ -263,6 +263,12 @@ in
         WHISPER_MODEL_PATH = "/var/lib/skynet/models/streaming-whisper";
       };
 
+      # Keep any future manual re-enable bounded if startup is still broken.
+      unitConfig = {
+        StartLimitIntervalSec = "5min";
+        StartLimitBurst = 5;
+      };
+
       serviceConfig = {
         ExecStart = "${lib.getExe pkgs.skynet}";
         Restart = "on-failure";

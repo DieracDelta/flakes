@@ -47,6 +47,29 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
 
+      unitConfig = {
+        StartLimitIntervalSec = "5min";
+        StartLimitBurst = 5;
+      };
+
+      postStart = ''
+        healthy=0
+        for attempt in $(seq 1 90); do
+          if ${lib.getExe pkgs.curl} --max-time 2 --silent --show-error --output /dev/null \
+            "http://127.0.0.1:${toString cfg.port}/"; then
+            healthy=$((healthy + 1))
+            if [ "$healthy" -ge 5 ]; then
+              exit 0
+            fi
+          else
+            healthy=0
+          fi
+          sleep 1
+        done
+        echo "Rotki did not remain healthy for five consecutive probes within 90 seconds" >&2
+        exit 1
+      '';
+
       serviceConfig = {
         Type = "simple";
         ExecStart = "${pkgs.rotki}/bin/rotkehlchen --rest-api-port ${toString cfg.port} --websockets-api-port ${toString cfg.wsPort} --data-dir ${cfg.dataDir} --api-host 127.0.0.1 --logtarget stdout";

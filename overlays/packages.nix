@@ -2300,6 +2300,43 @@ tmuxOverlay
       };
     };
 
+  # Lean LSP MCP server. Package the existing local feature work as a patch
+  # over its public upstream base instead of executing a mutable virtualenv.
+  lean-lsp-mcp = final.python313Packages.buildPythonApplication {
+    pname = "lean-lsp-mcp";
+    version = "0.26.2-local";
+    pyproject = true;
+
+    src = final.fetchFromGitHub {
+      owner = "oOo0oOo";
+      repo = "lean-lsp-mcp";
+      rev = "4b5f44d7100ae997f9bec8d2a4707b31ce5d4b13";
+      hash = "sha256-NWX+r6hz04WnSkERqVj57ruw47RhqOeEofYUaxuU/uM=";
+    };
+    patches = [ ../patches/lean-lsp-mcp-local.patch ];
+
+    build-system = [ final.python313Packages.setuptools ];
+    dependencies = with final.python313Packages; [
+      certifi
+      leanclient
+      mcp
+      orjson
+    ];
+
+    # The packaged Nixpkgs dependencies are newer compatible releases than
+    # the exact development pins in pyproject.toml.
+    dontCheckRuntimeDeps = true;
+    pythonImportsCheck = [ "lean_lsp_mcp" ];
+
+    meta = with final.lib; {
+      description = "Lean theorem prover MCP server";
+      homepage = "https://github.com/oOo0oOo/lean-lsp-mcp";
+      license = licenses.mit;
+      mainProgram = "lean-lsp-mcp";
+      platforms = platforms.linux;
+    };
+  };
+
   # Multi-scrobbler - scrobble from multiple sources to multiple clients
   # Upstream source with local subpath deployment fixes
   multi-scrobbler = (final.buildNpmPackage.override { nodejs = final.nodejs; }) {
@@ -2401,14 +2438,16 @@ tmuxOverlay
       cp -r node_modules $out/lib/multi-scrobbler/
       cp package.json $out/lib/multi-scrobbler/
 
-      # Copy source for tsx runtime (some files are still loaded from src)
+      # Node 24 executes the project's erasable TypeScript syntax natively.
+      # Upstream does not depend on `tsx`; injecting that loader made every
+      # service start fail with ERR_MODULE_NOT_FOUND.
       cp -r src $out/lib/multi-scrobbler/
 
       mkdir -p $out/bin
       cat > $out/bin/multi-scrobbler <<EOF
       #!${final.runtimeShell}
       cd $out/lib/multi-scrobbler
-      exec ${final.nodejs}/bin/node --import tsx src/backend/index.ts "\$@"
+      exec ${final.nodejs}/bin/node src/backend/index.ts "\$@"
       EOF
       chmod +x $out/bin/multi-scrobbler
 

@@ -91,7 +91,7 @@ let
       --http-port ${toString forgejoMcpPort} \
       --url http://127.0.0.1:${toString forgejoPort}
   '';
-  leanMcpBin = "/home/jrestivo/dev/lean-lsp-mcp/.venv/bin/lean-lsp-mcp";
+  leanMcpBin = lib.getExe pkgs.lean-lsp-mcp;
   leanMcpPort = 8212;
   leanMcpPath =
     lib.makeBinPath [
@@ -184,8 +184,8 @@ in
     enable = true;
     enableStreamingWhisper = false;
   };
-  # Keep the unit definition available, but do not start it automatically.
-  systemd.services.skynet.wantedBy = lib.mkForce [ ];
+  # Keep the source definition available, but mask the broken unit for now.
+  systemd.services.skynet.enable = false;
   custom_modules.dns.enable = true;
   custom_modules.taskwarrior.enable = true;
   custom_modules.calendar.enable = true;
@@ -272,19 +272,39 @@ in
     wantedBy = [ "multi-user.target" ];
     after = [ "network.target" ];
 
-    unitConfig.ConditionPathExists = leanMcpBin;
+    unitConfig = {
+      StartLimitIntervalSec = "5min";
+      StartLimitBurst = 5;
+    };
 
     environment = {
       HOME = "/home/jrestivo";
       PATH = lib.mkForce leanMcpPath;
-      UV_CACHE_DIR = "/tmp/uv-cache";
       LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING = "true";
     };
+
+    postStart = ''
+      healthy=0
+      for attempt in $(seq 1 30); do
+        if ${lib.getExe pkgs.curl} --max-time 2 --silent --show-error --output /dev/null \
+          "http://127.0.0.1:${toString leanMcpPort}/mcp"; then
+          healthy=$((healthy + 1))
+          if [ "$healthy" -ge 5 ]; then
+            exit 0
+          fi
+        else
+          healthy=0
+        fi
+        sleep 1
+      done
+      echo "Lean LSP MCP did not remain healthy for five consecutive probes within 30 seconds" >&2
+      exit 1
+    '';
 
     serviceConfig = {
       User = "jrestivo";
       Group = "users";
-      WorkingDirectory = "/home/jrestivo/dev/lean-lsp-mcp";
+      WorkingDirectory = "/home/jrestivo";
       ExecStart = "${leanMcpBin} --transport streamable-http --host 127.0.0.1 --port ${toString leanMcpPort}";
       Restart = "on-failure";
       RestartSec = "10s";
