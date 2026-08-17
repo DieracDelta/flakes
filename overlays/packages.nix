@@ -2300,32 +2300,45 @@ tmuxOverlay
       };
     };
 
-  # Lean LSP MCP server. Package the existing local feature work as a patch
-  # over its public upstream base instead of executing a mutable virtualenv.
+  # Lean LSP MCP 0.29 requires the async leanclient API introduced in 0.13.
+  leanclient_0_13 = final.python313Packages.leanclient.overridePythonAttrs (_old: {
+    version = "0.13.0";
+    src = final.fetchFromGitHub {
+      owner = "oOo0oOo";
+      repo = "leanclient";
+      tag = "v0.13.0";
+      hash = "sha256-3lH0QaivYf2y01iuT8+8g/k4LawW+jkA4PWGxzgttlY=";
+    };
+  });
+
+  # Keep one shared Streamable HTTP process while retaining upstream's safe
+  # single-project default unless the service explicitly opts into switching.
   lean-lsp-mcp = final.python313Packages.buildPythonApplication {
     pname = "lean-lsp-mcp";
-    version = "0.26.2-local";
+    version = "0.29.0";
     pyproject = true;
 
     src = final.fetchFromGitHub {
       owner = "oOo0oOo";
       repo = "lean-lsp-mcp";
-      rev = "4b5f44d7100ae997f9bec8d2a4707b31ce5d4b13";
-      hash = "sha256-NWX+r6hz04WnSkERqVj57ruw47RhqOeEofYUaxuU/uM=";
+      tag = "v0.29.0";
+      hash = "sha256-h/KNJoYQrMH/+G2DFuO3t63c1iKCnKlZXtXfXwQiymQ=";
     };
     patches = [ ../patches/lean-lsp-mcp-local.patch ];
 
     build-system = [ final.python313Packages.setuptools ];
     dependencies = with final.python313Packages; [
       certifi
-      leanclient
+      final.leanclient_0_13
       mcp
       orjson
     ];
 
-    # The packaged Nixpkgs dependencies are newer compatible releases than
-    # the exact development pins in pyproject.toml.
-    dontCheckRuntimeDeps = true;
+    # Nixpkgs carries compatible adjacent releases of these dependencies.
+    pythonRelaxDeps = [
+      "certifi"
+      "mcp"
+    ];
     pythonImportsCheck = [ "lean_lsp_mcp" ];
 
     meta = with final.lib; {

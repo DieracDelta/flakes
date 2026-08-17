@@ -76,6 +76,11 @@
         url = "http://127.0.0.1:8213/mcp";
         requestTimeoutMs = 120000;
       };
+      lean-lsp = {
+        url = "http://127.0.0.1:8212/mcp";
+        lifecycle = "keep-alive";
+        requestTimeoutMs = 180000;
+      };
     };
   };
 

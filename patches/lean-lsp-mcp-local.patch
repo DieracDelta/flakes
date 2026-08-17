@@ -1,52 +1,70 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 461b590..3d9bfa4 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -45,3 +45,4 @@ build-backend = "setuptools.build_meta"
+ 
+ [project.scripts]
+ lean-lsp-mcp = "lean_lsp_mcp:main"
++lean-lsp-mcp-devshell-exec = "lean_lsp_mcp.devshell:devshell_exec_main"
 diff --git a/src/lean_lsp_mcp/client_utils.py b/src/lean_lsp_mcp/client_utils.py
-index b3149f6..0feeced 100644
+index ed22631..1a38e1a 100644
 --- a/src/lean_lsp_mcp/client_utils.py
 +++ b/src/lean_lsp_mcp/client_utils.py
-@@ -13,12 +13,14 @@ from lean_lsp_mcp.file_utils import (
-     resolve_input_path,
+@@ -13,6 +13,7 @@ from lean_lsp_mcp.file_utils import (
      valid_lean_project_path,
  )
-+from lean_lsp_mcp.devshell import leanclient_subprocess_for_project
- from lean_lsp_mcp.utils import OutputCapture
+ from lean_lsp_mcp import config
++from lean_lsp_mcp.devshell import command_for_project
  
  
  logger = get_logger(__name__)
- CLIENT_LOCK = Lock()
- _ACTIVE_TRANSPORT_ENV = "LEAN_LSP_MCP_ACTIVE_TRANSPORT"
-+_ALLOW_PROJECT_SWITCHING_ENV = "LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING"
- _shared_clients: dict[Path, LeanLSPClient] = {}
- _builds_in_progress: set[Path] = set()
- 
-@@ -41,6 +43,9 @@ def _project_switching_allowed(ctx: Context | None = None) -> bool:
+@@ -41,7 +42,7 @@ def _project_switching_allowed(ctx: Context | None = None) -> bool:
          explicit = getattr(lifespan, "project_switching_allowed", None)
          if explicit is not None:
              return bool(explicit)
-+    explicit_env = os.environ.get(_ALLOW_PROJECT_SWITCHING_ENV)
-+    if explicit_env is not None:
-+        return explicit_env.strip().lower() in {"1", "true", "yes", "on"}
-     return _active_transport(ctx) == "stdio"
+-    return _active_transport(ctx) == "stdio"
++    return config.project_switching_allowed()
  
  
-@@ -124,12 +129,13 @@ def _start_client(project_path: Path) -> LeanLSPClient:
-     prevent_cache = bool(os.environ.get("LEAN_LSP_TEST_MODE"))
-     try:
-         with OutputCapture() as output:
--            client = LeanLSPClient(
--                project_path,
--                initial_build=False,
--                prevent_cache_get=prevent_cache,
--                max_opened_files=_max_opened_files(),
--            )
-+            with leanclient_subprocess_for_project(project_path):
-+                client = LeanLSPClient(
-+                    project_path,
-+                    initial_build=False,
-+                    prevent_cache_get=prevent_cache,
-+                    max_opened_files=_max_opened_files(),
-+                )
-             logger.info("Shared LSP client connected at %s", project_path)
-         build_output = output.get_output()
-         if build_output:
+ def _max_opened_files() -> int:
+@@ -90,6 +91,10 @@ async def _start_client(project_path: Path) -> AsyncLeanLSPClient:
+         client = AsyncLeanLSPClient(
+             str(project_path),
+             max_workers=_max_opened_files(),
++            server_command=command_for_project(
++                project_path,
++                ["lake", "serve", "--", "-Dserver.reportDelayMs=0"],
++            ),
+         )
+         await client.start()
+         logger.info("Shared async LSP client connected at %s", project_path)
+diff --git a/src/lean_lsp_mcp/config.py b/src/lean_lsp_mcp/config.py
+index f7318f3..8c8ab99 100644
+--- a/src/lean_lsp_mcp/config.py
++++ b/src/lean_lsp_mcp/config.py
+@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
+ 
+ # --- Environment variable names (single source of truth) ---
+ ACTIVE_TRANSPORT_ENV = "LEAN_LSP_MCP_ACTIVE_TRANSPORT"
++ALLOW_PROJECT_SWITCHING_ENV = "LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING"
+ MAX_OPEN_FILES_ENV = "LEAN_LSP_MAX_OPEN_FILES"
+ TEST_MODE_ENV = "LEAN_LSP_TEST_MODE"
+ PROJECT_PATH_ENV = "LEAN_PROJECT_PATH"
+@@ -50,6 +51,13 @@ def active_transport() -> str:
+     return os.environ.get(ACTIVE_TRANSPORT_ENV, "stdio").strip().lower() or "stdio"
+ 
+ 
++def project_switching_allowed() -> bool:
++    explicit = os.environ.get(ALLOW_PROJECT_SWITCHING_ENV)
++    if explicit is not None:
++        return explicit.strip().lower() in _TRUTHY
++    return active_transport() == "stdio"
++
++
+ def project_path() -> str:
+     return os.environ.get(PROJECT_PATH_ENV, "").strip()
+ 
 diff --git a/src/lean_lsp_mcp/file_utils.py b/src/lean_lsp_mcp/file_utils.py
 index 9c266d9..de9d42f 100644
 --- a/src/lean_lsp_mcp/file_utils.py
@@ -71,7 +89,7 @@ index 9c266d9..de9d42f 100644
              capture_output=True,
              text=True,
 diff --git a/src/lean_lsp_mcp/profile_utils.py b/src/lean_lsp_mcp/profile_utils.py
-index 8436d65..2202cce 100644
+index d867e4f..6baaad7 100644
 --- a/src/lean_lsp_mcp/profile_utils.py
 +++ b/src/lean_lsp_mcp/profile_utils.py
 @@ -7,6 +7,7 @@ import tempfile
@@ -93,54 +111,63 @@ index 8436d65..2202cce 100644
          "env",
          "lean",
 diff --git a/src/lean_lsp_mcp/repl.py b/src/lean_lsp_mcp/repl.py
-index 0964f3a..0345c16 100644
+index 6f0c004..22403dd 100644
 --- a/src/lean_lsp_mcp/repl.py
 +++ b/src/lean_lsp_mcp/repl.py
-@@ -9,6 +9,8 @@ import platform
- from dataclasses import dataclass, field
+@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
  from typing import Any
  
+ from lean_lsp_mcp import config
 +from lean_lsp_mcp.devshell import create_subprocess_exec_for_project
-+
+ 
  if platform.system() != "Windows":
      import resource
- 
-@@ -105,8 +107,8 @@ class Repl:
-                 limit = resource.RLIMIT_RSS  # Resident set size
-             mem = self.mem_mb * 1024 * 1024
-             kwargs["preexec_fn"] = lambda: resource.setrlimit(limit, (mem, mem))
+@@ -140,8 +141,8 @@ class Repl:
+         if platform.system() != "Windows":
+             kwargs["start_new_session"] = True
+             kwargs["preexec_fn"] = _memory_limit_preexec(self.mem_mb)
 -        self._proc = await asyncio.create_subprocess_exec(
 -            "lake", "env", self.repl_path, **kwargs
 +        self._proc = await create_subprocess_exec_for_project(
 +            self.project_dir, "lake", "env", self.repl_path, **kwargs
          )
  
-     async def _send(self, cmd: dict[str, Any]) -> dict[str, Any]:
+     async def _process_error(self, reason: str) -> ReplProcessError:
+diff --git a/src/lean_lsp_mcp/search_utils.py b/src/lean_lsp_mcp/search_utils.py
+index 86d3f39..b98f5b0 100644
+--- a/src/lean_lsp_mcp/search_utils.py
++++ b/src/lean_lsp_mcp/search_utils.py
+@@ -12,6 +12,7 @@ import threading
+ from orjson import loads as _json_loads
+ from pathlib import Path
+ 
++from lean_lsp_mcp.devshell import run_for_project
+ from lean_lsp_mcp.file_utils import LeanPathPolicy, build_lean_path_policy
+ 
+ INSTALL_URL = "https://github.com/BurntSushi/ripgrep#installation"
+@@ -390,7 +391,8 @@ def _get_lean_src_search_path(project_root: Path | None = None) -> str | None:
+ 
+     for command in commands:
+         try:
+-            completed = subprocess.run(
++            completed = run_for_project(
++                project_root or Path.cwd(),
+                 command,
+                 capture_output=True,
+                 text=True,
 diff --git a/src/lean_lsp_mcp/server.py b/src/lean_lsp_mcp/server.py
-index 656a96b..ea41690 100644
+index cfddf7a..5739507 100644
 --- a/src/lean_lsp_mcp/server.py
 +++ b/src/lean_lsp_mcp/server.py
-@@ -38,6 +38,10 @@ from lean_lsp_mcp.client_utils import (
-     setup_client_for_file,
-     startup_client,
+@@ -44,6 +44,7 @@ from lean_lsp_mcp.file_utils import (
  )
-+from lean_lsp_mcp.devshell import (
-+    create_subprocess_exec_for_project,
-+    leanclient_subprocess_for_project,
-+)
- from lean_lsp_mcp.file_utils import (
-     build_lean_path_policy,
-     get_file_contents,
-@@ -102,7 +106,7 @@ from lean_lsp_mcp.utils import (
-     extract_goals_list,
-     extract_range,
-     filter_diagnostics_by_position,
--    find_start_position,
-+    find_all_positions,
-     get_declaration_range,
-     is_build_stderr,
- )
-@@ -586,7 +590,9 @@ async def _run_build(
+ from lean_lsp_mcp.instructions import INSTRUCTIONS
+ from lean_lsp_mcp import config
++from lean_lsp_mcp.devshell import command_for_project, create_subprocess_exec_for_project
+ from lean_lsp_mcp.loogle import LoogleManager
+ from lean_lsp_mcp.repl import Repl, ReplProcessError, ReplRunResult, repl_enabled
+ from lean_lsp_mcp.models import (
+@@ -583,7 +584,9 @@ async def _run_build(
  
      async def _run_proc(*args: str, **kwargs) -> asyncio.subprocess.Process:
          nonlocal active_proc
@@ -151,107 +178,97 @@ index 656a96b..ea41690 100644
          active_proc = proc
          return proc
  
-@@ -694,12 +700,13 @@ async def _run_build(
- 
-         # Start LSP client (without initial build since we just did it)
-         with OutputCapture():
--            client = LeanLSPClient(
--                lean_project_path_obj,
--                initial_build=False,
--                prevent_cache_get=True,
--                max_opened_files=_max_opened_files(),
--            )
-+            with leanclient_subprocess_for_project(lean_project_path_obj):
-+                client = LeanLSPClient(
-+                    lean_project_path_obj,
-+                    initial_build=False,
-+                    prevent_cache_get=True,
-+                    max_opened_files=_max_opened_files(),
-+                )
- 
-         logger.info("Built project and re-started LSP client")
-         with CLIENT_LOCK:
-@@ -1342,16 +1349,21 @@ def declaration_file(
-     client.open_file(rel_path)
-     orig_file_content = client.get_file_content(rel_path)
- 
--    # Find the first occurence of the symbol (line and column) in the file
--    position = find_start_position(orig_file_content, symbol)
--    if not position:
-+    # Find all occurrences of the symbol and try each until one yields a declaration.
-+    # This skips comment/docstring hits where LSP returns no declarations.
-+    positions = find_all_positions(orig_file_content, symbol)
-+    if not positions:
-         raise LeanToolError(
-             f"Symbol `{symbol}` (case sensitive) not found in file. Add it first."
+@@ -692,6 +695,10 @@ async def _run_build(
+         client = AsyncLeanLSPClient(
+             str(lean_project_path_obj),
+             max_workers=config.max_open_files(),
++            server_command=command_for_project(
++                lean_project_path_obj,
++                ["lake", "serve", "--", "-Dserver.reportDelayMs=0"],
++            ),
          )
+         await client.start()
  
--    declaration = client.get_declarations(
--        rel_path, position["line"], position["column"]
--    )
-+    declaration = []
-+    for position in positions:
-+        declaration = client.get_declarations(
-+            rel_path, position["line"], position["column"]
-+        )
-+        if declaration:
-+            break
- 
-     if len(declaration) == 0:
-         raise LeanToolError(f"No declaration available for `{symbol}`.")
-diff --git a/src/lean_lsp_mcp/utils.py b/src/lean_lsp_mcp/utils.py
-index 667535d..77a5554 100644
---- a/src/lean_lsp_mcp/utils.py
-+++ b/src/lean_lsp_mcp/utils.py
-@@ -254,6 +254,29 @@ def find_start_position(content: str, query: str) -> dict | None:
-     return None
+diff --git a/tests/unit/test_config.py b/tests/unit/test_config.py
+index 65a9375..ec48da6 100644
+--- a/tests/unit/test_config.py
++++ b/tests/unit/test_config.py
+@@ -14,6 +14,24 @@ def test_active_transport_default_and_normalization(monkeypatch: pytest.MonkeyPa
+     assert config.active_transport() == "stdio"
  
  
-+def find_all_positions(content: str, query: str) -> List[dict]:
-+    """Find all positions of the query in the content.
++def test_project_switching_defaults_to_stdio_and_allows_explicit_opt_in(
++    monkeypatch: pytest.MonkeyPatch,
++):
++    monkeypatch.delenv(config.ALLOW_PROJECT_SWITCHING_ENV, raising=False)
 +
-+    Args:
-+        content (str): The content to search in.
-+        query (str): The query to find.
++    monkeypatch.setenv(config.ACTIVE_TRANSPORT_ENV, "stdio")
++    assert config.project_switching_allowed() is True
 +
-+    Returns:
-+        List[dict]: All positions of the query. Each is {"line": int, "column": int}.
-+    """
-+    positions = []
-+    lines = content.splitlines()
-+    for line_number, line in enumerate(lines):
-+        start = 0
-+        while True:
-+            char_index = line.find(query, start)
-+            if char_index == -1:
-+                break
-+            positions.append({"line": line_number, "column": char_index})
-+            start = char_index + 1
-+    return positions
++    monkeypatch.setenv(config.ACTIVE_TRANSPORT_ENV, "streamable-http")
++    assert config.project_switching_allowed() is False
++
++    monkeypatch.setenv(config.ALLOW_PROJECT_SWITCHING_ENV, "true")
++    assert config.project_switching_allowed() is True
++
++    monkeypatch.setenv(config.ALLOW_PROJECT_SWITCHING_ENV, "false")
++    assert config.project_switching_allowed() is False
 +
 +
- def format_line(
-     file_content: str,
-     line_number: int,
+ def test_max_open_files(monkeypatch: pytest.MonkeyPatch):
+     monkeypatch.delenv(config.MAX_OPEN_FILES_ENV, raising=False)
+     assert config.max_open_files() == 4
+diff --git a/tests/unit/test_server.py b/tests/unit/test_server.py
+index 1168560..0c9952f 100644
+--- a/tests/unit/test_server.py
++++ b/tests/unit/test_server.py
+@@ -53,6 +53,7 @@ class _FailingRepl:
+ @pytest.fixture(autouse=True)
+ def _clear_optional_runtime_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+     monkeypatch.delenv("LEAN_LSP_MCP_ACTIVE_TRANSPORT", raising=False)
++    monkeypatch.delenv("LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING", raising=False)
+     monkeypatch.delenv("LEAN_PROJECT_PATH", raising=False)
+     monkeypatch.delenv("LEAN_LSP_MCP_TOKEN", raising=False)
+     monkeypatch.delenv("LEAN_LOOGLE_LOCAL", raising=False)
+@@ -137,6 +138,20 @@ async def test_app_lifespan_requires_project_path_for_remote_transport(
+             pass
+ 
+ 
++@pytest.mark.asyncio
++async def test_app_lifespan_allows_remote_project_switching_opt_in(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.delenv("LEAN_PROJECT_PATH", raising=False)
++    monkeypatch.setenv("LEAN_LSP_MCP_ACTIVE_TRANSPORT", "streamable-http")
++    monkeypatch.setenv("LEAN_LSP_MCP_ALLOW_PROJECT_SWITCHING", "true")
++
++    async with server.app_lifespan(object()) as context:
++        assert context.lean_project_path is None
++        assert context.active_transport == "streamable-http"
++        assert context.project_switching_allowed is True
++
++
+ @pytest.mark.asyncio
+ async def test_app_lifespan_does_not_close_shared_client(
+     monkeypatch: pytest.MonkeyPatch,
 diff --git a/src/lean_lsp_mcp/devshell.py b/src/lean_lsp_mcp/devshell.py
 new file mode 100644
-index 0000000..cc35af1
+index 0000000..2efbdac
 --- /dev/null
 +++ b/src/lean_lsp_mcp/devshell.py
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,208 @@
 +from __future__ import annotations
 +
 +import asyncio
 +import os
++import shutil
 +import subprocess
-+from contextlib import contextmanager
++import sys
 +from dataclasses import dataclass
 +from functools import lru_cache
 +from pathlib import Path
 +from tempfile import NamedTemporaryFile
-+from typing import Iterator, Sequence
-+
-+import psutil
++from typing import Sequence
 +
 +
 +DEVSHELL_FILE = ".lean_mcp_devshell"
@@ -315,12 +332,6 @@ index 0000000..cc35af1
 +        )
 +
 +    return None
-+
-+
-+def command_for_project(
-+    project_path: Path | str, command: Sequence[str | Path]
-+) -> list[str]:
-+    return [str(part) for part in command]
 +
 +
 +def _decode_env_key_value(item: bytes) -> tuple[str, str] | None:
@@ -404,20 +415,30 @@ index 0000000..cc35af1
 +    return updated
 +
 +
++def command_for_project(
++    project_path: Path | str, command: Sequence[str | Path]
++) -> list[str]:
++    rendered = [str(part) for part in command]
++    if find_devshell(project_path) is None:
++        return rendered
++    project = str(Path(project_path).expanduser().resolve(strict=False))
++    if runner := shutil.which("lean-lsp-mcp-devshell-exec"):
++        return [runner, "--exec", project, *rendered]
++    return [
++        sys.executable,
++        "-m",
++        "lean_lsp_mcp.devshell",
++        "--exec",
++        project,
++        *rendered,
++    ]
++
++
 +def run_for_project(
 +    project_path: Path | str, command: Sequence[str | Path], **kwargs
 +) -> subprocess.CompletedProcess:
 +    return subprocess.run(
-+        command_for_project(project_path, command),
-+        **_kwargs_with_project_env(project_path, kwargs),
-+    )
-+
-+
-+def popen_for_project(
-+    project_path: Path | str, command: Sequence[str | Path], **kwargs
-+) -> subprocess.Popen:
-+    return subprocess.Popen(
-+        command_for_project(project_path, command),
++        [str(part) for part in command],
 +        **_kwargs_with_project_env(project_path, kwargs),
 +    )
 +
@@ -426,71 +447,100 @@ index 0000000..cc35af1
 +    project_path: Path | str, *command: str | Path, **kwargs
 +) -> asyncio.subprocess.Process:
 +    return await asyncio.create_subprocess_exec(
-+        *command_for_project(project_path, command),
++        *(str(part) for part in command),
 +        **_kwargs_with_project_env(project_path, kwargs),
 +    )
 +
 +
-+class _ProjectSubprocessProxy:
-+    def __init__(self, wrapped, project_path: Path | str) -> None:
-+        self._wrapped = wrapped
-+        self._project_path = project_path
-+        self.processes: list[subprocess.Popen] = []
-+
-+    def __getattr__(self, name: str):
-+        return getattr(self._wrapped, name)
-+
-+    def run(self, command: Sequence[str | Path], **kwargs):
-+        return self._wrapped.run(
-+            command_for_project(self._project_path, command),
-+            **_kwargs_with_project_env(self._project_path, kwargs),
++def devshell_exec_main() -> None:
++    if len(sys.argv) < 4 or sys.argv[1] != "--exec":
++        raise SystemExit(
++            "usage: lean-lsp-mcp-devshell-exec --exec PROJECT COMMAND [ARG ...]"
 +        )
-+
-+    def Popen(self, command: Sequence[str | Path], **kwargs):
-+        proc = self._wrapped.Popen(
-+            command_for_project(self._project_path, command),
-+            **_kwargs_with_project_env(self._project_path, kwargs),
-+        )
-+        self.processes.append(proc)
-+        return proc
++    project_path = sys.argv[2]
++    command = sys.argv[3:]
++    env = env_for_project(project_path) or os.environ.copy()
++    os.execvpe(command[0], command, env)
 +
 +
-+def _terminate_process_tree(proc: subprocess.Popen) -> None:
-+    if proc.poll() is not None:
-+        return
-+    try:
-+        parent = psutil.Process(proc.pid)
-+    except psutil.Error:
-+        return
++if __name__ == "__main__":
++    devshell_exec_main()
+diff --git a/tests/unit/test_devshell.py b/tests/unit/test_devshell.py
+new file mode 100644
+index 0000000..00523eb
+--- /dev/null
++++ b/tests/unit/test_devshell.py
+@@ -0,0 +1,73 @@
++from __future__ import annotations
 +
-+    processes = parent.children(recursive=True) + [parent]
-+    for process in processes:
-+        try:
-+            process.terminate()
-+        except psutil.Error:
-+            pass
++from pathlib import Path
 +
-+    gone, alive = psutil.wait_procs(processes, timeout=2)
-+    _ = gone
-+    for process in alive:
-+        try:
-+            process.kill()
-+        except psutil.Error:
-+            pass
++from lean_lsp_mcp.devshell import command_for_project, env_for_project, find_devshell
 +
 +
-+@contextmanager
-+def leanclient_subprocess_for_project(project_path: Path | str) -> Iterator[None]:
-+    import leanclient.base_client as base_client
++def test_find_devshell_walks_up_from_nested_project(tmp_path: Path) -> None:
++    repo = tmp_path / "repo"
++    project = repo / "lean-mock"
++    project.mkdir(parents=True)
++    (repo / ".lean_mcp_devshell").write_text(".#lean-mock\n", encoding="utf-8")
 +
-+    original = base_client.subprocess
-+    proxy = _ProjectSubprocessProxy(original, project_path)
-+    base_client.subprocess = proxy
-+    try:
-+        yield
-+    except Exception:
-+        for proc in proxy.processes:
-+            _terminate_process_tree(proc)
-+        raise
-+    finally:
-+        base_client.subprocess = original
++    spec = find_devshell(project)
++
++    assert spec is not None
++    assert spec.config_path == repo / ".lean_mcp_devshell"
++    assert spec.flake_ref == f"{repo}#lean-mock"
++
++
++def test_devshell_accepts_relative_flake_path(tmp_path: Path) -> None:
++    repo = tmp_path / "repo"
++    project = repo / "formalization"
++    project.mkdir(parents=True)
++    (project / ".lean_mcp_devshell").write_text("../..#lean\n", encoding="utf-8")
++
++    spec = find_devshell(project)
++
++    assert spec is not None
++    assert spec.flake_ref == f"{tmp_path.resolve()}#lean"
++
++
++def test_command_for_project_wraps_configured_devshell(
++    monkeypatch, tmp_path: Path
++) -> None:
++    project = tmp_path / "proj"
++    project.mkdir()
++    (project / ".lean_mcp_devshell").write_text(".#lean\n", encoding="utf-8")
++    monkeypatch.setattr(
++        "lean_lsp_mcp.devshell.shutil.which",
++        lambda _: "/nix/store/example/bin/lean-lsp-mcp-devshell-exec",
++    )
++
++    assert command_for_project(project, ["lake", "serve"]) == [
++        "/nix/store/example/bin/lean-lsp-mcp-devshell-exec",
++        "--exec",
++        str(project),
++        "lake",
++        "serve",
++    ]
++
++
++def test_command_for_project_falls_back_without_config(tmp_path: Path) -> None:
++    project = tmp_path / "proj"
++    project.mkdir()
++
++    assert command_for_project(project, ["lake", "serve"]) == ["lake", "serve"]
++
++
++def test_env_for_project_merges_devshell_env(monkeypatch, tmp_path: Path) -> None:
++    project = tmp_path / "proj"
++    project.mkdir()
++    monkeypatch.setattr(
++        "lean_lsp_mcp.devshell._devshell_env",
++        lambda _: {"PATH": "/nix/bin", "IN_NIX_SHELL": "impure"},
++    )
++
++    env = env_for_project(project, {"PATH": "/base/bin", "KEEP": "1"})
++
++    assert env is not None
++    assert env["PATH"] == "/nix/bin"
++    assert env["IN_NIX_SHELL"] == "impure"
++    assert env["KEEP"] == "1"
