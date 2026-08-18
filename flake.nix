@@ -217,6 +217,8 @@
             grep -F 'alert: PhysicalDiskWrites24hCritical' ${rules}
             grep -F 'alert: UnattributedDiskWrites24hWarning' ${rules}
             grep -F 'alert: UnattributedDiskWrites24hCritical' ${rules}
+            grep -F 'Current rate: {{ $value | humanize1024 }}B/s.' ${rules}
+            grep -F 'Current total: {{ $value | humanize }}B.' ${rules}
 
             alertmanager_fixture="$TMPDIR/alertmanager-fixture"
             mkdir -p "$alertmanager_fixture"

@@ -290,7 +290,7 @@ in
                     signal: physical-rate
                   annotations:
                     summary: "Sustained high physical writes on {{ $labels.device }}"
-                    description: "Physical writes on {{ $labels.device }} have exceeded 50 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
+                    description: "Physical writes on {{ $labels.device }} have exceeded 50 MiB/s for 30 minutes. Current rate: {{ $value | humanize1024 }}B/s."
                 # Alert separately when at least 25 MiB/s cannot be assigned to
                 # a top-level cgroup, which catches filesystem metadata storms.
                 - alert: UnattributedDiskWriteRateHigh
@@ -302,7 +302,7 @@ in
                     signal: unattributed-rate
                   annotations:
                     summary: "Sustained unattributed writes on {{ $labels.device }}"
-                    description: "Filesystem or kernel writes not charged to a monitored cgroup on {{ $labels.device }} have exceeded 25 MiB/s for 30 minutes. Current rate: {{ $value }} bytes/s."
+                    description: "Filesystem or kernel writes not charged to a monitored cgroup on {{ $labels.device }} have exceeded 25 MiB/s for 30 minutes. Current rate: {{ $value | humanize1024 }}B/s."
                 - alert: PhysicalDiskWrites24hWarning
                   expr: node_disk_written_bytes_1d > 500000000000
                   for: 10m
@@ -312,7 +312,7 @@ in
                     signal: physical-volume
                   annotations:
                     summary: "More than 500 GB written to {{ $labels.device }} in 24 hours"
-                    description: "Physical writes to {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                    description: "Physical writes to {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value | humanize }}B."
                 - alert: PhysicalDiskWrites24hCritical
                   expr: node_disk_written_bytes_1d > 1000000000000
                   for: 10m
@@ -322,7 +322,7 @@ in
                     signal: physical-volume
                   annotations:
                     summary: "More than 1 TB written to {{ $labels.device }} in 24 hours"
-                    description: "Physical writes to {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                    description: "Physical writes to {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value | humanize }}B."
                 - alert: UnattributedDiskWrites24hWarning
                   expr: node_disk_unattributed_written_bytes_1d > 500000000000
                   for: 10m
@@ -332,7 +332,7 @@ in
                     signal: unattributed-volume
                   annotations:
                     summary: "More than 500 GB of unattributed writes on {{ $labels.device }}"
-                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 500 GB over the rolling 24-hour window. Current total: {{ $value | humanize }}B."
                 - alert: UnattributedDiskWrites24hCritical
                   expr: node_disk_unattributed_written_bytes_1d > 1000000000000
                   for: 10m
@@ -342,7 +342,7 @@ in
                     signal: unattributed-volume
                   annotations:
                     summary: "More than 1 TB of unattributed writes on {{ $labels.device }}"
-                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value }} bytes."
+                    description: "Writes not charged to monitored cgroups on {{ $labels.device }} exceeded 1 TB over the rolling 24-hour window. Current total: {{ $value | humanize }}B."
         ''
       ];
 
