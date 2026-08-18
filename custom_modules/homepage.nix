@@ -324,6 +324,13 @@ in
               };
             }
             {
+              "Forgejo" = {
+                icon = "forgejo";
+                href = "/forgejo/";
+                description = "Git Forge & CI";
+              };
+            }
+            {
               "AdGuard Home" = {
                 icon = "adguard-home";
                 href = "/adguard/";
