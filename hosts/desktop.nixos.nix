@@ -344,6 +344,9 @@ in
   services.forgejo = {
     enable = true;
     stateDir = "/var/lib/forgejo";
+    # Use nixpkgs' unmodified current release. The generic package is served by
+    # cache.nixos.org and avoids rebuilding Forgejo's frontend for znver3.
+    package = inputs.nixpkgs-unpatched.legacyPackages.${system}.forgejo;
 
     database = {
       type = "postgres";
@@ -725,6 +728,8 @@ in
   environment.systemPackages = with pkgs; [
     linear-cli
     agent-deck
+    prime-agent
+    deepseek-harness
     pi-coding-agent
     # pi-subagents
     pi-background-tasks

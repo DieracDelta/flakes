@@ -9,6 +9,7 @@ let
   zig = import ./zig.nix;
   rust = import ./rust.nix;
   nodejs = import ./nodejs.nix;
+  ai-agent-tools = import ./ai-agent-tools.nix;
   packages = import ./packages.nix { };
   rmux = import ./rmux.nix;
   mcpRemote = import ./mcp-remote.nix;
@@ -94,6 +95,7 @@ in
   zig
   rust
   nodejs
+  ai-agent-tools
   packages
   rmux
   pi

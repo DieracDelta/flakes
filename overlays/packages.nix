@@ -2013,43 +2013,35 @@ tmuxOverlay
     };
   };
 
+  # Pin the canonical development branch head reproducibly. Upstream calls the
+  # branch "main" (there is no "master") and now ships the v16 Actions job/log
+  # tools that previously required our local MCP patch.
   forgejo-mcp = final.buildGoModule rec {
     pname = "forgejo-mcp";
-    version = "2.30.2";
+    version = "unstable-2026-08-18";
+    gitRev = "e6a85958fd963cdb54a081b93c89bf13503525f6";
 
-    src = final.fetchFromGitHub {
-      owner = "goern";
-      repo = "forgejo-mcp";
-      rev = "v${version}";
-      hash = "sha256-czL2jfFalnbDzvtEAOLS82c+zuGpWgUrMFlu/vj1C8Q=";
+    src = final.fetchgit {
+      url = "https://git.b4mad.industries/agentic-forges/forgejo-mcp.git";
+      rev = gitRev;
+      hash = "sha256-HacBds52/4Gvi4q5fBLnYATcygMC3u6u5VT7ffAW6OI=";
     };
 
-    patches = [ ../patches/forgejo-mcp-action-job-logs.patch ];
+    vendorHash = "sha256-WoeTy80iC3j9LoekCF7f0yZ9GIQyl6Gx+KGvHABW7OM=";
 
-    vendorHash = "sha256-QDJRbF4mZzBv1vxvo1ZQJaUJayRHj1jMgjaRfAmLMik=";
+    passthru = {
+      inherit gitRev;
+      upstreamBranch = "main";
+    };
 
     meta = with final.lib; {
       description = "MCP server for interacting with Forgejo repositories";
-      homepage = "https://github.com/goern/forgejo-mcp";
+      homepage = "https://git.b4mad.industries/agentic-forges/forgejo-mcp";
       license = licenses.mit;
       platforms = platforms.linux;
       mainProgram = "forgejo-mcp";
     };
   };
-
-  forgejo = final.forgejo-lts;
-
-  forgejo-lts =
-    (final.callPackage (import "${prev.path}/pkgs/by-name/fo/forgejo/generic.nix" {
-      version = "15.0.6";
-      hash = "sha256-kWmBs/qAiBlmVcSwBM+rXapDbC8IpJtKfQRVPLH4geI=";
-      npmDepsHash = "sha256-wPta+potJJeOac7TyMk3BZg6su6mgHCEgesrsr7SCR4=";
-      vendorHash = "sha256-Kx+mP3GKfEOlsy5bkF7QYDebkrV+FHr37aQC4th/XJM=";
-      lts = true;
-    }) { }).overrideAttrs
-      (oldAttrs: {
-        patches = (oldAttrs.patches or [ ]) ++ [ ../patches/forgejo-actions-api-jobs-logs.patch ];
-      });
 
   # NixOS has no ld.so cache for DCGM, so the local patch bypasses upstream's
   # /sbin/ldconfig prerequisite check. Runtime loading is still enforced by the

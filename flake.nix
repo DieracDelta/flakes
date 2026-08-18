@@ -276,6 +276,81 @@
             touch "$out"
           '';
 
+      checks.x86_64-linux.forgejo-16-stack-config =
+        assert !(builtins.pathExists ./patches/forgejo-actions-api-jobs-logs.patch);
+        assert !(builtins.pathExists ./patches/forgejo-mcp-action-job-logs.patch);
+        let
+          cfg = self.nixosConfigurations.desktop.config;
+          pkgs = myLib.x86_64-linux.pkgs;
+        in
+        pkgs.runCommand "forgejo-16-stack-config-check" { } ''
+          ${cfg.services.forgejo.package}/bin/forgejo --version | grep -F 'forgejo version 16.0.2'
+          ${pkgs.forgejo-mcp}/bin/forgejo-mcp --help >/dev/null
+          test '${pkgs.forgejo-mcp.gitRev}' = 'e6a85958fd963cdb54a081b93c89bf13503525f6'
+          test '${pkgs.forgejo-mcp.upstreamBranch}' = 'main'
+          grep -R -F 'ListActionRunJobsToolName' ${pkgs.forgejo-mcp.src}/operation/actions
+          grep -R -F 'GetActionJobLogsToolName' ${pkgs.forgejo-mcp.src}/operation/actions
+          ${pkgs.bash}/bin/bash -n ${./scripts/forgejo-16-preupgrade-backup.sh}
+          ${pkgs.shellcheck}/bin/shellcheck ${./scripts/forgejo-16-preupgrade-backup.sh}
+          touch "$out"
+        '';
+
+      checks.x86_64-linux.ai-agent-tools =
+        let
+          pkgs = myLib.x86_64-linux.pkgs;
+        in
+        pkgs.runCommand "ai-agent-tools-check" { } ''
+          export HOME="$TMPDIR/home"
+          export XDG_CONFIG_HOME="$HOME/.config"
+          export XDG_DATA_HOME="$HOME/.local/share"
+          export XDG_STATE_HOME="$HOME/.local/state"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME"
+
+          ${pkgs.prime-agent}/bin/prime-agent --version 2>&1 | grep -F '0.7.3'
+          ${pkgs.prime-agent}/bin/prime-agent --help 2>&1 | grep -F 'AI coding assistant with an IPython tool'
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.prime-agent}/lib/prime-agent/node_modules/zeromq')"
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.prime-agent}/lib/prime-agent/node_modules/koffi')"
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.prime-agent}/lib/prime-agent/node_modules/@mariozechner/clipboard')"
+          ${pkgs.deepseek-harness}/bin/dsh --version | grep -F '0.1.0-rc.7'
+          ${pkgs.deepseek-harness}/bin/dsh --help | grep -F 'dsh'
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.deepseek-harness}/lib/deepseek-harness/node_modules/node-pty')"
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.deepseek-harness}/lib/deepseek-harness/node_modules/@koromix/koffi-linux-x64')"
+          ${pkgs.nodejs_24}/bin/node -e "require('${pkgs.deepseek-harness}/lib/deepseek-harness/node_modules/sharp')"
+          test -x '${pkgs.deepseek-harness}/lib/deepseek-harness/node_modules/@deepseek-ai/node-addon-landlock-run-linux-x64/bin/landlock-run'
+          grep -F '${pkgs.pnpm}/bin' ${pkgs.deepseek-harness}/bin/dsh
+
+          dsh_log="$TMPDIR/dsh-web.log"
+          ${pkgs.deepseek-harness}/bin/dsh web --host 127.0.0.1 --port 39876 >"$dsh_log" 2>&1 &
+          dsh_pid=$!
+          trap 'kill "$dsh_pid" 2>/dev/null || true' EXIT
+          dsh_ready=0
+          for _attempt in $(seq 1 60); do
+            if ${pkgs.curl}/bin/curl --fail --silent --output /dev/null http://127.0.0.1:39876/; then
+              dsh_ready=1
+              break
+            fi
+            if ! kill -0 "$dsh_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 0.25
+          done
+          if [ "$dsh_ready" -ne 1 ]; then
+            cat "$dsh_log" >&2
+            exit 1
+          fi
+          kill "$dsh_pid"
+          wait "$dsh_pid" || true
+          trap - EXIT
+          ${pkgs.deepseek-harness}/bin/dsh plugin --profile web list --depth 0 >/dev/null
+
+          test '${pkgs.prime-agent.upstreamRev}' = '61131b2d195ba7a67a4ce8ac60bb10cecae07b67'
+          test '${pkgs.prime-agent.dormantUpstreamAdvisory}' = 'CVE-2026-56876'
+          grep -F '${pkgs.fd}/bin' ${pkgs.prime-agent}/bin/prime-agent
+          grep -F '${pkgs.ripgrep}/bin' ${pkgs.prime-agent}/bin/prime-agent
+          test '${pkgs.deepseek-harness.upstreamRev}' = '99f6f02fecdb7dff40c3fbc9470f5907c29f74ca'
+          touch "$out"
+        '';
+
       # Hydra CI jobs
       hydraJobs.x86_64-linux.desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
 

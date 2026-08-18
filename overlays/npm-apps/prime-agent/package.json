@@ -1,0 +1,8 @@
+{
+  "name": "prime-agent-nix-wrapper",
+  "version": "0.7.3",
+  "private": true,
+  "dependencies": {
+    "prime-agent": "https://github.com/PrimeIntellect-ai/prime-agent/releases/download/v0.7.3/prime-agent-0.7.3.tgz"
+  }
+}
